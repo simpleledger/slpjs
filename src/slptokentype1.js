@@ -1,4 +1,4 @@
-import SlpUtils from './slputils'
+var SlpUtils = require('./slputils')
 
 class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
@@ -145,4 +145,4 @@ class SlpTokenType1 {
     }
 }
 
-export default SlpTokenType1
+module.exports = SlpTokenType1

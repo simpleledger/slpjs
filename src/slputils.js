@@ -70,4 +70,4 @@ class SlpUtils {
     }
 }
 
-export default SlpUtils
+module.exports = SlpUtils

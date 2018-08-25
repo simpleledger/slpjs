@@ -36,4 +36,4 @@ class Network {
     }
 }
 
-export default Network
+module.exports = Network
