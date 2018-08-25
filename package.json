@@ -1,21 +1,14 @@
 {
   "name": "slp-lib",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "Utilities for Simple Ledger Protocol (SLP).",
-  "main": "src/slp-lib.js",
+  "main": "slp-lib.js",
   "files": [
-    "src/",
-    "dist/"
+    "slp-lib.js",
+    "lib/"
   ],
   "scripts": {
-    "build": "node scripts/build.js",
-    "test": "npx nyc --reporter=html --reporter=text npx mocha --require babel-core/register --timeout 15000",
-    "coveralls": "npx nyc report --reporter=text-lcov | npx coveralls",
-    "preversion": "npm test",
-    "version": "node scripts/version.js",
-    "postversion": "node scripts/postversion.js",
-    "bump": "npm version patch -m 'Bump version to %s.'",
-    "bump:minor": "npm version minor -m 'Bump version to %s.'"
+    "test": ""
   },
   "repository": {
     "type": "git",
@@ -37,28 +30,7 @@
     "url": "https://github.com/simpleledger/slp-lib-js/issues"
   },
   "homepage": "https://github.com/simpleledger/slp-lib-js#readme",
-  "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-core": "^6.26.3",
-    "babel-loader": "^7.1.5",
-    "babel-preset-env": "^1.7.0",
-    "babelify": "^8.0.0",
-    "browserify": "^14.5.0",
-    "chai": "^4.1.2",
-    "coveralls": "^3.0.2",
-    "eslint": "^4.19.1",
-    "http-server": "^0.10.0",
-    "jsdoc": "^3.5.5",
-    "lodash": "^4.17.10",
-    "mocha": "^4.0.1",
-    "mocha-eslint": "^4.1.0",
-    "mustache": "^2.3.2",
-    "nyc": "^11.9.0",
-    "random-js": "^1.0.8",
-    "shelljs": "^0.7.8",
-    "uglify-js": "^3.4.7",
-    "watchify": "^3.11.0"
-  },
+  "devDependencies": {},
   "dependencies": {
     "cashaddrjs": "^0.2.9",
     "bitbox-cli": "^1.4.9"
