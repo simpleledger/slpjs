@@ -32,7 +32,7 @@
   "homepage": "https://github.com/simpleledger/slp-lib-js#readme",
   "devDependencies": {},
   "dependencies": {
-    "cashaddrjs": "^0.2.9",
+    "cashaddrjs-slp": "^0.2.9",
     "bitbox-cli": "^1.4.9"
   }
 }
