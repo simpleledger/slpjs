@@ -1,18 +1,60 @@
-# slp-lib
+# slpjs
 
-[![NPM](https://nodei.co/npm/slp-lib.png)](https://nodei.co/npm/slp-lib/)
+[![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
 
-### slp address format conversion usage
+JavaScript library for the Simple Ledger Protocol (SLP)
+
+### Install
+#### node.js
+`npm install slpjs`
+#### browser
+`<script src='https://unpkg.com/slpjs'></script>`
+
+### GENESIS op_return serialization & network txn
 
 ```
-let SlpUtils = require('slp-lib').slputils
+let slp = require('slpjs').slp
+let network = require('slpjs').network
 
-var slpAddr = SlpUtils.cashToSlpAddr("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
+let genesisOpReturn = slp.buildGenesisOpReturn(
+    ticker,
+    name,
+    urlOrEmail,
+    decimalPlaces,
+    batonVout,
+    initialQuantity,
+)
+
+let genesisChangeUtxo = await network.sendGenesisTx(this.address, this.keyPair, genesisOpReturn, batonAddress)
+let genesisTxid = genesisChangeUtxo.txid
+```
+
+### SEND op_return serialization & network txn
+
+```
+let slp = require('slpjs').slp
+let network = require('slpjs').network
+
+let sendOpReturn = slp.buildSendOpReturn(
+    genesisTxid,
+    this.state.tokenProps.decimalPlaces,
+    outputQtyArray,
+)
+
+let sendTxid = await network.sendSendTx(keyPair, genesisChangeUtxo, sendOpReturn, outputAddressArray, paymentAddress)
+
+```
+
+### Address conversion
+
+```
+let slputils = require('slpjs').slputils
+
+var slpAddr = slputils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
 console.log(slpAddr);
 // simpleledger:qzkpdhw8xwe2x2dt7mqtxwjrpfnlrclkwqvhlgwxy8
 
-var cashAddr = SlpUtils.slpToCashAddr(slpAddr);
+var cashAddr = slputils.toCashAddress(slpAddr);
 console.log(cashAddr);
 // bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf
-
 ```

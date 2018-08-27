@@ -1,18 +1,19 @@
 {
-  "name": "slp-lib",
-  "version": "0.0.6",
+  "name": "slpjs",
+  "version": "0.0.2",
   "description": "Utilities for Simple Ledger Protocol (SLP).",
-  "main": "slp-lib.js",
+  "main": "index.js",
   "files": [
-    "slp-lib.js",
+    "index.js",
     "lib/"
   ],
   "scripts": {
-    "test": ""
+    "test": "mocha",
+    "build": "browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/simpleledger/slp-lib-js.git"
+    "url": "git+https://github.com/simpleledger/slpjs.git"
   },
   "keywords": [
     "bitcoin",
@@ -20,19 +21,23 @@
     "slp",
     "simple",
     "ledger",
-    "protocol",
     "node",
     "browser"
   ],
-  "author": "SLP Developers",
+  "author": "Simple Ledger Protocol",
   "license": "MIT",
+  "unpkg": "dist/slpjs.min.js",
   "bugs": {
-    "url": "https://github.com/simpleledger/slp-lib-js/issues"
+    "url": "https://github.com/simpleledger/slpjs/issues"
   },
-  "homepage": "https://github.com/simpleledger/slp-lib-js#readme",
-  "devDependencies": {},
+  "homepage": "https://github.com/simpleledger/slpjs#readme",
+  "devDependencies": {
+    "browserify": "^16.2.2",
+    "mocha": "^5.1.1",
+    "uglify-es": "^3.3.9"
+  },
   "dependencies": {
-    "cashaddrjs-slp": "^0.2.9",
-    "bitbox-cli": "^1.4.9"
+    "bchaddrjs-slp": "^0.2.4",
+    "bitbox-cli": "^1.6.1"
   }
 }
