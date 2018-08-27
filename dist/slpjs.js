@@ -72,9 +72,17 @@ class Network {
 
     static async sendGenesisTx(paymentAddress, paymentKeyPair, genesisOpReturn, batonAddress) {
         // Check for slp format addresses
-        if(!bchaddr.isSlpAddress(paymentAddress) || !bchaddr.isSlpAddress(batonAddress)){
+
+        if(!bchaddr.isSlpAddress(paymentAddress)){
             throw new Error("Not an SLP address.");
         }
+
+        if(batonAddress != null && !bchaddr.isSlpAddress(batonAddress)){
+            throw new Error("Not an SLP address.");
+        }
+
+        paymentAddress = bchaddr.toCashAddress(paymentAddress);
+        batonAddress = bchaddr.toCashAddress(batonAddress);
 
         // TODO: Check for fee too large or send leftover to target address
 
@@ -132,6 +140,7 @@ class Network {
             if(!bchaddr.isSlpAddress(outputAddress)){
                 throw new Error("Not an SLP address.");
             }
+            outputAddress = bchaddr.toCashAddress(outputAddress);
             transactionBuilder.addOutput(outputAddress, 546)
         })
 
@@ -42439,7 +42448,7 @@ var ValidationError = validation.ValidationError;
  *
  * @private
  */
-var VALID_PREFIXES = ['bitcoincash', 'bchtest', 'bchreg', 'simpleledger'];
+var VALID_PREFIXES = ['bitcoincash', 'bchtest', 'bchreg', 'simpleledger', 'slptest'];
 
 /**
  * Checks whether a string is a valid prefix; ie., it has a single letter case
