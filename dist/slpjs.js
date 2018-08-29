@@ -3,14 +3,14 @@
 
 const slp = require('./lib/slp');
 const slputils = require('./lib/slputils');
-const network = require('./lib/network');
+const bitbox = require('./lib/bitboxnetwork');
 
 module.exports = {
     slp: slp,
     slputils: slputils,
-    network: network
+    bitbox: bitbox
 }
-},{"./lib/network":2,"./lib/slp":3,"./lib/slputils":5}],2:[function(require,module,exports){
+},{"./lib/bitboxnetwork":2,"./lib/slp":3,"./lib/slputils":5}],2:[function(require,module,exports){
 let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default;
 let BITBOX = new BITBOXCli();
 
@@ -74,77 +74,136 @@ class Network {
 
         onPaymentCB()
     }
+}
 
-    static async buildRawGenesisTx(tokenAddress, paymentKeyPair, genesisOpReturn, batonAddress) {
+module.exports = Network
+},{"./slputils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],3:[function(require,module,exports){
+let slptokentype1 = require('./slptokentype1')
+
+class Slp {
+
+    // Example config:
+    // let config = {
+    //     ticker: "", 
+    //     name: "",
+    //     urlOrEmail: "", 
+    //     hash: null,
+    //     decimals: 0, 
+    //     batonVout: 2, // normally this is null (for fixed supply) or 2 for flexible
+    //     initialQuantity: 1000000
+    // }
+    static buildGenesisOpReturn(config, type=0x01) {
+        return slptokentype1.buildGenesisOpReturn(
+            config.ticker,
+            config.name,
+            config.urlOrEmail,
+            config.hash,
+            config.decimals,
+            config.batonVout,
+            config.initialQuantity
+        )
+    }
+
+    // Example config:
+    // let config = {
+    //     tokenIdHex: "", 
+    //     decimals: 0, 
+    //     outputQtyArray: []
+    // }
+    static buildSendOpReturn(config, type=0x01) {
+        return slptokentype1.buildSendOpReturn(
+            config.tokenIdHex,
+            config.decimals,
+            config.outputQtyArray            
+        )
+    }
+
+    // Example config: 
+    // let config = {
+    //     slpGenesisOpReturn: genesisOpReturn, 
+    //     mintReceiverAddress: this.slpAddress,
+    //     batonReceiverAddress: batonAddress,
+    //     utxo_txid: utxo.txid,
+    //     utxo_vout: utxo.vout,
+    //     utxo_satoshis: utxo.satoshis,
+    //     wif: this.wif
+    //   }
+    static buildRawGenesisTx(config, type=0x01){
         // Check for slp format addresses
 
-        if(!bchaddr.isSlpAddress(tokenAddress)){
+        if(!bchaddr.isSlpAddress(config.mintReceiverAddress)){
             throw new Error("Not an SLP address.");
         }
 
-        if(batonAddress != null && !bchaddr.isSlpAddress(batonAddress)){
+        if(config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)){
             throw new Error("Not an SLP address.");
         }
         else {
-            batonAddress = bchaddr.toCashAddress(batonAddress);
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
         }
 
-        tokenAddress = bchaddr.toCashAddress(tokenAddress);
+        config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
 
         // TODO: Check for fee too large or send leftover to target address
 
-        let utxo = await this.getUtxo(tokenAddress)
-
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
-        transactionBuilder.addInput(utxo.txid, utxo.vout)
+        transactionBuilder.addInput(config.utxo_txid, config.utxo_vout)
 
-        let fee = slputils.calculateGenesisFee(batonAddress)
-        let satoshisAfterFee = utxo.satoshis - fee + 546
+        let fee = slputils.calculateGenesisFee(config.batonReceiverAddress)
+        let satoshisAfterFee = config.utxo_satoshis - fee + 546
 
         // Genesis OpReturn
-        transactionBuilder.addOutput(genesisOpReturn, 0)
+        transactionBuilder.addOutput(config.slpGenesisOpReturn, 0)
 
         // Genesis token mint
-        transactionBuilder.addOutput(tokenAddress, satoshisAfterFee)
+        transactionBuilder.addOutput(config.mintReceiverAddress, satoshisAfterFee)
 
         // Baton address (optional)
-        if (batonAddress != null) {
-            transactionBuilder.addOutput(batonAddress, 546)
+        if (config.batonReceiverAddress != null) {
+            transactionBuilder.addOutput(config.batonReceiverAddress, 546)
         }
 
+        let paymentKeyPair = BITBOX.ECPair.fromWIF(config.wif)
+
         let redeemScript
-        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, utxo.satoshis)
+        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, utxo_satoshis)
 
         return {
             hex: transactionBuilder.build().toHex(),
             satoshis: satoshisAfterFee
         }
-
-        //let txid = await this.sendTx(hex)
-
-        // TODO: Retry sendTx & Calculate txid on tx exists
-        // txid = SlpUtils.txidFromHex(hex)
-
-        // Return change utxo
-        // return {
-        //     txid: txid,
-        //     vout: changeVout,
-        //     satoshis: satoshisAfterFee,
-        // }
     }
 
-    static async buildRawSendTx(paymentKeyPair, tokenTxid, tokenVout, satoshis, sendOpReturn, outputAddressArray, changeAddress) {        
+    // Example config: 
+    // let configSendTx = {
+    //     slpSendOpReturn: sendOpReturn,
+    //     input_token_utxos: [ 
+    //       { 
+    //         token_utxo_txid: genesisTxid,
+    //         token_utxo_vout: 1,
+    //         token_utxo_satoshis: genesisTxData.satoshis 
+    //       }
+    //     ],
+    //     tokenReceiverAddressArray: outputAddressArray,
+    //     bchChangeAddress: this.state.paymentAddress,
+    //     wif: this.wif
+    //   }
+    static buildRawSendTx(config, type=0x01){       
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
-        transactionBuilder.addInput(tokenTxid, tokenVout)
+        satoshis = 0;
+        config.input_token_utxos.forEach(token_utxo => {
+            transactionBuilder.addInput(token_utxo.token_utxo_txid, token_utxo.token_utxo_vout)
+            satoshis = satoshis + token_utxo.token_utxo_satoshis
+        });
 
-        let fee = slputils.calculateSendFee(outputAddressArray)
+        let fee = slputils.calculateSendFee(tokenReceiverAddressArray)
         let satoshisAfterFee = satoshis - fee
 
         // Genesis OpReturn
-        transactionBuilder.addOutput(sendOpReturn, 0)
+        transactionBuilder.addOutput(slpSendOpReturn, 0)
 
         // Token distribution outputs
-        outputAddressArray.forEach((outputAddress) => {
+        tokenReceiverAddressArray.forEach((outputAddress) => {
             // Check for slp format addresses
             if(!bchaddr.isSlpAddress(outputAddress)){
                 throw new Error("Not an SLP address.");
@@ -155,8 +214,10 @@ class Network {
 
         // Change
         if (satoshisAfterFee >= 546) {
-            transactionBuilder.addOutput(changeAddress, satoshisAfterFee)
+            transactionBuilder.addOutput(bchChangeAddress, satoshisAfterFee)
         }
+
+        let paymentKeyPair = BITBOX.ECPair.fromWIF(config.wif)
 
         let redeemScript
         transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, satoshis)
@@ -169,34 +230,6 @@ class Network {
     }
 }
 
-module.exports = Network
-},{"./slputils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],3:[function(require,module,exports){
-let slptokentype1 = require('./slptokentype1')
-
-class Slp {
-    static buildGenesisOpReturn(ticker, name, urlOrEmail, decimals, batonVout, initialQuantity) {
-        return slptokentype1.buildGenesisOpReturn(
-            0x01,
-            ticker,
-            name,
-            urlOrEmail,
-            null,
-            decimals,
-            batonVout,
-            initialQuantity
-        )
-    }
-
-    static buildSendOpReturn(tokenIdHex, decimals, outputQtyArray) {
-        return slptokentype1.buildSendOpReturn(
-            0x01,
-            tokenIdHex,
-            decimals,
-            outputQtyArray            
-        )
-    }
-}
-
 module.exports = Slp
 },{"./slptokentype1":4}],4:[function(require,module,exports){
 (function (Buffer){
@@ -205,7 +238,7 @@ var SlpUtils = require('./slputils')
 class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
-    static buildGenesisOpReturn(tokenType, ticker, name, documentUrl, documentHash, decimals, batonVout, initialQuantity) {
+    static buildGenesisOpReturn(ticker, name, documentUrl, documentHash, decimals, batonVout, initialQuantity) {
         let script = []
 
         // OP Return Prefix
@@ -217,9 +250,7 @@ class SlpTokenType1 {
         lokadId.forEach((item) => script.push(item))
 
         // Token Type
-        if (tokenType !== 0x01) {
-            throw Error("Unsupported token type")
-        }
+        let tokenType = 0x01
         script.push(SlpUtils.getPushDataOpcode([tokenType]))
         script.push(tokenType)
 
@@ -295,7 +326,7 @@ class SlpTokenType1 {
         return encodedScript
     }
 
-    static buildSendOpReturn(tokenType, tokenIdHex, decimals, outputQtyArray) {
+    static buildSendOpReturn(tokenIdHex, decimals, outputQtyArray) {
         let script = []
 
         // OP Return Prefix
@@ -307,9 +338,7 @@ class SlpTokenType1 {
         lokadId.forEach((item) => script.push(item))
 
         // Token Type
-        if (tokenType !== 0x01) {
-            throw Error("Unsupported token type")
-        }
+        let tokenType = 0x01
         script.push(SlpUtils.getPushDataOpcode([tokenType]))
         script.push(tokenType)
 
