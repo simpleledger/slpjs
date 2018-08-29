@@ -78,7 +78,12 @@ class Network {
 
 module.exports = Network
 },{"./slputils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],3:[function(require,module,exports){
-let slptokentype1 = require('./slptokentype1')
+let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default;
+let BITBOX = new BITBOXCli();
+let bchaddr = require('bchaddrjs-slp');
+
+let slptokentype1 = require('./slptokentype1');
+var slputils = require('./slputils');
 
 class Slp {
 
@@ -138,9 +143,6 @@ class Slp {
         if(config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)){
             throw new Error("Not an SLP address.");
         }
-        else {
-            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
-        }
 
         config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
 
@@ -160,13 +162,14 @@ class Slp {
 
         // Baton address (optional)
         if (config.batonReceiverAddress != null) {
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
             transactionBuilder.addOutput(config.batonReceiverAddress, 546)
         }
 
         let paymentKeyPair = BITBOX.ECPair.fromWIF(config.wif)
 
         let redeemScript
-        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, utxo_satoshis)
+        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, config.utxo_satoshis)
 
         return {
             hex: transactionBuilder.build().toHex(),
@@ -190,20 +193,20 @@ class Slp {
     //   }
     static buildRawSendTx(config, type=0x01){       
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
-        satoshis = 0;
+        var satoshis = 0;
         config.input_token_utxos.forEach(token_utxo => {
             transactionBuilder.addInput(token_utxo.token_utxo_txid, token_utxo.token_utxo_vout)
             satoshis = satoshis + token_utxo.token_utxo_satoshis
         });
 
-        let fee = slputils.calculateSendFee(tokenReceiverAddressArray)
+        let fee = slputils.calculateSendFee(config.tokenReceiverAddressArray)
         let satoshisAfterFee = satoshis - fee
 
         // Genesis OpReturn
-        transactionBuilder.addOutput(slpSendOpReturn, 0)
+        transactionBuilder.addOutput(config.slpSendOpReturn, 0)
 
         // Token distribution outputs
-        tokenReceiverAddressArray.forEach((outputAddress) => {
+        config.tokenReceiverAddressArray.forEach((outputAddress) => {
             // Check for slp format addresses
             if(!bchaddr.isSlpAddress(outputAddress)){
                 throw new Error("Not an SLP address.");
@@ -214,7 +217,7 @@ class Slp {
 
         // Change
         if (satoshisAfterFee >= 546) {
-            transactionBuilder.addOutput(bchChangeAddress, satoshisAfterFee)
+            transactionBuilder.addOutput(config.bchChangeAddress, satoshisAfterFee)
         }
 
         let paymentKeyPair = BITBOX.ECPair.fromWIF(config.wif)
@@ -231,9 +234,9 @@ class Slp {
 }
 
 module.exports = Slp
-},{"./slptokentype1":4}],4:[function(require,module,exports){
+},{"./slptokentype1":4,"./slputils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],4:[function(require,module,exports){
 (function (Buffer){
-var SlpUtils = require('./slputils')
+var slputils = require('./slputils')
 
 class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
@@ -246,17 +249,17 @@ class SlpTokenType1 {
 
         // Lokad Id
         let lokadId = Buffer.from(this.lokadIdHex, 'hex')
-        script.push(SlpUtils.getPushDataOpcode(lokadId))
+        script.push(slputils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
         // Token Type
         let tokenType = 0x01
-        script.push(SlpUtils.getPushDataOpcode([tokenType]))
+        script.push(slputils.getPushDataOpcode([tokenType]))
         script.push(tokenType)
 
         // Transaction Type
         let transactionType = Buffer.from('GENESIS')
-        script.push(SlpUtils.getPushDataOpcode(transactionType))
+        script.push(slputils.getPushDataOpcode(transactionType))
         transactionType.forEach((item) => script.push(item))
 
         // Ticker
@@ -264,7 +267,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             ticker = Buffer.from(ticker)
-            script.push(SlpUtils.getPushDataOpcode(ticker))
+            script.push(slputils.getPushDataOpcode(ticker))
             ticker.forEach((item) => script.push(item))
         }
 
@@ -273,7 +276,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             name = Buffer.from(name)
-            script.push(SlpUtils.getPushDataOpcode(name))
+            script.push(slputils.getPushDataOpcode(name))
             name.forEach((item) => script.push(item))
         }
 
@@ -282,7 +285,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             documentUrl = Buffer.from(documentUrl)
-            script.push(SlpUtils.getPushDataOpcode(documentUrl))
+            script.push(slputils.getPushDataOpcode(documentUrl))
             documentUrl.forEach((item) => script.push(item))
         }
 
@@ -291,7 +294,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             documentHash = Buffer.from(documentHash)
-            script.push(SlpUtils.getPushDataOpcode(documentHash))
+            script.push(slputils.getPushDataOpcode(documentHash))
             documentHash.forEach((item) => script.push(item))
         }
 
@@ -299,7 +302,7 @@ class SlpTokenType1 {
         if (decimals < 0 || decimals > 9) {
             throw Error("Decimals property must be in range 0 to 9")
         } else {
-            script.push(SlpUtils.getPushDataOpcode([decimals]))
+            script.push(slputils.getPushDataOpcode([decimals]))
             script.push(decimals)
         }
 
@@ -310,16 +313,16 @@ class SlpTokenType1 {
             if (batonVout <= 1) {
                 throw Error("Baton vout must be 2 or greater")
             }
-            script.push(SlpUtils.getPushDataOpcode([batonVout]))
+            script.push(slputils.getPushDataOpcode([batonVout]))
             script.push(batonVout)
         }
 
         // Initial Quantity
-        initialQuantity = SlpUtils.int2FixedBuffer(initialQuantity * 10**decimals, 8)
-        script.push(SlpUtils.getPushDataOpcode(initialQuantity))
+        initialQuantity = slputils.int2FixedBuffer(initialQuantity * 10**decimals, 8)
+        script.push(slputils.getPushDataOpcode(initialQuantity))
         initialQuantity.forEach((item) => script.push(item))
 
-        let encodedScript = SlpUtils.encodeScript(script)
+        let encodedScript = slputils.encodeScript(script)
         if (encodedScript.length > 223) {
             throw Error("Script too long, must be less than 223 bytes.")
         }
@@ -334,22 +337,22 @@ class SlpTokenType1 {
 
         // Lokad Id
         let lokadId = Buffer.from(this.lokadIdHex, 'hex')
-        script.push(SlpUtils.getPushDataOpcode(lokadId))
+        script.push(slputils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
         // Token Type
         let tokenType = 0x01
-        script.push(SlpUtils.getPushDataOpcode([tokenType]))
+        script.push(slputils.getPushDataOpcode([tokenType]))
         script.push(tokenType)
 
         // Transaction Type
         let transactionType = Buffer.from('SEND')
-        script.push(SlpUtils.getPushDataOpcode(transactionType))
+        script.push(slputils.getPushDataOpcode(transactionType))
         transactionType.forEach((item) => script.push(item))
 
         // Token Id
         let tokenId = Buffer.from(tokenIdHex, 'hex')
-        script.push(SlpUtils.getPushDataOpcode(tokenId))
+        script.push(slputils.getPushDataOpcode(tokenId))
         tokenId.forEach((item) => script.push(item))
 
         // Output Quantities
@@ -363,12 +366,12 @@ class SlpTokenType1 {
             if (outputQty < 0) {
                 throw Error("All outputs must be 0 or greater")
             }
-            let qtyBuffer = SlpUtils.int2FixedBuffer(outputQty * 10**decimals, 8)
-            script.push(SlpUtils.getPushDataOpcode(qtyBuffer))
+            let qtyBuffer = slputils.int2FixedBuffer(outputQty * 10**decimals, 8)
+            script.push(slputils.getPushDataOpcode(qtyBuffer))
             qtyBuffer.forEach((item) => script.push(item))
         })
 
-        let encodedScript = SlpUtils.encodeScript(script)
+        let encodedScript = slputils.encodeScript(script)
         if (encodedScript.length > 223) {
             throw Error("Script too long, must be less than 223 bytes.")
         }
