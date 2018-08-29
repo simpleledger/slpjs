@@ -2,10 +2,10 @@
 
 const slp = require('./lib/slp');
 const slputils = require('./lib/slputils');
-const network = require('./lib/network');
+const bitbox = require('./lib/bitboxnetwork');
 
 module.exports = {
     slp: slp,
     slputils: slputils,
-    network: network
+    bitbox: bitbox
 }

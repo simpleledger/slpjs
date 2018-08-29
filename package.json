@@ -1,11 +1,11 @@
 {
   "name": "slpjs",
-  "version": "0.0.3",
+  "version": "0.0.7",
   "description": "Utilities for Simple Ledger Protocol (SLP).",
   "main": "index.js",
   "files": [
-    "index.js",
-    "lib/"
+    "lib/",
+    "dist/"
   ],
   "scripts": {
     "test": "mocha",

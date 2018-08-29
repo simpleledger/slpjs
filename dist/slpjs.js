@@ -54,6 +54,11 @@ class Network {
     }
 
     static async monitorForPayment(paymentAddress, fee, onPaymentCB) {
+        // must be a cash or legacy addr
+        if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) {
+            throw new Error("Not an a valid address format.");
+        }
+
         while (true) {
             try {
                 let utxo = await this.getUtxo(paymentAddress)
@@ -70,25 +75,26 @@ class Network {
         onPaymentCB()
     }
 
-    static async sendGenesisTx(paymentAddress, paymentKeyPair, genesisOpReturn, batonAddress) {
+    static async buildRawGenesisTx(tokenAddress, paymentKeyPair, genesisOpReturn, batonAddress) {
         // Check for slp format addresses
 
-        if(!bchaddr.isSlpAddress(paymentAddress)){
+        if(!bchaddr.isSlpAddress(tokenAddress)){
             throw new Error("Not an SLP address.");
         }
 
         if(batonAddress != null && !bchaddr.isSlpAddress(batonAddress)){
             throw new Error("Not an SLP address.");
         }
+        else {
+            batonAddress = bchaddr.toCashAddress(batonAddress);
+        }
 
-        paymentAddress = bchaddr.toCashAddress(paymentAddress);
-        batonAddress = bchaddr.toCashAddress(batonAddress);
+        tokenAddress = bchaddr.toCashAddress(tokenAddress);
 
         // TODO: Check for fee too large or send leftover to target address
 
-        let utxo = await this.getUtxo(paymentAddress)
+        let utxo = await this.getUtxo(tokenAddress)
 
-        let changeVout = 1
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
         transactionBuilder.addInput(utxo.txid, utxo.vout)
 
@@ -99,7 +105,7 @@ class Network {
         transactionBuilder.addOutput(genesisOpReturn, 0)
 
         // Genesis token mint
-        transactionBuilder.addOutput(paymentAddress, satoshisAfterFee)
+        transactionBuilder.addOutput(tokenAddress, satoshisAfterFee)
 
         // Baton address (optional)
         if (batonAddress != null) {
@@ -109,27 +115,30 @@ class Network {
         let redeemScript
         transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, utxo.satoshis)
 
-        let hex = transactionBuilder.build().toHex()
+        return {
+            hex: transactionBuilder.build().toHex(),
+            satoshis: satoshisAfterFee
+        }
 
-        let txid = await this.sendTx(hex)
+        //let txid = await this.sendTx(hex)
 
         // TODO: Retry sendTx & Calculate txid on tx exists
         // txid = SlpUtils.txidFromHex(hex)
 
         // Return change utxo
-        return {
-            txid: txid,
-            vout: changeVout,
-            satoshis: satoshisAfterFee,
-        }
+        // return {
+        //     txid: txid,
+        //     vout: changeVout,
+        //     satoshis: satoshisAfterFee,
+        // }
     }
 
-    static async sendSendTx(paymentKeyPair, genesisUtxo, sendOpReturn, outputAddressArray, changeAddress) {        
+    static async buildRawSendTx(paymentKeyPair, tokenTxid, tokenVout, satoshis, sendOpReturn, outputAddressArray, changeAddress) {        
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
-        transactionBuilder.addInput(genesisUtxo.txid, genesisUtxo.vout)
+        transactionBuilder.addInput(tokenTxid, tokenVout)
 
         let fee = slputils.calculateSendFee(outputAddressArray)
-        let satoshisAfterFee = genesisUtxo.satoshis - fee
+        let satoshisAfterFee = satoshis - fee
 
         // Genesis OpReturn
         transactionBuilder.addOutput(sendOpReturn, 0)
@@ -150,13 +159,13 @@ class Network {
         }
 
         let redeemScript
-        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, genesisUtxo.satoshis)
+        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, satoshis)
 
-        let hex = transactionBuilder.build().toHex()
+        return transactionBuilder.build().toHex()
 
-        let txid = await this.sendTx(hex)
+        // let txid = await this.sendTx(hex)
 
-        return txid
+        // return txid
     }
 }
 
@@ -349,16 +358,16 @@ let bchaddr = require('bchaddrjs-slp');
 
 class SlpUtils {
 
-    static toLegacyAddress(address){
-        return bchaddr.toLegacyAddress(address);
-    }
-
     static toCashAddress(address){
         return bchaddr.toCashAddress(address);
     }
 
     static toSlpAddress(address){
         return bchaddr.toSlpAddress(address);
+    }
+
+    static isSlpAddress(address){
+        return bchaddr.isSlpAddress(address);
     }
 
     static getPushDataOpcode(data) {
@@ -9783,40 +9792,45 @@ require('./convert')
 module.exports = BigInteger
 },{"./bigi":57,"./convert":58}],60:[function(require,module,exports){
 module.exports={
-  "_from": "bigi@^1.4.2",
+  "_args": [
+    [
+      "bigi@1.4.2",
+      "/Users/jamescramer/slp-lib-js"
+    ]
+  ],
+  "_from": "bigi@1.4.2",
   "_id": "bigi@1.4.2",
   "_inBundle": false,
   "_integrity": "sha1-nGZalfiLiwj8Bc/XMfVhhZ1yWCU=",
   "_location": "/bigi",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "bigi@^1.4.2",
+    "raw": "bigi@1.4.2",
     "name": "bigi",
     "escapedName": "bigi",
-    "rawSpec": "^1.4.2",
+    "rawSpec": "1.4.2",
     "saveSpec": null,
-    "fetchSpec": "^1.4.2"
+    "fetchSpec": "1.4.2"
   },
   "_requiredBy": [
-    "/bip32-utils/bitbox-cli",
     "/bip38",
     "/bitbox-cli",
-    "/bitcoincashjs-lib",
+    "/bitbox-cli/bip32-utils/bitbox-cli",
+    "/bitbox-cli/bip32-utils/bitcoincashjs-lib",
+    "/bitbox-cli/bitbox-cli",
+    "/bitbox-cli/bitcoincashjs-lib",
     "/bitcoinjs-lib",
     "/ecurve"
   ],
   "_resolved": "https://registry.npmjs.org/bigi/-/bigi-1.4.2.tgz",
-  "_shasum": "9c665a95f88b8b08fc05cfd731f561859d725825",
-  "_spec": "bigi@^1.4.2",
-  "_where": "/Users/jamescramer/slp-lib-js/node_modules/bitbox-cli",
+  "_spec": "1.4.2",
+  "_where": "/Users/jamescramer/slp-lib-js",
   "bugs": {
     "url": "https://github.com/cryptocoinjs/bigi/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {},
-  "deprecated": false,
   "description": "Big integers.",
   "devDependencies": {
     "coveralls": "^2.11.2",
@@ -49691,29 +49705,36 @@ utils.intFromLE = intFromLE;
 
 },{"bn.js":158,"minimalistic-assert":286,"minimalistic-crypto-utils":287}],246:[function(require,module,exports){
 module.exports={
-  "_from": "elliptic@^6.2.3",
+  "_args": [
+    [
+      "elliptic@6.4.1",
+      "/Users/jamescramer/slp-lib-js"
+    ]
+  ],
+  "_from": "elliptic@6.4.1",
   "_id": "elliptic@6.4.1",
   "_inBundle": false,
   "_integrity": "sha512-BsXLz5sqX8OHcsh7CqBMztyXARmGQ3LWPtGjJi6DiJHq5C/qvi9P3OqgswKSDftbu8+IoI/QDTAm2fFnQ9SZSQ==",
   "_location": "/elliptic",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "elliptic@^6.2.3",
+    "raw": "elliptic@6.4.1",
     "name": "elliptic",
     "escapedName": "elliptic",
-    "rawSpec": "^6.2.3",
+    "rawSpec": "6.4.1",
     "saveSpec": null,
-    "fetchSpec": "^6.2.3"
+    "fetchSpec": "6.4.1"
   },
   "_requiredBy": [
+    "/browserify-sign",
+    "/create-ecdh",
     "/secp256k1"
   ],
   "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-6.4.1.tgz",
-  "_shasum": "c2d0b7776911b86722c632c3c06c60f2f819939a",
-  "_spec": "elliptic@^6.2.3",
-  "_where": "/Users/jamescramer/slp-lib-js/node_modules/secp256k1",
+  "_spec": "6.4.1",
+  "_where": "/Users/jamescramer/slp-lib-js",
   "author": {
     "name": "Fedor Indutny",
     "email": "fedor@indutny.com"
@@ -49721,7 +49742,6 @@ module.exports={
   "bugs": {
     "url": "https://github.com/indutny/elliptic/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {
     "bn.js": "^4.4.0",
     "brorand": "^1.0.1",
@@ -49731,7 +49751,6 @@ module.exports={
     "minimalistic-assert": "^1.0.0",
     "minimalistic-crypto-utils": "^1.0.0"
   },
-  "deprecated": false,
   "description": "EC cryptography",
   "devDependencies": {
     "brfs": "^1.4.3",
