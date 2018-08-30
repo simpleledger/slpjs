@@ -2,19 +2,18 @@
 'use strict';
 
 const slp = require('./lib/slp');
-const slputils = require('./lib/slputils');
+const utils = require('./lib/utils');
 const bitbox = require('./lib/bitboxnetwork');
 
 module.exports = {
     slp: slp,
-    slputils: slputils,
+    utils: utils,
     bitbox: bitbox
 }
-},{"./lib/bitboxnetwork":2,"./lib/slp":3,"./lib/slputils":5}],2:[function(require,module,exports){
+},{"./lib/bitboxnetwork":2,"./lib/slp":3,"./lib/utils":5}],2:[function(require,module,exports){
 let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default;
 let BITBOX = new BITBOXCli();
 
-let slputils = require('./slputils');
 let bchaddr = require('bchaddrjs-slp');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -26,7 +25,6 @@ class Network {
                 if (!result || !result.length || !result[0].satoshis) {
                     reject(null)
                 }
-
                 let utxo = result.sort((a, b) => { return a.satoshis - b.satoshis })[result.length-1]
                 resolve(utxo)
             }, (err) => { 
@@ -35,6 +33,33 @@ class Network {
             })
         })
     }
+
+    static async getUtxoWithRetry(address, retries = 40){
+		var result;
+		var count = 0;
+		while(result == undefined){
+			result = await this.getUtxo(address)
+			count++;
+			if(count > retries)
+				throw new Error("BITBOX.Address.utxo endpoint experienced a problem");
+			await sleep(250);
+		}
+		return result;
+    }
+    
+	static async getAddressDetailsWithRetry(address, retries = 20){
+		var result;
+		var count = 0;
+		while(result == undefined){
+			result = await BITBOX.Address.details(address);
+			count++;
+			if(count > retries)
+				throw new Error("BITBOX.Address.details endpoint experienced a problem");
+
+			await sleep(250);
+		}
+		return result;
+	}
 
     static async sendTx(hex) {
         return new Promise( (resolve, reject) => {
@@ -58,7 +83,6 @@ class Network {
         if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) {
             throw new Error("Not an a valid address format.");
         }
-
         while (true) {
             try {
                 let utxo = await this.getUtxo(paymentAddress)
@@ -68,22 +92,20 @@ class Network {
             } catch (ex) {
                 console.log(ex)
             }
-
             await sleep(5000)
         }
-
         onPaymentCB()
     }
 }
 
 module.exports = Network
-},{"./slputils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],3:[function(require,module,exports){
+},{"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],3:[function(require,module,exports){
 let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default;
 let BITBOX = new BITBOXCli();
 let bchaddr = require('bchaddrjs-slp');
 
 let slptokentype1 = require('./slptokentype1');
-var slputils = require('./slputils');
+var utils = require('./utils');
 
 class Slp {
 
@@ -127,10 +149,15 @@ class Slp {
     // let config = {
     //     slpGenesisOpReturn: genesisOpReturn, 
     //     mintReceiverAddress: this.slpAddress,
+    //     mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
     //     batonReceiverAddress: batonAddress,
-    //     utxo_txid: utxo.txid,
-    //     utxo_vout: utxo.vout,
-    //     utxo_satoshis: utxo.satoshis,
+    //     batonReceiverSatoshis: 546,
+    //     bchChangeReceiverAddress: null,
+    //     input_utxos: [{
+    //          utxo_txid: utxo.txid,
+    //          utxo_vout: utxo.vout,
+    //          utxo_satoshis: utxo.satoshis,
+    //     }],
     //     wif: this.wif
     //   }
     static buildRawGenesisTx(config, type=0x01){
@@ -149,36 +176,44 @@ class Slp {
         // TODO: Check for fee too large or send leftover to target address
 
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
-        transactionBuilder.addInput(config.utxo_txid, config.utxo_vout)
+        var satoshis = 0
+        config.input_utxos.forEach(token_utxo => {
+            transactionBuilder.addInput(token_utxo.utxo_txid, token_utxo.utxo_vout)
+            satoshis += token_utxo.utxo_satoshis
+        });
 
-        let fee = slputils.calculateGenesisFee(config.batonReceiverAddress)
-        let satoshisAfterFee = config.utxo_satoshis - fee + 546
+        var bchChangeAfterFeeSatoshis = satoshis
 
         // Genesis OpReturn
         transactionBuilder.addOutput(config.slpGenesisOpReturn, 0)
 
         // Genesis token mint
-        transactionBuilder.addOutput(config.mintReceiverAddress, satoshisAfterFee)
+        transactionBuilder.addOutput(config.mintReceiverAddress, config.mintReceiverSatoshis)
+        bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis
 
         // Baton address (optional)
         if (config.batonReceiverAddress != null) {
-            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
-            transactionBuilder.addOutput(config.batonReceiverAddress, 546)
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress)
+            transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis)
+            bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis
+        }
+
+        // Change (optional)
+        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= 546){
+            config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress)
+            transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis)
         }
 
         let paymentKeyPair = BITBOX.ECPair.fromWIF(config.wif)
 
         let redeemScript
-        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, config.utxo_satoshis)
+        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, satoshis)
 
-        return {
-            hex: transactionBuilder.build().toHex(),
-            satoshis: satoshisAfterFee
-        }
+        return transactionBuilder.build().toHex()
     }
 
     // Example config: 
-    // let configSendTx = {
+    // let config = {
     //     slpSendOpReturn: sendOpReturn,
     //     input_token_utxos: [ 
     //       { 
@@ -188,19 +223,19 @@ class Slp {
     //       }
     //     ],
     //     tokenReceiverAddressArray: outputAddressArray,
-    //     bchChangeAddress: this.state.paymentAddress,
+    //     bchChangeReceiverAddress: this.state.paymentAddress, // optional
     //     wif: this.wif
     //   }
     static buildRawSendTx(config, type=0x01){       
         let transactionBuilder = new BITBOX.TransactionBuilder('bitcoincash')
-        var satoshis = 0;
+        var inputSatoshis = 0;
         config.input_token_utxos.forEach(token_utxo => {
             transactionBuilder.addInput(token_utxo.token_utxo_txid, token_utxo.token_utxo_vout)
-            satoshis = satoshis + token_utxo.token_utxo_satoshis
+            inputSatoshis += token_utxo.token_utxo_satoshis
         });
 
-        let fee = slputils.calculateSendFee(config.tokenReceiverAddressArray)
-        let satoshisAfterFee = satoshis - fee
+        let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length ,config.tokenReceiverAddressArray.length)
+        var bchChangeAfterFeeSatoshis = inputSatoshis - sendCost
 
         // Genesis OpReturn
         transactionBuilder.addOutput(config.slpSendOpReturn, 0)
@@ -213,30 +248,71 @@ class Slp {
             }
             outputAddress = bchaddr.toCashAddress(outputAddress);
             transactionBuilder.addOutput(outputAddress, 546)
+            bchChangeAfterFeeSatoshis -= 546;
         })
 
         // Change
-        if (satoshisAfterFee >= 546) {
-            transactionBuilder.addOutput(config.bchChangeAddress, satoshisAfterFee)
+        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= 546) {
+            config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress)
+            transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis)
         }
 
         let paymentKeyPair = BITBOX.ECPair.fromWIF(config.wif)
 
         let redeemScript
-        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, satoshis)
+        transactionBuilder.sign(0, paymentKeyPair, redeemScript, transactionBuilder.hashTypes.SIGHASH_ALL, inputSatoshis)
 
         return transactionBuilder.build().toHex()
-
-        // let txid = await this.sendTx(hex)
-
-        // return txid
     }
+
+    static calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress=null, bchChangeAddress=null, feeRate=1) {
+        let outputs = 1
+        let nonfeeoutputs = 546
+        if (batonAddress != null) {
+            nonfeeoutputs += 546
+            outputs += 1
+        }
+
+        if (bchChangeAddress != null) {
+            nonfeeoutputs += 546
+            outputs += 1
+        }
+
+        let fee = BITBOX.BitcoinCash.getByteCount({ P2PKH: inputUtxoSize }, { P2PKH: outputs })
+        fee += genesisOpReturnLength
+        fee += 10 // added to avoid insufficient priority
+        fee *= feeRate
+        console.log("GENESIS cost before outputs: " + fee.toString());
+        fee += nonfeeoutputs
+        console.log("GENESIS cost after outputs are added: " + fee.toString());
+
+        return fee
+    }
+
+    static calculateSendCost(sendOpReturnLength, inputUtxoSize, outputAddressArraySize, bchChangeAddress=null, feeRate=1) {
+        let outputs = outputAddressArraySize
+        let nonfeeoutputs = outputAddressArraySize * 546
+        
+        if (bchChangeAddress != null){
+            outputs += 1
+        }
+
+        let fee = BITBOX.BitcoinCash.getByteCount({ P2PKH: inputUtxoSize }, { P2PKH: outputs })
+        fee += sendOpReturnLength
+        fee += 10 // added to avoid insufficient priority
+        fee *= feeRate
+        console.log("SEND cost before outputs: " + fee.toString());
+        fee += nonfeeoutputs
+        console.log("SEND cost after outputs are added: " + fee.toString());
+        return fee
+    }
+
 }
 
 module.exports = Slp
-},{"./slptokentype1":4,"./slputils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],4:[function(require,module,exports){
+},{"./slptokentype1":4,"./utils":5,"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92}],4:[function(require,module,exports){
 (function (Buffer){
-var slputils = require('./slputils')
+var utils = require('./utils')
 
 class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
@@ -249,17 +325,17 @@ class SlpTokenType1 {
 
         // Lokad Id
         let lokadId = Buffer.from(this.lokadIdHex, 'hex')
-        script.push(slputils.getPushDataOpcode(lokadId))
+        script.push(utils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
         // Token Type
         let tokenType = 0x01
-        script.push(slputils.getPushDataOpcode([tokenType]))
+        script.push(utils.getPushDataOpcode([tokenType]))
         script.push(tokenType)
 
         // Transaction Type
         let transactionType = Buffer.from('GENESIS')
-        script.push(slputils.getPushDataOpcode(transactionType))
+        script.push(utils.getPushDataOpcode(transactionType))
         transactionType.forEach((item) => script.push(item))
 
         // Ticker
@@ -267,7 +343,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             ticker = Buffer.from(ticker)
-            script.push(slputils.getPushDataOpcode(ticker))
+            script.push(utils.getPushDataOpcode(ticker))
             ticker.forEach((item) => script.push(item))
         }
 
@@ -276,7 +352,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             name = Buffer.from(name)
-            script.push(slputils.getPushDataOpcode(name))
+            script.push(utils.getPushDataOpcode(name))
             name.forEach((item) => script.push(item))
         }
 
@@ -285,7 +361,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             documentUrl = Buffer.from(documentUrl)
-            script.push(slputils.getPushDataOpcode(documentUrl))
+            script.push(utils.getPushDataOpcode(documentUrl))
             documentUrl.forEach((item) => script.push(item))
         }
 
@@ -294,7 +370,7 @@ class SlpTokenType1 {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             documentHash = Buffer.from(documentHash)
-            script.push(slputils.getPushDataOpcode(documentHash))
+            script.push(utils.getPushDataOpcode(documentHash))
             documentHash.forEach((item) => script.push(item))
         }
 
@@ -302,7 +378,7 @@ class SlpTokenType1 {
         if (decimals < 0 || decimals > 9) {
             throw Error("Decimals property must be in range 0 to 9")
         } else {
-            script.push(slputils.getPushDataOpcode([decimals]))
+            script.push(utils.getPushDataOpcode([decimals]))
             script.push(decimals)
         }
 
@@ -313,16 +389,16 @@ class SlpTokenType1 {
             if (batonVout <= 1) {
                 throw Error("Baton vout must be 2 or greater")
             }
-            script.push(slputils.getPushDataOpcode([batonVout]))
+            script.push(utils.getPushDataOpcode([batonVout]))
             script.push(batonVout)
         }
 
         // Initial Quantity
-        initialQuantity = slputils.int2FixedBuffer(initialQuantity * 10**decimals, 8)
-        script.push(slputils.getPushDataOpcode(initialQuantity))
+        initialQuantity = utils.int2FixedBuffer(initialQuantity * 10**decimals, 8)
+        script.push(utils.getPushDataOpcode(initialQuantity))
         initialQuantity.forEach((item) => script.push(item))
 
-        let encodedScript = slputils.encodeScript(script)
+        let encodedScript = utils.encodeScript(script)
         if (encodedScript.length > 223) {
             throw Error("Script too long, must be less than 223 bytes.")
         }
@@ -337,22 +413,22 @@ class SlpTokenType1 {
 
         // Lokad Id
         let lokadId = Buffer.from(this.lokadIdHex, 'hex')
-        script.push(slputils.getPushDataOpcode(lokadId))
+        script.push(utils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
         // Token Type
         let tokenType = 0x01
-        script.push(slputils.getPushDataOpcode([tokenType]))
+        script.push(utils.getPushDataOpcode([tokenType]))
         script.push(tokenType)
 
         // Transaction Type
         let transactionType = Buffer.from('SEND')
-        script.push(slputils.getPushDataOpcode(transactionType))
+        script.push(utils.getPushDataOpcode(transactionType))
         transactionType.forEach((item) => script.push(item))
 
         // Token Id
         let tokenId = Buffer.from(tokenIdHex, 'hex')
-        script.push(slputils.getPushDataOpcode(tokenId))
+        script.push(utils.getPushDataOpcode(tokenId))
         tokenId.forEach((item) => script.push(item))
 
         // Output Quantities
@@ -366,12 +442,12 @@ class SlpTokenType1 {
             if (outputQty < 0) {
                 throw Error("All outputs must be 0 or greater")
             }
-            let qtyBuffer = slputils.int2FixedBuffer(outputQty * 10**decimals, 8)
-            script.push(slputils.getPushDataOpcode(qtyBuffer))
+            let qtyBuffer = utils.int2FixedBuffer(outputQty * 10**decimals, 8)
+            script.push(utils.getPushDataOpcode(qtyBuffer))
             qtyBuffer.forEach((item) => script.push(item))
         })
 
-        let encodedScript = slputils.encodeScript(script)
+        let encodedScript = utils.encodeScript(script)
         if (encodedScript.length > 223) {
             throw Error("Script too long, must be less than 223 bytes.")
         }
@@ -381,14 +457,14 @@ class SlpTokenType1 {
 
 module.exports = SlpTokenType1
 }).call(this,require("buffer").Buffer)
-},{"./slputils":5,"buffer":194}],5:[function(require,module,exports){
+},{"./utils":5,"buffer":194}],5:[function(require,module,exports){
 (function (Buffer){
 let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default
 let BITBOX = new BITBOXCli()
 
 let bchaddr = require('bchaddrjs-slp');
 
-class SlpUtils {
+class Utils {
 
     static toCashAddress(address){
         return bchaddr.toCashAddress(address);
@@ -455,42 +531,34 @@ class SlpUtils {
         return hash.match(/[a-fA-F0-9]{2}/g).reverse().join('')
     }
 
-    static calculateFee(batonAddress, outputAddressArray) {
-        let genesisFee = this.calculateGenesisFee(batonAddress)
-        let sendFee = this.calculateSendFee(outputAddressArray)
-        return genesisFee + sendFee
-    }
+    // Method to get Script 32-bit integer (little-endian signed magnitude representation)
+	static readScriptInt32(buffer) {
+		var number;
+		if(buffer.readUInt32LE(0) > 2147483647)
+			number = -1 * (buffer.readUInt32LE(0) - 2147483648);
+		else
+			number = buffer.readUInt32LE(0);
+		return number; 
+	}
 
-    static calculateGenesisFee(batonAddress) {
-        let outputs = 4
-        let dustOutputs = 1
+	// Method to check whether or not a secret value is valid
+	static secretIsValid(buffer) {
+		var number = this.readScriptInt32(buffer);
+		if(number > 1073741823 || number < -1073741823)
+			return false;
+		return true;
+	}
 
-        if (batonAddress != null) {
-            outputs += 1
-            dustOutputs += 1
-        }
-
-        let fee = BITBOX.BitcoinCash.getByteCount({ P2PKH: 1 }, { P2PKH: outputs })
-        fee += dustOutputs * 546
-
-        return fee
-    }
-
-    static calculateSendFee(outputAddressArray) {
-        let outputs = 5 + outputAddressArray.length
-
-        let fee = BITBOX.BitcoinCash.getByteCount({ P2PKH: 1 }, { P2PKH: outputs })
-        fee += outputAddressArray.length * 546
-
-        return fee
-    }
-
-    static validateSlpAddress(slpAddr){
-
-    }
+	static generateSecretNumber() {
+		var secret = BITBOX.Crypto.randomBytes(32);
+		while(!this.secretIsValid(secret)){
+			secret = BITBOX.Crypto.randomBytes(32);
+		}
+		return secret;
+	}
 }
 
-module.exports = SlpUtils
+module.exports = Utils
 }).call(this,require("buffer").Buffer)
 },{"bchaddrjs-slp":52,"bitbox-cli/lib/bitbox-cli":92,"buffer":194}],6:[function(require,module,exports){
 module.exports = after
