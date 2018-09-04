@@ -1,32 +1,44 @@
 # slpjs
 
+Simple Ledger Protocol (SLP) JavaScript Library for building and sending token transactions using BITBOX network.  Genesis and Send transactions are currently supported.
 
 [![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
 
-JavaScript library for the Simple Ledger Protocol (SLP).  Currently only GENESIS and SEND transactions are supported in this library.
 
-### Install
-#### node.js
+
+# Installation
+
+#### For node.js
 `npm install slpjs`
-#### browser
-`<script src='https://unpkg.com/slpjs'></script>`
 
-### GENESIS OP_RETURN & txn serialization
+#### For browser
+```<script src='https://unpkg.com/slpjs'></script>```
 
-```
+
+
+# Example Usage
+
+The following examples show how this library should be used.
+
+## Creating a new SLP token - GENESIS
+
+Creating a new token requires the Genesis OP_RETURN metadata message to be built and used within a properly formatted Genesis transaction.  The `buildGenesisOpReturn()` and `buildRawGenesisTx()` methods are used to generate a properly formatted metadata message and raw transaction hex.  For convenience, the SLPJS library has BITBOX network functionality built-in.
+
+```javascript
+
 let slp = require('slpjs').slp
 let network = require('slpjs').network
 
 let utxo = await network.getUtxoWithRetry("bitcoincash:...");
 
 let genesisOpReturn = slp.buildGenesisOpReturn({ 
-    ticker: "some ticker",
-    name: "a good token name",
-    urlOrEmail: "email@google.com",
+    ticker: "TOKEN21",
+    name: "A new token for fractional accounting",
+    urlOrEmail: "issuer@gmx.com",
     hash: null, 
     decimals: 9,
     batonVout: null,
-    initialQuantity: 1000000,
+    initialQuantity: new BigNumber(1000000),
 })
 
 let genesisTxHex = slp.buildRawGenesisTx({
@@ -47,15 +59,15 @@ let genesisTxHex = slp.buildRawGenesisTx({
 let txid = await network.sendTx(genesisTxHex)
 ```
 
-### SEND OP_RETURN & txn serialization
+## Transfer an existing Token - SEND
 
-```
+```javascript
+
 let slp = require('slpjs').slp
 let network = require('slpjs').network
 
 let sendOpReturn = slp.buildSendOpReturn({
     tokenIdHex: genesisTxid,
-    decimals: this.state.tokenProps.decimalPlaces, 
     outputQtyArray: outputQtyArray,
 })
 
@@ -77,16 +89,16 @@ let sendTxHex = slp.buildRawSendTx({
 })
 ```
 
-### SimpleLedger Address Conversion
+### Address Conversion to SLP address format
 
-```
+```javascript
 let utils = require('slpjs').utils
 
-var slpAddr = utils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
+let slpAddr = utils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
 console.log(slpAddr);
 // simpleledger:qzkpdhw8xwe2x2dt7mqtxwjrpfnlrclkwqvhlgwxy8
 
-var cashAddr = utils.toCashAddress(slpAddr);
+let cashAddr = utils.toCashAddress(slpAddr);
 console.log(cashAddr);
 // bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf
 ```
