@@ -474,7 +474,7 @@ class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
     static buildGenesisOpReturn(ticker, name, documentUrl, documentHash, decimals, batonVout, initialQuantity) {
-        if(!(amount instanceof BigNumber))
+        if(!(initialQuantity instanceof BigNumber))
             throw Error("Amount must be an instance of BigNumber");
 
         let script = []
@@ -598,7 +598,7 @@ class SlpTokenType1 {
             throw Error("Cannot have less than 1 SLP token output.")
         }
         outputQtyArray.forEach((outputQty) => {
-            if(!(amount instanceof BigNumber))
+            if(!(outputQty instanceof BigNumber))
                 throw Error("Amount must be an instance of BigNumber");
 
             if (outputQty < 0)
