@@ -101,7 +101,7 @@ module.exports = class BitboxNetwork {
         }
         while (true) {
             try {
-                let utxo = await this.getUtxo(paymentAddress)
+                let utxo = (await this.getUtxo(paymentAddress))[0]
                 if (utxo && utxo.satoshis >= fee) {
                     break
                 }
@@ -333,8 +333,8 @@ class Slp {
             inputSatoshis += token_utxo.token_utxo_satoshis;
         });
 
-        let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length ,config.tokenReceiverAddressArray.length);
-        let bchChangeAfterFeeSatoshis = inputSatoshis - sendCost;
+        let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length, config.tokenReceiverAddressArray.length, config.bchChangeReceiverAddress);
+        let bchChangeAfterFeeSatoshis = inputSatoshis - sendCost; 
 
         // Genesis OpReturn
         transactionBuilder.addOutput(config.slpSendOpReturn, 0);
@@ -347,7 +347,6 @@ class Slp {
             }
             outputAddress = bchaddr.toCashAddress(outputAddress);
             transactionBuilder.addOutput(outputAddress, 546);
-            //bchChangeAfterFeeSatoshis -= 546;
         })
 
         // Change
@@ -474,7 +473,7 @@ class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
     static buildGenesisOpReturn(ticker, name, documentUrl, documentHash, decimals, batonVout, initialQuantity) {
-        if(!(initialQuantity instanceof BigNumber))
+        if(!initialQuantity._isBigNumber)
             throw Error("Amount must be an instance of BigNumber");
 
         let script = []
@@ -545,14 +544,16 @@ class SlpTokenType1 {
         if (batonVout == null) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
-            if (batonVout <= 1) {
-                throw Error("Baton vout must be 2 or greater")
-            }
+            if (batonVout <= 1 || !(batonVout instanceof Number)) 
+                throw Error("Baton vout must a number and greater than 2")
+            
             script.push(utils.getPushDataOpcode([batonVout]))
             script.push(batonVout)
         }
 
         // Initial Quantity
+        if (initialQuantity.toNumber() < 0 || initialQuantity.toNumber() % 1 != 0)
+            throw Error("Quantity cannot be less than 0 and must be a whole number.");
         initialQuantity = utils.int2FixedBuffer(initialQuantity)
         script.push(utils.getPushDataOpcode(initialQuantity))
         initialQuantity.forEach((item) => script.push(item))
@@ -598,11 +599,11 @@ class SlpTokenType1 {
             throw Error("Cannot have less than 1 SLP token output.")
         }
         outputQtyArray.forEach((outputQty) => {
-            if(!(outputQty instanceof BigNumber))
+            if(!outputQty._isBigNumber)
                 throw Error("Amount must be an instance of BigNumber");
 
-            if (outputQty < 0)
-                throw Error("All outputs must be 0 or greater");
+            if (outputQty.toNumber() < 0 || outputQty.toNumber() % 1 != 0)
+                throw Error("All outputs must be 0 or greater and must be a whole number.");
             
             let qtyBuffer = utils.int2FixedBuffer(outputQty)
             script.push(utils.getPushDataOpcode(qtyBuffer))
@@ -621,9 +622,10 @@ module.exports = SlpTokenType1
 }).call(this,require("buffer").Buffer)
 },{"./utils":6,"bignumber.js":113,"buffer":251}],6:[function(require,module,exports){
 (function (Buffer){
-let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default
-let BITBOX = new BITBOXCli()
-let bchaddr = require('bchaddrjs-slp');
+const BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default
+    , BITBOX = new BITBOXCli()
+    , BigNumber = require('bignumber.js')
+    , bchaddr = require('bchaddrjs-slp');
 
 class Utils {
 
@@ -653,9 +655,9 @@ class Utils {
     }
 
     static int2FixedBuffer(amount) {
-        if(!(amount instanceof BigNumber))
+        if(!amount._isBigNumber)
             throw Error("Amount must be an instance of BigNumber");
-        
+
         let hex = amount.toString(16);
         hex = hex.padStart(16, '0')
         return Buffer.from(hex, 'hex');
@@ -719,7 +721,7 @@ class Utils {
 
 module.exports = Utils
 }).call(this,require("buffer").Buffer)
-},{"bchaddrjs-slp":103,"bitbox-cli/lib/bitbox-cli":145,"buffer":251}],7:[function(require,module,exports){
+},{"bchaddrjs-slp":103,"bignumber.js":113,"bitbox-cli/lib/bitbox-cli":145,"buffer":251}],7:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -116018,6 +116020,7 @@ module.exports={
     "fetchSpec": "2.4.3"
   },
   "_requiredBy": [
+    "/request",
     "/request-promise"
   ],
   "_resolved": "https://registry.npmjs.org/tough-cookie/-/tough-cookie-2.4.3.tgz",
