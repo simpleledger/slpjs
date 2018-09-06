@@ -32,41 +32,60 @@ let slp = require('slpjs').slp
 let network = require('slpjs').bitbox
 let BigNumber = require('bignumber.js')
 
+let fundingAddress           = ""; // <-- must be bitcoincash format
+let fundingWif               = ""; // <-- compressed WIF format
+let tokenReceiverAddress     = ""; // <-- must be simpleledger format
+let batonReceiverAddress     = ""; // <-- must be simpleledger format
+let bchChangeReceiverAddress = ""; // <-- simpleledger or bitcoincash format
+
 // 1) Assume the first utxo at the given address has enough funds to fund this example.
-let utxo = (await network.getUtxoWithRetry("bitcoincash:..."))[0];
+let utxo;
+(async function(){
+    let txos = await network.getUtxoWithRetry(fundingAddress);
+    utxo = txos[txos.length-1]; // UTXOs are sorted small to large, so grab biggest one to be conservative.
+})();
+
+// NOTE: Wait for utxo response before we proceed to next step...
 
 // 2) Select decimal precision for this new token
 let decimals = 9;
 
+// 3) Select initial token quantity to issue
+let initialQty = (new BigNumber(1000000)).times(10**decimals);
+
 // 3) Create the genesis OP_RETURN metadata message
 let genesisOpReturn = slp.buildGenesisOpReturn({ 
     ticker: "TOKEN21",
-    name: "A new token for fractional accounting",
+    name: "21st Century Token",
     urlOrEmail: "issuer@gmx.com",
     hash: null, 
     decimals: decimals,
-    batonVout: null,
-    initialQuantity: (new BigNumber(1000000)).times(10**decimals),
-})
+    batonVout: 2,
+    initialQuantity: initialQty,
+});
 
 // 4) Create/sign the raw transaction hex for Genesis
 let genesisTxHex = slp.buildRawGenesisTx({
     slpGenesisOpReturn: genesisOpReturn, 
-    mintReceiverAddress: "simpleledger:qr0kk59jfk7ya5cu5xe9edxtntleu9psr5w80zy4q9",
+    mintReceiverAddress: tokenReceiverAddress,
     mintReceiverSatoshis: 546,
-    batonReceiverAddress: "simpleledger:qr0kk59jfk7ya5cu5xe9edxtntleu9psr5w80zy4q9",
+    batonReceiverAddress: batonReceiverAddress,
     batonReceiverSatoshis: 546,
-    bchChangeReceiverAddress: "simpleledger:qr0kk59jfk7ya5cu5xe9edxtntleu9psr5w80zy4q9", 
+    bchChangeReceiverAddress: bchChangeReceiverAddress, 
     input_utxos: [{
-        utxo_txid: utxo.txid,
-        utxo_vout: utxo.vout,
-        utxo_satoshis: utxo.satoshis,
-    }],
-    wif: "<private key>"
-})
+        txid: utxo.txid,
+        vout: utxo.vout,
+        satoshis: utxo.satoshis,
+        wif: fundingWif
+    }]
+});
 
 // 5) Broadcast the raw transaction hex to the network using BITBOX
-let genesisTxid = await network.sendTx(genesisTxHex);
+let genesisTxid;
+(async function(){
+    genesisTxid = await network.sendTx(genesisTxHex);
+})();
+
 ```
 
 ## Sending an existing token - SEND Transaction
@@ -81,34 +100,48 @@ let network = require('slpjs').bitbox
 let bitdb = require('slpjs').bitdb
 let BigNumber = require('bignumber.js')
 
-let BITDB_KEY = '<bitdb_api_key_here>';
+let BITDB_KEY                = ""; // <-- visit http://bitdb.network for api key
+let fundingAddress           = ""; // <-- must be bitcoincash format
+let fundingWif               = ""; // <-- compressed WIF format
+let tokenReceiverAddress     = ""; // <-- must be simpleledger format
+let bchChangeReceiverAddress = ""; // <-- simpleledger or bitcoincash format
 
 // 1) Set the token of interest for send transaction
-let tokenId = genesisTxId;
+let tokenId = "c950c236ae779c8c3b35bffd6e19a64c3adda13ab6d3215fc8f664200b433d0f";
 
 // 2) Fetch criticial token information using bitdb
-const { tokenName, tokenPrecision } = await bitdb.getTokenInformation(tokenId, BITDB_KEY);
+let tokenDecimals;
+(async function(){
+    const { tokenName, tokenPrecision } = await bitdb.getTokenInformation(tokenId, BITDB_KEY);
+    tokenDecimals = tokenPrecision; 
+})();
+
+// Wait for network response...
 
 // 3) Get all utxos for our address and filter out UTXOs for other tokens
 let inputSet = [];
 let validTokenQuantity = new BigNumber(0);
-let utxoSet = await network.getUtxoWithTxDetails("bitcoincash:...");
-for(let utxo in utxoSet){
-    try {
-        utxo.slp = slpjs.decodeTxOut(utxo);
-        if(utxo.slp.token != tokenId)
-            continue;
-        validTokenQuantity = validTokenQuantity.plus(utxo.slp.quantity);
-    } catch(_) {}
-    
-    // sweeping is easiest way to manage coin selection
-    inputSet.push(utxo);
-}
+(async function(){
+    let utxoSet = await network.getUtxoWithTxDetails(fundingAddress);
+    for(let utxo of utxoSet){
+        try {
+            utxo.slp = slp.decodeTxOut(utxo);
+            if(utxo.slp.token != tokenId)
+                continue;
+            validTokenQuantity = validTokenQuantity.plus(utxo.slp.quantity);
+        } catch(_) {}
+        
+        // sweeping is easiest way to manage coin selection
+        inputSet.push(utxo);
+    }
+})();
 
-inputSet = inputSet.map(utxo => {token_utxo_txid: utxo.txid, token_utxo_vout: utxo.vout, token_utxo_satoshis: utxo.satoshis});
+// Wait for network response...
+
+inputSet = inputSet.map(utxo => ({ txid: utxo.txid, vout: utxo.vout, satoshis: utxo.satoshis, wif: fundingWif }));
 
 // 4) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
-let tokenSendAmount = (new BigNumber(100)).times(10**tokenPrecision);
+let tokenSendAmount = (new BigNumber(100)).times(10**tokenDecimals);
 let tokenChangeAmount = validTokenQuantity.minus(tokenSendAmount);
 
 // 5) Create the Send OP_RETURN message
@@ -122,15 +155,16 @@ let sendTxHex = slp.buildRawSendTx({
     slpSendOpReturn: sendOpReturn,
     input_token_utxos: inputSet,
     tokenReceiverAddressArray: [
-        "simpleledger:qr0kk59jfk7ya5cu5xe9edxtntleu9psr5w80zy4q9",
-        "simpleledger:qrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr444"
+        tokenReceiverAddress, tokenReceiverAddress
     ],
-    bchChangeReceiverAddress: "simpleledger:qr0kk59jfk7ya5cu5xe9edxtntleu9psr5w80zy4q9",
-    wif: "<private key>"
+    bchChangeReceiverAddress: bchChangeReceiverAddress
 })
 
 // 7) Broadcast the transaction over the network using BITBOX
-let sendTxid = await network.sendTx(sendTxHex);
+let sendTxid;
+(async function(){
+    sendTxid = await network.sendTx(sendTxHex);
+})(); 
 ```
 
 ### Address Conversion to SLP address format
