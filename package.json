@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.0.21",
+  "version": "0.1.0",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -41,6 +41,7 @@
     "bchaddrjs-slp": "git+https://github.com/simpleledger/bchaddrjs.git",
     "bitbox-cli": "^1.6.1",
     "request": "^2.88.0",
-    "request-promise": "^4.2.2"
+    "request-promise": "^4.2.2",
+    "lodash": "^4.17.10"
   }
 }
