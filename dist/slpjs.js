@@ -175,8 +175,7 @@ module.exports = class BitbdProxy {
             }
         };
         const data = Buffer.from(JSON.stringify(query)).toString('base64');
-        console.log(JSON.stringify(query));
-        console.log(bitDbUrl + data);
+    
         const response = await request({
             method: 'GET',
             uri: bitDbUrl + data,
@@ -502,8 +501,6 @@ class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
     static buildGenesisOpReturn(ticker, name, documentUrl, documentHash, decimals, batonVout, initialQuantity) {
-        if(!initialQuantity._isBigNumber)
-            throw Error("Amount must be an instance of BigNumber");
 
         let script = []
 
@@ -581,8 +578,20 @@ class SlpTokenType1 {
         }
 
         // Initial Quantity
-        if (initialQuantity.toNumber() < 0 || initialQuantity.toNumber() % 1 != 0)
-            throw Error("Quantity cannot be less than 0 and must be a whole number.");
+        let MAX_QTY = new BigNumber('18446744073709551615');
+
+        if(!initialQuantity._isBigNumber)
+            throw Error("Amount must be an instance of BigNumber");
+
+        if(initialQuantity > MAX_QTY)
+            throw new Error("Maximum genesis value exceeded.  Reduce input quantity below 18446744073709551615.");
+
+        if (initialQuantity < 0)
+            throw Error("Genesis quantity must be greater than 0.");
+
+        if (initialQuantity % 1 != 0)
+            throw Error("Genesis quantity must be a whole number.");
+
         initialQuantity = utils.int2FixedBuffer(initialQuantity)
         script.push(utils.getPushDataOpcode(initialQuantity))
         initialQuantity.forEach((item) => script.push(item))
@@ -631,8 +640,16 @@ class SlpTokenType1 {
             if(!outputQty._isBigNumber)
                 throw Error("Amount must be an instance of BigNumber");
 
-            if (outputQty.toNumber() < 0 || outputQty.toNumber() % 1 != 0)
-                throw Error("All outputs must be 0 or greater and must be a whole number.");
+            let MAX_QTY = new BigNumber('18446744073709551615');
+
+            if(outputQty > MAX_QTY)
+                throw new Error("Maximum value exceeded.  Reduce input quantity below 18446744073709551615.");
+
+            if (outputQty < 0)
+                throw Error("All Send outputs must be greater than 0.");
+            
+            if (outputQty % 1 != 0)
+                throw Error("All Send outputs must be a whole number.");
             
             let qtyBuffer = utils.int2FixedBuffer(outputQty)
             script.push(utils.getPushDataOpcode(qtyBuffer))
