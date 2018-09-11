@@ -235,7 +235,7 @@ class Slp {
 
     static get lokadIdHex() { return "534c5000" }
 
-    static buildGenesisOpReturn(config, type=0x01) {
+    static buildGenesisOpReturn(config, type = 0x01) {
         // Example config:
         // let config = {
         //     ticker: "", 
@@ -257,7 +257,7 @@ class Slp {
         )
     }
 
-    static buildSendOpReturn(config, type=0x01) {
+    static buildSendOpReturn(config, type = 0x01) {
         // Example config:
         // let config = {
         //     tokenIdHex: "", 
@@ -265,11 +265,11 @@ class Slp {
         // }
         return slptokentype1.buildSendOpReturn(
             config.tokenIdHex,
-            config.outputQtyArray            
+            config.outputQtyArray
         )
     }
 
-    static buildRawGenesisTx(config, type=0x01){
+    static buildRawGenesisTx(config, type = 0x01) {
         // Example config: 
         // let config = {
         //     slpGenesisOpReturn: genesisOpReturn, 
@@ -287,11 +287,11 @@ class Slp {
         //   }
 
         // Check for slp format addresses
-        if(!bchaddr.isSlpAddress(config.mintReceiverAddress)){
+        if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
             throw new Error("Not an SLP address.");
         }
 
-        if(config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)){
+        if (config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)) {
             throw new Error("Not an SLP address.");
         }
 
@@ -324,14 +324,14 @@ class Slp {
         }
 
         // Change (optional)
-        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= 546){
+        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= 546) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis);
         }
 
         // sign inputs
         let i = 0;
-        for(const txo of config.input_utxos){
+        for (const txo of config.input_utxos) {
             let paymentKeyPair = BITBOX.ECPair.fromWIF(txo.wif);
             transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis);
             i++;
@@ -340,7 +340,7 @@ class Slp {
         return transactionBuilder.build().toHex();
     }
 
-    static buildRawSendTx(config, type=0x01){ 
+    static buildRawSendTx(config, type = 0x01) {
         // Example config: 
         // let config = {
         //     slpSendOpReturn: sendOpReturn,
@@ -363,7 +363,7 @@ class Slp {
         });
 
         let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length, config.tokenReceiverAddressArray.length, config.bchChangeReceiverAddress);
-        let bchChangeAfterFeeSatoshis = inputSatoshis - sendCost; 
+        let bchChangeAfterFeeSatoshis = inputSatoshis - sendCost;
 
         // Genesis OpReturn
         transactionBuilder.addOutput(config.slpSendOpReturn, 0);
@@ -371,7 +371,7 @@ class Slp {
         // Token distribution outputs
         config.tokenReceiverAddressArray.forEach((outputAddress) => {
             // Check for slp format addresses
-            if(!bchaddr.isSlpAddress(outputAddress)){
+            if (!bchaddr.isSlpAddress(outputAddress)) {
                 throw new Error("Not an SLP address.");
             }
             outputAddress = bchaddr.toCashAddress(outputAddress);
@@ -386,7 +386,7 @@ class Slp {
 
         // sign inputs
         let i = 0;
-        for(const txo of config.input_token_utxos){
+        for (const txo of config.input_token_utxos) {
             let paymentKeyPair = BITBOX.ECPair.fromWIF(txo.wif);
             transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis);
             i++;
@@ -395,7 +395,7 @@ class Slp {
         return transactionBuilder.build().toHex();
     }
 
-    static decodeTxOut(txOut){
+    static decodeTxOut(txOut) {
         // txOut = {
         //     txid: 
         //     tx: {} //transaction details from bitbox object
@@ -404,50 +404,50 @@ class Slp {
             token: '',
             quantity: 0
         };
-    
+
         const script = BITBOX.Script.toASM(Buffer.from(txOut.tx.vout[0].scriptPubKey.hex, 'hex')).split(' ');
 
-        if(script[0] !== 'OP_RETURN'){
+        if (script[0] !== 'OP_RETURN') {
             throw new Error('Not an OP_RETURN');
         }
-    
-        if(script[1] !== this.lokadIdHex){
+
+        if (script[1] !== this.lokadIdHex) {
             throw new Error('Not a SLP OP_RETURN');
         }
-    
-        if(script[2] != 'OP_1'){ // NOTE: bitcoincashlib-js converts hex 01 to OP_1 due to BIP62.3 enforcement
+
+        if (script[2] != 'OP_1') { // NOTE: bitcoincashlib-js converts hex 01 to OP_1 due to BIP62.3 enforcement
             throw new Error('Unknown token type');
         }
-    
+
         const type = Buffer.from(script[3], 'hex').toString('ascii').toLowerCase();
-    
-        if(type === 'genesis'){
-            if(txOut.vout !== 1){
+
+        if (type === 'genesis') {
+            if (txOut.vout !== 1) {
                 throw new Error('Not a SLP txout');
             }
             out.token = txOut.txid;
             out.quantity = new BigNumber(script[10], 16);
-        } else if(type === 'mint'){
-            if(txOut.vout !== 1){
+        } else if (type === 'mint') {
+            if (txOut.vout !== 1) {
                 throw new Error('Not a SLP txout');
             }
             out.token = script[4];
             out.quantity = new BigNumber(script[6], 16);
-        } else if(type === 'send'){
-            if(script.length <= txOut.vout + 4){
+        } else if (type === 'send') {
+            if (script.length <= txOut.vout + 4) {
                 throw new Error('Not a SLP txout');
             }
-    
+
             out.token = script[4];
             out.quantity = new BigNumber(script[txOut.vout + 4], 16);
         } else {
             throw new Error('Invalid tx type');
         }
-    
+
         return out;
     }
 
-    static calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress=null, bchChangeAddress=null, feeRate=1) {
+    static calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress = null, bchChangeAddress = null, feeRate = 1) {
         let outputs = 1
         let nonfeeoutputs = 546
         if (batonAddress != null) {
@@ -461,7 +461,7 @@ class Slp {
 
         let fee = BITBOX.BitcoinCash.getByteCount({ P2PKH: inputUtxoSize }, { P2PKH: outputs })
         fee += genesisOpReturnLength
-        fee += 10 // added to avoid insufficient priority
+        fee += 10 // added to account for OP_RETURN ammount of 0000000000000000
         fee *= feeRate
         console.log("GENESIS cost before outputs: " + fee.toString());
         fee += nonfeeoutputs
@@ -470,17 +470,17 @@ class Slp {
         return fee
     }
 
-    static calculateSendCost(sendOpReturnLength, inputUtxoSize, outputAddressArraySize, bchChangeAddress=null, feeRate=1) {
+    static calculateSendCost(sendOpReturnLength, inputUtxoSize, outputAddressArraySize, bchChangeAddress = null, feeRate = 1) {
         let outputs = outputAddressArraySize
         let nonfeeoutputs = outputAddressArraySize * 546
-        
-        if (bchChangeAddress != null){
+
+        if (bchChangeAddress != null) {
             outputs += 1
         }
 
         let fee = BITBOX.BitcoinCash.getByteCount({ P2PKH: inputUtxoSize }, { P2PKH: outputs })
         fee += sendOpReturnLength
-        fee += 10 // added to avoid insufficient priority
+        fee += 10 // added to account for OP_RETURN ammount of 0000000000000000
         fee *= feeRate
         console.log("SEND cost before outputs: " + fee.toString());
         fee += nonfeeoutputs
@@ -570,9 +570,9 @@ class SlpTokenType1 {
         if (batonVout == null) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
-            if (batonVout <= 1 || !(typeof batonVout == 'number')) 
+            if (batonVout <= 1 || !(typeof batonVout == 'number'))
                 throw Error("Baton vout must a number and greater than 1")
-            
+
             script.push(utils.getPushDataOpcode([batonVout]))
             script.push(batonVout)
         }
@@ -580,16 +580,16 @@ class SlpTokenType1 {
         // Initial Quantity
         let MAX_QTY = new BigNumber('18446744073709551615');
 
-        if(!initialQuantity._isBigNumber)
+        if (!initialQuantity._isBigNumber)
             throw Error("Amount must be an instance of BigNumber");
 
-        if(initialQuantity > MAX_QTY)
+        if (initialQuantity.isGreaterThan(MAX_QTY))
             throw new Error("Maximum genesis value exceeded.  Reduce input quantity below 18446744073709551615.");
 
-        if (initialQuantity < 0)
+        if (initialQuantity.isLessThan(0))
             throw Error("Genesis quantity must be greater than 0.");
 
-        if (initialQuantity % 1 != 0)
+        if (initialQuantity.modulo(1) != 0)
             throw Error("Genesis quantity must be a whole number.");
 
         initialQuantity = utils.int2FixedBuffer(initialQuantity)
@@ -637,20 +637,20 @@ class SlpTokenType1 {
             throw Error("Cannot have less than 1 SLP token output.")
         }
         outputQtyArray.forEach((outputQty) => {
-            if(!outputQty._isBigNumber)
+            if (!outputQty._isBigNumber)
                 throw Error("Amount must be an instance of BigNumber");
 
             let MAX_QTY = new BigNumber('18446744073709551615');
 
-            if(outputQty > MAX_QTY)
+            if (outputQty.isGreaterThan(MAX_QTY))
                 throw new Error("Maximum value exceeded.  Reduce input quantity below 18446744073709551615.");
 
-            if (outputQty < 0)
+            if (outputQty.isLessThan(0))
                 throw Error("All Send outputs must be greater than 0.");
-            
-            if (outputQty % 1 != 0)
+
+            if (outputQty.modulo(1) != 0)
                 throw Error("All Send outputs must be a whole number.");
-            
+
             let qtyBuffer = utils.int2FixedBuffer(outputQty)
             script.push(utils.getPushDataOpcode(qtyBuffer))
             qtyBuffer.forEach((item) => script.push(item))
