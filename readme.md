@@ -33,7 +33,7 @@ let bitboxproxy = require('slpjs').bitbox;
 let balances;
 (async function() {
   let addr = "simpleledger:qz9tzs6d5097ejpg279rg0rnlhz546q4fsnck9wh5m";
-  balances = await bitboxproxy.getTokenBalances(addr);
+  balances = await bitboxproxy.getAllTokenBalances(addr);
   console.log("balances: ", balances);
 })();
 
@@ -104,8 +104,7 @@ if(tokenId in balances){
     console.log("Token has 0 balance");
 }
 
-// Check for sufficient BCH balance to fuel txn
-if(sendCost > balances.satoshis_available)
+// TODO: Check there is sufficient BCH balance to fund miners fee.  Look at balances.satoshis_available value.
 
 let txid;
 (async function(){
