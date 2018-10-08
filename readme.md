@@ -6,6 +6,7 @@ SLPJS is a JavaScript Library for building Simple Ledger Protocol (SLP) token tr
 [![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
 
 
+
 # Installation
 
 #### For node.js
@@ -15,11 +16,105 @@ SLPJS is a JavaScript Library for building Simple Ledger Protocol (SLP) token tr
 ```<script src='https://unpkg.com/slpjs'></script>```
 
 
-# Example Usage
+
+# Usage
 
 The following examples show how this library should be used. For convenience, the SLPJS library has BITBOX and bitdb network functionality built-in and are used within these examples.
 
 The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is used to avoid precision issues with numbers having more than 15 significant digits.
+
+
+
+## GetAllTokenBalances() - for all token balances at an address
+
+```javascript
+let bitboxproxy = require('slpjs').bitbox;
+
+let balances;
+(async function() {
+  let addr = "simpleledger:qz9tzs6d5097ejpg279rg0rnlhz546q4fsnck9wh5m";
+  balances = await bitboxproxy.getTokenBalances(addr);
+  console.log("balances: ", balances);
+})();
+
+// RETURNS ALL BALANCES: 
+// NOTE: satoshis_avaliable = BCH funds not locked in SLP utxo
+
+// { satoshis_available: 190889,
+//   satoshis_locked_in_minting_baton: 546,
+//   satoshis_locked_in_token: 1092,
+//   '1cda254d0a995c713b7955298ed246822bee487458cd9747a91d9e81d9d28125': BigNumber { s: 1, e: 3, c: [ 1000 ] },
+//   '047918c612e94cce03876f1ad2bd6c9da43b586026811d9b0d02c3c3e910f972': BigNumber { s: 1, e: 2, c: [ 100 ] } 
+//   }
+
+```
+
+
+
+## sendToken() -  Sending an existing token
+
+You will need to register with the [bitdb.network](https://bitdb.network) website to obtain an API key.
+
+You must have a sufficient balance of BCH (satoshis) and the token in order to perform a send.
+
+```javascript
+let slp = require('slpjs').slp
+let bitboxproxy = require('slpjs').bitbox
+let bitdb = require('slpjs').bitdb
+let BigNumber = require('bignumber.js')
+
+let BITDB_KEY                = "qrg3fvfue463rc5genp2kyrj4mg6g2lpxst0y4wamw"; // <-- visit http://bitdb.network for your key
+let fundingAddress           = "simpleledger:qz9tzs6d5097ejpg279rg0rnlhz546q4fsnck9wh5m"; // <-- must be bitcoincash format
+let fundingWif               = "L44gh9WaAwhrQnRowTFFumHQ99TSuastDNErm3TYqbu3SxwcbunG"; // <-- compressed WIF format
+let tokenReceiverAddress     = "simpleledger:qr8fxllmjeupamay8c8k6x3fvp2w2hp08yh6k4x5dz"; // <-- must be simpleledger format
+let bchChangeReceiverAddress = "simpleledger:qz9tzs6d5097ejpg279rg0rnlhz546q4fsnck9wh5m"; // <-- simpleledger or bitcoincash format
+
+// 1) Set the token of interest for send transaction
+let tokenId = "1cda254d0a995c713b7955298ed246822bee487458cd9747a91d9e81d9d28125";
+
+// 2) Fetch criticial token information using bitdb
+let tokenDecimals;
+(async function(){
+    const { tokenName, tokenPrecision } = await bitdb.getTokenInformation(tokenId, BITDB_KEY);
+    tokenDecimals = tokenPrecision; 
+    console.log("Token precision: " + tokenPrecision.toString());
+})();
+
+// Wait for network response....
+
+// 3) Calculate send amount in "Token Satoshis".  In this example we want to just send 1 token unit to someone...
+let sendAmount = (new BigNumber(1)).times(10**tokenDecimals);  // Don't forget to account for token precision
+
+// 4) Check that token balance is greater than our desired sendAmount
+let balances; 
+(async function() {
+  balances = await bitboxproxy.getAllTokenBalances(fundingAddress);
+  console.log(balances);
+})();
+
+// Wait for network response...
+
+// Check for sufficient Token Balance
+if(tokenId in balances){
+    let balance = balances[tokenId].times(10**tokenDecimals);
+    console.log("Token balance: " + balance.toString());
+    if(sendAmount > balance)
+        console.log("Insufficient token balance!");
+} else {
+    console.log("Token has 0 balance");
+}
+
+// Check for sufficient BCH balance to fuel txn
+if(sendCost > balances.satoshis_available)
+
+let txid;
+(async function(){
+    txid = await bitboxproxy.sendToken(tokenId, sendAmount, fundingAddress, fundingWif, tokenReceiverAddress, bchChangeReceiverAddress);
+    console.log("token send complete.");
+})();
+```
+
+
 
 ## Creating a new SLP token - GENESIS Transaction
 
@@ -57,7 +152,7 @@ let initialQty = (new BigNumber(1000000)).times(10**decimals);
 let genesisOpReturn = slp.buildGenesisOpReturn({ 
     ticker: "TOKEN21",
     name: "21st Century Token",
-    urlOrEmail: "issuer@gmx.com",
+    urlOrEmail: "info@slp.cash",
     hash: null, 
     decimals: decimals,
     batonVout: 2,
@@ -88,84 +183,7 @@ let genesisTxid;
 
 ```
 
-## Sending an existing token - SEND Transaction
 
-Creating a SEND transaction is similar to creating a GENESIS transaction, except the outputs from a previous token transaction should be included as inputs in the SEND transaction.  A special SEND transaction OP_RETURN message is created using `buildSendOpReturn()` method and and added as the first output of the transaction.  The SEND transaction hex is created using the `buildRawSendTx()` method.
-
-NOTE: In order to fetch token information using bitdb you will need to register with the [bitdb.network](https://bitdb.network) website to obtain an API key.
-
-```javascript
-let slp = require('slpjs').slp
-let network = require('slpjs').bitbox
-let bitdb = require('slpjs').bitdb
-let BigNumber = require('bignumber.js')
-
-let BITDB_KEY                = ""; // <-- visit http://bitdb.network for api key
-let fundingAddress           = ""; // <-- must be bitcoincash format
-let fundingWif               = ""; // <-- compressed WIF format
-let tokenReceiverAddress     = ""; // <-- must be simpleledger format
-let bchChangeReceiverAddress = ""; // <-- simpleledger or bitcoincash format
-
-// 1) Set the token of interest for send transaction
-let tokenId = "c950c236ae779c8c3b35bffd6e19a64c3adda13ab6d3215fc8f664200b433d0f";
-
-// 2) Fetch criticial token information using bitdb
-let tokenDecimals;
-(async function(){
-    const { tokenName, tokenPrecision } = await bitdb.getTokenInformation(tokenId, BITDB_KEY);
-    tokenDecimals = tokenPrecision; 
-})();
-
-// Wait for network response...
-
-// 3) Get all utxos for our address and filter out UTXOs for other tokens
-let inputSet = [];
-let validTokenQuantity = new BigNumber(0);
-(async function(){
-    let utxoSet = await network.getUtxoWithTxDetails(fundingAddress);
-    for(let utxo of utxoSet){
-        try {
-            utxo.slp = slp.decodeTxOut(utxo);
-            if(utxo.slp.token != tokenId)
-                continue;
-            validTokenQuantity = validTokenQuantity.plus(utxo.slp.quantity);
-        } catch(_) {}
-        
-        // sweeping is easiest way to manage coin selection
-        inputSet.push(utxo);
-    }
-})();
-
-// Wait for network response...
-
-inputSet = inputSet.map(utxo => ({ txid: utxo.txid, vout: utxo.vout, satoshis: utxo.satoshis, wif: fundingWif }));
-
-// 4) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
-let tokenSendAmount = (new BigNumber(100)).times(10**tokenDecimals);
-let tokenChangeAmount = validTokenQuantity.minus(tokenSendAmount);
-
-// 5) Create the Send OP_RETURN message
-let sendOpReturn = slp.buildSendOpReturn({
-    tokenIdHex: tokenId,
-    outputQtyArray: [tokenSendAmount, tokenChangeAmount],
-})
-
-// 6) Create the raw Send transaction hex
-let sendTxHex = slp.buildRawSendTx({
-    slpSendOpReturn: sendOpReturn,
-    input_token_utxos: inputSet,
-    tokenReceiverAddressArray: [
-        tokenReceiverAddress, tokenReceiverAddress
-    ],
-    bchChangeReceiverAddress: bchChangeReceiverAddress
-})
-
-// 7) Broadcast the transaction over the network using BITBOX
-let sendTxid;
-(async function(){
-    sendTxid = await network.sendTx(sendTxHex);
-})(); 
-```
 
 ### Address Conversion to SLP address format
 
@@ -180,3 +198,4 @@ let cashAddr = utils.toCashAddress(slpAddr);
 console.log(cashAddr);
 // bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf
 ```
+
