@@ -72,7 +72,7 @@ let bchChangeReceiverAddress = "simpleledger:qz9tzs6d5097ejpg279rg0rnlhz546q4fsn
 // 1) Set the token of interest for send transaction
 let tokenId = "1cda254d0a995c713b7955298ed246822bee487458cd9747a91d9e81d9d28125";
 
-// 2) Fetch criticial token information using bitdb
+// 2) Fetch critical token information using bitdb
 let tokenDecimals;
 (async function(){
     const { tokenName, tokenPrecision } = await bitdb.getTokenInformation(tokenId, BITDB_KEY);
