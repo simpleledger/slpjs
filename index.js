@@ -4,6 +4,7 @@ const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const slp = require('./lib/slp')
     , utils = require('./lib/utils')
     , bitdb = require('./lib/bitdbproxy')
+    , validation = require('./lib/proxyvalidation')
     , bitbox = require('./lib/bitboxnetwork');
 
 module.exports = {
@@ -11,5 +12,6 @@ module.exports = {
     utils: utils,
     bitbox: bitbox, 
     bitdb: bitdb, 
+    validation: validation,
     bitboxsdk: BITBOX 
 }
