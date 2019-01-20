@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2015",
+        "moduleResolution": "node",
+        "lib":["es2017"]
+    },
+    "include": [
+        "index.ts",
+        "./lib" 
+    ]
+}

@@ -1,11 +1,12 @@
 # slpjs
 
-SLPJS is a JavaScript Library for building Simple Ledger Protocol (SLP) token transactions.  GENESIS and SEND transaction types are currently supported for [SLP Token Type 1](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md).  For convenience, BITBOX and bitdb network functionality have been built into the library.
+SLPJS is a JavaScript Library for building Simple Ledger Protocol (SLP) token transactions.  
 
+GENESIS and SEND transaction types are currently supported for [SLP Token Type 1](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md).  
+
+For convenience, BITBOX and bitdb network functionality have been built into the library.  However, SLP-SDK may be more appropriate in some instances.
 
 [![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
-
-
 
 # Installation
 
@@ -16,13 +17,15 @@ SLPJS is a JavaScript Library for building Simple Ledger Protocol (SLP) token tr
 ```<script src='https://unpkg.com/slpjs'></script>```
 
 
-
 # Usage
 
-The following examples show how this library should be used. For convenience, the SLPJS library has BITBOX and bitdb network functionality built-in and are used within these examples.
+
+
+# Examples
+
+The following examples show how this library should be used. For convenience, the SLPJS library has  functionality built-in for BITBOX and bitdb proxy networks.
 
 The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is used to avoid precision issues with numbers having more than 15 significant digits.
-
 
 
 ## GetAllTokenBalances() - for all token balances at an address
@@ -49,8 +52,6 @@ let balances;
 
 ```
 
-
-
 ## sendToken() -  Sending an existing token
 
 You will need to register with the [bitdb.network](https://bitdb.network) website to obtain an API key.
@@ -63,7 +64,6 @@ let bitboxproxy = require('slpjs').bitbox
 let bitdb = require('slpjs').bitdb
 let BigNumber = require('bignumber.js')
 
-let BITDB_KEY                = "qrg3fvfue463rc5genp2kyrj4mg6g2lpxst0y4wamw"; // <-- visit http://bitdb.network for your key
 let fundingAddress           = "simpleledger:qz9tzs6d5097ejpg279rg0rnlhz546q4fsnck9wh5m"; // <-- must be bitcoincash format
 let fundingWif               = "L44gh9WaAwhrQnRowTFFumHQ99TSuastDNErm3TYqbu3SxwcbunG"; // <-- compressed WIF format
 let tokenReceiverAddress     = "simpleledger:qr8fxllmjeupamay8c8k6x3fvp2w2hp08yh6k4x5dz"; // <-- must be simpleledger format
@@ -75,8 +75,8 @@ let tokenId = "1cda254d0a995c713b7955298ed246822bee487458cd9747a91d9e81d9d28125"
 // 2) Fetch critical token information using bitdb
 let tokenDecimals;
 (async function(){
-    const { tokenName, tokenPrecision } = await bitdb.getTokenInformation(tokenId, BITDB_KEY);
-    tokenDecimals = tokenPrecision; 
+    const tokenInfo = await bitdb.getTokenInformation(tokenId);
+    tokenDecimals = tokenInfo.decimals; 
     console.log("Token precision: " + tokenPrecision.toString());
 })();
 
@@ -112,8 +112,6 @@ let txid;
     console.log("token send complete.");
 })();
 ```
-
-
 
 ## Creating a new SLP token - GENESIS Transaction
 
@@ -182,8 +180,6 @@ let genesisTxid;
 
 ```
 
-
-
 ### Address Conversion to SLP address format
 
 ```javascript
@@ -198,3 +194,9 @@ console.log(cashAddr);
 // bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf
 ```
 
+## Change Log
+
+### v0.X
+* [Breaking Change] Removed `verifyTransactions` method from `BitdbProxy` class, should use the new `ProxyValidator` class. 
+* Added `ProxyValidator` class.
+* 

@@ -32,15 +32,19 @@
   },
   "homepage": "https://github.com/simpleledger/slpjs#readme",
   "devDependencies": {
+    "@types/node": "^10.12.18",
+    "bitbox-sdk": "^2.3.0",
     "browserify": "^16.2.2",
     "mocha": "^5.1.1",
+    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
+    "ts-node": "^7.0.1",
+    "tsify": "^4.0.1",
     "uglify-es": "^3.3.9"
   },
   "dependencies": {
     "axios": "^0.18.0",
     "bchaddrjs-slp": "git+https://github.com/simpleledger/bchaddrjs.git",
     "bignumber.js": "^7.2.1",
-    "bitbox-sdk": "^2.2.0",
     "slp-balances": "^0.1.0"
   }
 }
