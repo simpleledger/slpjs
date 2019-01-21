@@ -3,6 +3,10 @@
 # dependencies
 /node_modules
 
+# ignore built js files
+lib/*.js
+index.js
+
 # testing
 /coverage
 

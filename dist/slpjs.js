@@ -40,7 +40,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 class BitboxNetwork {
     constructor(BITBOX, proxyUrl = 'https://validate.simpleledger.info') {
         this.BITBOX = BITBOX;
-        this.slp = new slp_1.Slp();
+        this.slp = new slp_1.Slp(BITBOX);
         this.validator = new proxyvalidation_1.ProxyValidation(proxyUrl);
     }
     getUtxo(address) {
@@ -57,7 +57,7 @@ class BitboxNetwork {
             // try to parse out SLP object from SEND or GENESIS txn type
             for (let txOut of utxos) {
                 try {
-                    txOut.slp = this.slp.decodeTxOut(txOut);
+                    txOut.slp = this.slp.parseSlpOutputScript(txOut.tx.vout[0].scriptPubKey.hex);
                 }
                 catch (e) {
                     if (e.message === "Possible mint baton") {
@@ -82,10 +82,10 @@ class BitboxNetwork {
             // loop through UTXO set and accumulate balances for each valid token.
             for (const txOut of utxos) {
                 if ("slp" in txOut && txOut.txid in validSLPTx) {
-                    if (!(txOut.slp.token in bals)) {
-                        bals[txOut.slp.token] = new bignumber_js_1.default(0);
+                    if (!(txOut.slp.tokenIdHex in bals)) {
+                        bals[txOut.slp.tokenIdHex] = new bignumber_js_1.default(0);
                     }
-                    bals[txOut.slp.token] = bals[txOut.slp.token].plus(txOut.slp.quantity);
+                    bals[txOut.slp.tokenIdHex] = bals[txOut.slp.tokenIdHex].plus(txOut.slp.genesisOrMintQuantity);
                     bals.satoshis_locked_in_token += txOut.satoshis;
                 }
                 else if (txOut.baton === true) {
@@ -116,8 +116,8 @@ class BitboxNetwork {
             let utxoSet = yield this.getUtxoWithTxDetails(fundingAddress_cashfmt);
             for (let utxo of utxoSet) {
                 try {
-                    utxo.slp = this.slp.decodeTxOut(utxo);
-                    if (utxo.slp.token != tokenId)
+                    utxo.slp = this.slp.parseSlpOutputScript(utxo.tx.vout[0].scriptPubKey.hex);
+                    if (utxo.slp.tokenIdHex != tokenId)
                         continue;
                 }
                 catch (_) { }
@@ -127,19 +127,17 @@ class BitboxNetwork {
             // find the valid SLP tokens and compute the valid input balance.
             let validSLPTx = yield this.validator.validateTransactions([
                 ...new Set(utxoSet.filter(txOut => {
-                    if (txOut.slp == undefined) {
+                    if (txOut.slp == undefined)
                         return false;
-                    }
-                    if (txOut.slp.token != tokenId) {
+                    if (txOut.slp.tokenIdHex != tokenId)
                         return false;
-                    }
                     return true;
                 }).map(txOut => txOut.txid))
             ]);
             let validTokenQuantity = new bignumber_js_1.default(0);
             for (const txOut of inputUtxoSet) {
                 if ("slp" in txOut && txOut.txid in validSLPTx) {
-                    validTokenQuantity = validTokenQuantity.plus(txOut.slp.quantity);
+                    validTokenQuantity = validTokenQuantity.plus(txOut.slp.genesisOrMintQuantity);
                 }
             }
             //inputUtxoSet = inputUtxoSet.map(utxo => ({ txid: utxo.txid, vout: utxo.vout, satoshis: utxo.satoshis, wif: fundingWif }));
@@ -325,7 +323,7 @@ class BitdbProxy {
             }
             let tokenDetails = {
                 transactionType: __1.TokenTransactionType.GENESIS,
-                tokenId: tokenId,
+                tokenIdHex: tokenId,
                 type: parseInt(list[0].token_type, 16),
                 timestamp: list[0].timestamp,
                 symbol: list[0].symbol,
@@ -333,8 +331,9 @@ class BitdbProxy {
                 documentUri: list[0].document,
                 documentSha256: Buffer.from(list[0].document_sha256),
                 decimals: parseInt(list[0].decimals, 16) || 0,
-                baton: list[0].baton === '02',
-                quantity: new bignumber_js_1.default(list[0].quantity, 16).dividedBy(Math.pow(10, (parseInt(list[0].decimals, 16))))
+                baton: Buffer.from(list[0].baton, 'hex').readUIntBE(0, 1) >= 2,
+                batonVout: Buffer.from(list[0].baton, 'hex').readUIntBE(0, 1),
+                genesisOrMintQuantity: new bignumber_js_1.default(list[0].quantity, 16).dividedBy(Math.pow(10, (parseInt(list[0].decimals, 16))))
             };
             return tokenDetails;
         });
@@ -389,14 +388,6 @@ class ProxyValidation {
             // Filter array to only valid txid results
             const validateResults = yield axios_1.default.all(validatePromises);
             return validateResults.filter((result) => result.length > 0);
-            // if(txIds.length === 0)
-            //     return [];
-            // const response = await axios({
-            //     method: 'GET',
-            //     url: proxyValidatorUrl + txIds.join(','),
-            //     json: true,
-            // });
-            // return response.data.response.filter(i => !i.errors).map(i => i.tx);
         });
     }
 }
@@ -411,7 +402,7 @@ const bignumber_js_1 = require("bignumber.js");
 const __1 = require("..");
 let slptokentype1 = require('./slptokentype1');
 class Slp {
-    cosntructor(BITBOX) {
+    constructor(BITBOX) {
         this.BITBOX = BITBOX;
     }
     get lokadIdHex() { return "534c5000"; }
@@ -542,109 +533,186 @@ class Slp {
         }
         return transactionBuilder.build().toHex();
     }
-    decodeTxOut(txOut) {
-        // txOut = {
-        //     txid: 
-        //     tx: {} //transaction details from bitbox object
-        // }
-        let out;
-        //const vout = parseInt(txOut.vout);
-        const script = this.BITBOX.Script.toASM(Buffer.from(txOut.tx.vout[0].scriptPubKey.hex, 'hex')).split(' ');
-        if (script[0] !== 'OP_RETURN') {
-            throw new Error('Not an OP_RETURN');
+    parseSlpOutputScript(outputScript) {
+        let slpMsg = {};
+        let chunks;
+        try {
+            chunks = this.parseOpReturnToChunks(outputScript);
         }
-        if (script[1] !== this.lokadIdHex) {
-            throw new Error('Not a SLP OP_RETURN');
+        catch (e) {
+            //console.log(e);
+            throw Error('Bad OP_RETURN');
         }
-        if (script[2] != 'OP_1') { // NOTE: bitcoincashlib-js converts hex 01 to OP_1 due to BIP62.3 enforcement
-            throw new Error('Unknown token type');
+        if (chunks.length === 0)
+            throw Error('Empty OP_RETURN');
+        if (!chunks[0].equals(Buffer.from(this.lokadIdHex, 'hex')))
+            throw Error('No SLP');
+        if (chunks.length === 1)
+            throw Error("Missing token_type");
+        // # check if the token version is supported
+        slpMsg.type = Slp.parseChunkToInt(chunks[1], 1, 2, true);
+        if (slpMsg.type !== __1.TokenType.TokenType1)
+            throw Error('Unsupported token type:' + slpMsg.type);
+        if (chunks.length === 2)
+            throw Error('Missing SLP transaction type');
+        try {
+            slpMsg.transactionType = __1.TokenTransactionType[chunks[2].toString('ascii')];
         }
-        const type = Buffer.from(script[3], 'hex').toString('ascii').toLowerCase();
-        if (type === 'genesis') {
-            out.transactionType = __1.TokenTransactionType.GENESIS;
-            if (typeof script[9] === 'string' && script[9].startsWith('OP_')) {
-                script[9] = parseInt(script[9].slice(3)).toString(16);
-            }
-            if (script[9] === 'OP_2' && txOut.vout === 2 || parseInt(script[9]) === txOut.vout) {
-                out.tokenId = txOut.txid;
-                out.baton = true;
-                return out;
-            }
-            if (txOut.vout !== 1) {
-                throw new Error('Not a SLP txout');
-            }
-            out.tokenId = txOut.txid;
-            out.quantity = new bignumber_js_1.default(script[10], 16);
+        catch (_) {
+            throw Error('Bad transaction type');
         }
-        else if (type === 'mint') {
-            out.transactionType = __1.TokenTransactionType.MINT;
-            if (typeof script[5] === 'string' && script[5].startsWith('OP_')) {
-                script[5] = parseInt(script[5].slice(3)).toString(16);
+        if (slpMsg.transactionType === __1.TokenTransactionType.GENESIS) {
+            if (chunks.length !== 10)
+                throw Error('GENESIS with incorrect number of parameters');
+            slpMsg.symbol = chunks[3] ? chunks[3].toString('utf8') : '';
+            slpMsg.name = chunks[4] ? chunks[4].toString('utf8') : '';
+            slpMsg.documentUri = chunks[5] ? chunks[5].toString('utf8') : '';
+            slpMsg.documentSha256 = chunks[6] ? chunks[6] : null;
+            if (slpMsg.documentSha256) {
+                if (slpMsg.documentSha256.length !== 0 && slpMsg.documentSha256.length !== 32)
+                    throw Error('Token document hash is incorrect length');
             }
-            if (script[5] === 'OP_2' && txOut.vout === 2 || parseInt(script[5]) === txOut.vout) {
-                out.tokenId = script[4];
-                out.baton = true;
-                return out;
+            slpMsg.decimals = Slp.parseChunkToInt(chunks[7], 1, 1, true);
+            if (slpMsg.decimals > 9)
+                throw Error('Too many decimals');
+            slpMsg.batonVout = chunks[8] ? Slp.parseChunkToInt(chunks[8], 1, 1) : null;
+            if (slpMsg.batonVout !== null) {
+                if (slpMsg.batonVout < 2)
+                    throw Error('Mint baton cannot be on vout=0 or 1');
+                slpMsg.baton = true;
             }
-            if (txOut.vout !== 1) {
-                throw new Error('Not a SLP txout');
-            }
-            out.tokenId = script[4];
-            if (typeof script[6] === 'string' && script[6].startsWith('OP_')) {
-                script[6] = parseInt(script[6].slice(3)).toString(16);
-            }
-            out.quantity = new bignumber_js_1.default(script[6], 16);
+            slpMsg.genesisOrMintQuantity = new bignumber_js_1.default(chunks[9].readUInt8(0));
         }
-        else if (type === 'send') {
-            out.transactionType = __1.TokenTransactionType.SEND;
-            if (script.length <= txOut.vout + 4) {
-                throw new Error('Not a SLP txout');
-            }
-            out.tokenId = script[4];
-            if (typeof script[txOut.vout + 4] === 'string' && script[txOut.vout + 4].startsWith('OP_')) {
-                script[txOut.vout + 4] = parseInt(script[txOut.vout + 4].slice(3)).toString(16);
-            }
-            out.quantity = new bignumber_js_1.default(script[txOut.vout + 4], 16);
+        else if (slpMsg.transactionType === __1.TokenTransactionType.SEND) {
+            if (chunks.length < 4)
+                throw Error('SEND with too few parameters');
+            if (chunks[3].length !== 32)
+                throw Error('token_id is wrong length');
+            slpMsg.tokenIdHex = chunks[3].toString('hex');
+            // # Note that we put an explicit 0 for  ['token_output'][0] since it
+            // # corresponds to vout=0, which is the OP_RETURN tx output.
+            // # ['token_output'][1] is the first token output given by the SLP
+            // # message, i.e., the number listed as `token_output_quantity1` in the
+            // # spec, which goes to tx output vout=1.
+            slpMsg.sendOutputs = [];
+            slpMsg.sendOutputs.push(new bignumber_js_1.default(0));
+            chunks.slice(4).forEach(chunk => {
+                if (chunk.length !== 8)
+                    throw Error('SEND quantities must be 8-bytes each.');
+                slpMsg.sendOutputs.push(new bignumber_js_1.default(chunk.readUInt8(0)));
+            });
+            // # maximum 19 allowed token outputs, plus 1 for the explicit [0] we inserted.
+            if (slpMsg.sendOutputs.length < 2)
+                throw Error('Missing output amounts');
+            if (slpMsg.sendOutputs.length > 20)
+                throw Error('More than 19 output amounts');
         }
-        else {
-            throw new Error('Invalid tx type');
+        else if (slpMsg.transactionType === __1.TokenTransactionType.MINT) {
+            if (chunks.length != 6)
+                throw Error('MINT with incorrect number of parameters');
+            if (chunks[3].length != 32)
+                throw Error('token_id is wrong length');
+            slpMsg.tokenIdHex = chunks[3].toString('hex');
+            slpMsg.batonVout = chunks[4] ? Slp.parseChunkToInt(chunks[4], 1, 1) : null;
+            if (slpMsg.batonVout !== null) {
+                if (slpMsg.batonVout < 2)
+                    throw Error('Mint baton cannot be on vout=0 or 1');
+                slpMsg.baton = true;
+            }
+            slpMsg.genesisOrMintQuantity = new bignumber_js_1.default(chunks[5].readUInt8(0));
         }
-        return out;
+        else
+            throw Error('Bad transaction type');
+        return slpMsg;
     }
-    decodeMetadata(txDetails) {
-        // txOut = {
-        //     txid: 
-        //     tx: {} //transaction details from bitbox object
-        // }
-        let out = {
-            token: '',
-            quantity: null,
-            ticker: '',
-            name: '',
-            decimals: null
-        };
-        const script = this.BITBOX.Script.toASM(Buffer.from(txDetails.vout[0].scriptPubKey.hex, 'hex')).split(' ');
-        if (script[0] !== 'OP_RETURN') {
-            throw new Error('Not an OP_RETURN');
+    static parseChunkToInt(intBytes, minByteLen, maxByteLen, raise_on_Null = false) {
+        // # Parse data as unsigned-big-endian encoded integer.
+        // # For empty data different possibilities may occur:
+        // #      minByteLen <= 0 : return 0
+        // #      raise_on_Null == False and minByteLen > 0: return None
+        // #      raise_on_Null == True and minByteLen > 0:  raise SlpInvalidOutputMessage
+        if (intBytes.length >= minByteLen && intBytes.length <= maxByteLen)
+            return intBytes.readUIntBE(0, intBytes.length);
+        if (intBytes.length === 0 && !raise_on_Null)
+            return null;
+        throw Error('Field has wrong length');
+    }
+    // get list of data chunks resulting from data push operations
+    parseOpReturnToChunks(script, allow_op_0 = false, allow_op_number = false) {
+        // """Extract pushed bytes after opreturn. Returns list of bytes() objects,
+        // one per push.
+        let ops;
+        // Strict refusal of non-push opcodes; bad scripts throw OpreturnError."""
+        try {
+            ops = this.getScriptOperations(script);
         }
-        if (script[1] !== this.lokadIdHex) {
-            throw new Error('Not a SLP OP_RETURN');
+        catch (e) {
+            //console.log(e);
+            throw Error('Script error');
         }
-        if (script[2] != 'OP_1') { // NOTE: bitcoincashlib-js converts hex 01 to OP_1 due to BIP62.3 enforcement
-            throw new Error('Unknown token type');
+        if (ops[0].opcode != this.BITBOX.Script.opcodes.OP_RETURN)
+            throw Error('No OP_RETURN');
+        let chunks = [];
+        ops.slice(1).forEach(opitem => {
+            if (opitem.opcode > this.BITBOX.Script.opcodes.OP_16)
+                throw Error("Non-push opcode");
+            if (opitem.opcode > this.BITBOX.Script.opcodes.OP_PUSHDATA4) {
+                if (opitem.opcode === 80)
+                    throw Error('Non-push opcode');
+                if (!allow_op_number)
+                    throw Error('OP_1NEGATE to OP_16 not allowed');
+                if (opitem.opcode === this.BITBOX.Script.opcodes.OP_1NEGATE)
+                    opitem.data = Buffer.from([0x81]);
+                else // OP_1 - OP_16
+                    opitem.data = Buffer.from([opitem.opcode - 80]);
+            }
+            if (opitem.opcode === this.BITBOX.Script.opcodes.OP_0 && !allow_op_0) {
+                throw Error('OP_0 not allowed');
+            }
+            chunks.push(opitem.data);
+        });
+        //console.log(chunks);
+        return chunks;
+    }
+    // Get a list of operations with accompanying push data (if a push opcode)
+    getScriptOperations(script) {
+        let ops = [];
+        try {
+            let n = 0;
+            let dlen;
+            while (n < script.length) {
+                let op = { opcode: script[n], data: null };
+                n += 1;
+                if (op.opcode <= this.BITBOX.Script.opcodes.OP_PUSHDATA4) {
+                    if (op.opcode < this.BITBOX.Script.opcodes.OP_PUSHDATA1)
+                        dlen = op.opcode;
+                    else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA1) {
+                        dlen = script[n];
+                        n += 1;
+                    }
+                    else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA2) {
+                        dlen = script.slice(n, n + 2).readUIntLE(0, 2);
+                        n += 2;
+                    }
+                    else {
+                        dlen = script.slice(n, n + 4).readUIntLE(0, 4);
+                        n += 4;
+                    }
+                    if ((n + dlen) > script.length) {
+                        throw Error('IndexError');
+                    }
+                    if (dlen > 0)
+                        op.data = script.slice(n, n + dlen);
+                    n += dlen;
+                }
+                ops.push(op);
+            }
         }
-        const type = Buffer.from(script[3], 'hex').toString('ascii').toLowerCase();
-        if (type === 'genesis') {
-            out.token = txDetails.txid;
-            out.ticker = Buffer.from(script[4], 'hex').toString('ascii');
-            out.name = Buffer.from(script[5], 'hex').toString('ascii');
-            out.decimals = script[8].startsWith('OP_') ? parseInt(script[8].slice(3)) : parseInt(script[8], 16);
-            out.quantity = new bignumber_js_1.default(script[10], 16);
+        catch (e) {
+            //console.log(e);
+            throw Error('truncated script');
         }
-        else {
-            throw new Error('Invalid tx type');
-        }
-        return out;
+        return ops;
     }
     calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress = null, bchChangeAddress = null, feeRate = 1) {
         let outputs = 1;
@@ -877,7 +945,7 @@ class Utils {
             throw Error("Amount must be an instance of BigNumber");
         }
         let hex = amount.toString(16);
-        //hex = hex.padStart(16, '0');
+        hex = hex.padStart(16, '0');
         return Buffer.from(hex, 'hex');
     }
     // This is for encoding Script in scriptPubKey OP_RETURN scripts, where BIP62.3 does not apply
