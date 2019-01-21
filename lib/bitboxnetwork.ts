@@ -2,11 +2,12 @@ import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
 import BigNumber from 'bignumber.js';
 import _ from 'lodash';
 import bchaddr from 'bchaddrjs';
-import { AddressUtxoResult } from 'bitbox-sdk/typings/Address';
+import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/typings/Address';
 import { AddressUtxoResultExtended, TokenBalancesResult } from '..';
 
 import { Slp } from './slp';
 import { ProxyValidation } from './proxyvalidation';
+import { TxnDetails } from 'bitbox-sdk/typings/Transaction';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -17,7 +18,7 @@ export class BitboxNetwork {
 
     constructor(BITBOX: BITBOX, proxyUrl='https://validate.simpleledger.info') {
         this.BITBOX = BITBOX;
-        this.slp = new Slp();
+        this.slp = new Slp(BITBOX);
         this.validator = new ProxyValidation(proxyUrl);
     }
     
@@ -34,7 +35,7 @@ export class BitboxNetwork {
         // try to parse out SLP object from SEND or GENESIS txn type
         for(let txOut of utxos) {
             try {
-                txOut.slp = this.slp.decodeTxOut(txOut);
+                txOut.slp = this.slp.parseSlpOutputScript(txOut.tx.vout[0].scriptPubKey.hex);
             } catch(e) {
                 if(e.message === "Possible mint baton"){
                     txOut.baton = true;
@@ -61,11 +62,11 @@ export class BitboxNetwork {
         // loop through UTXO set and accumulate balances for each valid token.
         for (const txOut of utxos) {
             if ("slp" in txOut && txOut.txid in validSLPTx) {
-                if (!(txOut.slp.token in bals)) {
-                    bals[txOut.slp.token] = new BigNumber(0);
+                if (!(txOut.slp.tokenIdHex in bals)) {
+                    bals[txOut.slp.tokenIdHex] = new BigNumber(0);
                 }
-                bals[txOut.slp.token] = bals[txOut.slp.token].plus(
-                    txOut.slp.quantity
+                bals[txOut.slp.tokenIdHex] = bals[txOut.slp.tokenIdHex].plus(
+                    txOut.slp.genesisOrMintQuantity
                 );
                 bals.satoshis_locked_in_token += txOut.satoshis;
             } else if(txOut.baton === true) {
@@ -88,8 +89,7 @@ export class BitboxNetwork {
     }
 
     // fundingAddress and tokenReceiverAddress must be in SLP format.
-    async sendToken(tokenId: string, sendAmount: BigNumber, fundingAddress: string, fundingWif: string, tokenReceiverAddress: string, changeReceiverAddress: string) {
-    
+    async sendToken(tokenId: string, sendAmount: BigNumber, fundingAddress: string, fundingWif: string, tokenReceiverAddress: string, changeReceiverAddress: string) {  
         // convert address to cashAddr from SLP format.
         let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
 
@@ -98,8 +98,8 @@ export class BitboxNetwork {
         let utxoSet = await this.getUtxoWithTxDetails(fundingAddress_cashfmt);
         for(let utxo of utxoSet){
             try {
-                utxo.slp = this.slp.decodeTxOut(utxo);
-                if(utxo.slp.token != tokenId)
+                utxo.slp = this.slp.parseSlpOutputScript(utxo.tx.vout[0].scriptPubKey.hex);
+                if(utxo.slp.tokenIdHex != tokenId)
                     continue;
             } catch(_) {}
             
@@ -110,12 +110,10 @@ export class BitboxNetwork {
         // find the valid SLP tokens and compute the valid input balance.
         let validSLPTx = await this.validator.validateTransactions([
             ...new Set(utxoSet.filter(txOut => {
-                if(txOut.slp == undefined){
+                if(txOut.slp == undefined)
                     return false;
-                }
-                if(txOut.slp.token != tokenId){
+                if(txOut.slp.tokenIdHex != tokenId)
                     return false;
-                }
                 return true;
             }).map(txOut => txOut.txid))
         ]);
@@ -123,7 +121,7 @@ export class BitboxNetwork {
         
         for (const txOut of inputUtxoSet) {
             if ("slp" in txOut && txOut.txid in validSLPTx) {
-                validTokenQuantity = validTokenQuantity.plus(txOut.slp.quantity);
+                validTokenQuantity = validTokenQuantity.plus(txOut.slp.genesisOrMintQuantity);
             }
         }
 
@@ -201,7 +199,7 @@ export class BitboxNetwork {
         }));
     
         // concat the chunked arrays
-        txDetails = [].concat(...txDetails);
+        txDetails = <TxnDetails[]>[].concat(...txDetails);
     
         for(let i = 0; i < set.length; i++){
             set[i].tx = txDetails[i];
@@ -210,8 +208,8 @@ export class BitboxNetwork {
         return set;
     }
     
-    async getTransactionDetailsWithRetry(txid, retries = 40) {
-        let result;
+    async getTransactionDetailsWithRetry(txid: string, retries = 40) {
+        let result: TxnDetails | TxnDetails[];
         let count = 0;
         while(result == undefined){
             result = await this.BITBOX.Transaction.details(txid);
@@ -224,11 +222,11 @@ export class BitboxNetwork {
         return result; 
     }
 
-	async getAddressDetailsWithRetry(address, retries = 40) {
+	async getAddressDetailsWithRetry(address: string, retries = 40) {
         // must be a cash or legacy addr
         if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
-		let result;
+		let result: AddressDetailsResult[];
 		let count = 0;
 		while(result == undefined){
 			result = await this.BITBOX.Address.details(address);
@@ -241,13 +239,13 @@ export class BitboxNetwork {
 		return result;
 	}
 
-    async sendTx(hex) {
+    async sendTx(hex: string) {
         let res = await this.BITBOX.RawTransactions.sendRawTransaction(hex);
         console.log(res);
         return res;
     }
 
-    async monitorForPayment(paymentAddress, fee, onPaymentCB) {
+    async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function) {
         // must be a cash or legacy addr
         if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");

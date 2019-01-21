@@ -6,7 +6,7 @@ export class ProxyValidation {
         this.proxyUrl = proxyUrl;
     }
 
-    async isValidSlpTxid(txid) {
+    async isValidSlpTxid(txid: string) {
         const result = await axios({
             method: "post",
             url: this.proxyUrl,
@@ -35,15 +35,5 @@ export class ProxyValidation {
         // Filter array to only valid txid results
         const validateResults = await axios.all(validatePromises)
         return validateResults.filter((result) => result.length > 0);
-
-        // if(txIds.length === 0)
-        //     return [];
-
-        // const response = await axios({
-        //     method: 'GET',
-        //     url: proxyValidatorUrl + txIds.join(','),
-        //     json: true,
-        // });
-        // return response.data.response.filter(i => !i.errors).map(i => i.tx);
     }
 }

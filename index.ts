@@ -11,20 +11,18 @@ export enum TokenType {
 
 export interface TokenTransactionDetails {
     transactionType: TokenTransactionType;
-    tokenId: string;
+    tokenIdHex: string;
     type: TokenType;
     timestamp: string;
-    symbol: string;
-    name: string;
-    documentUri: string; 
-    documentSha256: Buffer;
-    decimals: number;
-    baton: boolean;
-    quantity: BigNumber;
-}
-
-export interface TokenSendDetails {
-    quantity: BigNumber;
+    symbol?: string;
+    name?: string;
+    documentUri?: string; 
+    documentSha256?: Buffer;
+    decimals?: number;
+    baton?: boolean;
+    batonVout?: number | null;
+    genesisOrMintQuantity?: BigNumber;
+    sendOutputs?: BigNumber[];
 }
 
 export interface TokenBalancesResult {
@@ -34,9 +32,26 @@ export interface TokenBalancesResult {
 }
 
 export interface AddressUtxoResultExtended extends AddressUtxoResult {
-    tx: any;
+    wif: any;
+    tx: TxnDetailsModified;
     baton: boolean;
-    slp: any;
+    slp: TokenTransactionDetails;
+}
+
+export declare interface TxnDetailsModified {
+    txid: string;
+    version: number;
+    locktime: number;
+    vin: any[];
+    vout: any[];
+    blockhash: string;
+    blockheight: number;
+    confirmations: number;
+    time: number;
+    blocktime: number;
+    isCoinBase: boolean;
+    valueOut: number;
+    size: number;
 }
 
 const slp = require('./lib/slp')

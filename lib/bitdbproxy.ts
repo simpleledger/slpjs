@@ -27,7 +27,7 @@ export class BitdbProxy {
         };
 
         const response = (await axios(config)).data;
-    
+
         const list = [];
         if(response.c){
             list.push(...response.c);
@@ -35,13 +35,13 @@ export class BitdbProxy {
         if(response.u){
             list.push(...response.u);
         }
-        if(list.length === 0){
+        if(list.length === 0) {
             throw new Error('Token not found');
         }
 
         let tokenDetails: TokenTransactionDetails = {
             transactionType: TokenTransactionType.GENESIS,
-            tokenId: tokenId, 
+            tokenIdHex: tokenId, 
             type: parseInt(list[0].token_type, 16),
             timestamp: list[0].timestamp,
             symbol: list[0].symbol,
@@ -49,8 +49,9 @@ export class BitdbProxy {
             documentUri: list[0].document,
             documentSha256: Buffer.from(list[0].document_sha256),
             decimals: parseInt(list[0].decimals, 16) || 0,
-            baton: list[0].baton === '02',
-            quantity: new BigNumber(list[0].quantity, 16).dividedBy(10**(parseInt(list[0].decimals, 16)))
+            baton: Buffer.from(list[0].baton,'hex').readUIntBE(0,1) >= 2,
+            batonVout: Buffer.from(list[0].baton,'hex').readUIntBE(0,1),
+            genesisOrMintQuantity: new BigNumber(list[0].quantity, 16).dividedBy(10**(parseInt(list[0].decimals, 16)))
         }
 
         return tokenDetails;
