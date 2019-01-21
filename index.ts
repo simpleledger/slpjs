@@ -38,7 +38,7 @@ export interface AddressUtxoResultExtended extends AddressUtxoResult {
     slp: TokenTransactionDetails;
 }
 
-export declare interface TxnDetailsModified {
+export interface TxnDetailsModified {
     txid: string;
     version: number;
     locktime: number;
@@ -54,16 +54,4 @@ export declare interface TxnDetailsModified {
     size: number;
 }
 
-const slp = require('./lib/slp')
-    , utils = require('./lib/utils')
-    , bitdbproxy = require('./lib/bitdbproxy')
-    , validation = require('./lib/proxyvalidation')
-    , bitbox = require('./lib/bitboxnetwork');
-
-export const slpjs = {
-    slp: slp,
-    utils: utils,
-    bitbox: bitbox, 
-    bitdb: bitdbproxy, 
-    validation: validation
-}
+export const slpjs = require('./lib/slpjs');

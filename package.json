@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "mocha",
-    "build": "browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
+    "build": "tsc && browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
   },
   "repository": {
     "type": "git",

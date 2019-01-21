@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import { AddressUtxoResultExtended, TokenTransactionDetails, TokenTransactionType, TxnDetailsModified, TokenType } from '..';
 let slptokentype1 = require('./slptokentype1');
 
-declare interface PushDataOperation {
+export interface PushDataOperation {
     opcode: number, 
     data: Buffer | null
 }
@@ -15,13 +15,26 @@ export interface configBuildGenesisOpReturn {
     urlOrEmail: string;
     hash: Buffer,
     decimals: number;
-    batonVout: number; // normally this is null (for fixed supply) or 2 for flexible
+    batonVout: number; // normally this is null (for fixed supply) or 2+ for flexible
     initialQuantity: BigNumber
+}
+
+export interface configBuildMintOpReturn {
+    tokenIdHex: string;
+    batonVout: number; // normally this is null (for fixed supply) or 2+ for flexible
+    mintQuantity: BigNumber;
 }
 
 export interface configBuildSendOpReturn {
     tokenIdHex: string; 
     outputQtyArray: BigNumber[]
+}
+
+export interface utxo {
+    txid: string;
+    vout: number;
+    satoshis: number;
+    wif: string;
 }
 
 export interface configBuildRawGenesisTx {
@@ -34,22 +47,21 @@ export interface configBuildRawGenesisTx {
     input_utxos: utxo[];
 }
 
-export interface utxo {
-    txid: string;
-    vout: number;
-    satoshis: number;
-    wif: string;
-}
-
 export interface configBuildRawSendTx {
     slpSendOpReturn: Buffer;
-    input_token_utxos: AddressUtxoResultExtended[];
+    input_token_utxos: utxo[];//AddressUtxoResultExtended[];
     tokenReceiverAddressArray: string[];
     bchChangeReceiverAddress: string;
 }
 
-export interface SlpInvalidOutputMessageError extends Error {
-
+export interface configBuildRawMintTx {
+    slpMintOpReturn: Buffer;
+    mintReceiverAddress: string;
+    mintReceiverSatoshis: number;
+    batonReceiverAddress: string;
+    batonReceiverSatoshis: number;
+    bchChangeReceiverAddress: string;
+    input_baton_utxos: utxo[];
 }
 
 export class Slp {
@@ -80,6 +92,14 @@ export class Slp {
             config.decimals,
             config.batonVout,
             config.initialQuantity
+        )
+    }
+
+    buildMintOpReturn(config: configBuildMintOpReturn, type = 0x01) {
+        return slptokentype1.buildMintOpReturn(
+            config.tokenIdHex,
+            config.batonVout,
+            config.mintQuantity
         )
     }
 
@@ -213,6 +233,77 @@ export class Slp {
         // sign inputs
         let i = 0;
         for (const txo of config.input_token_utxos) {
+            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+            transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis);
+            i++;
+        }
+
+        return transactionBuilder.build().toHex();
+    }
+
+    buildRawMintTx(config: configBuildRawMintTx, type = 0x01) {
+        // Example config: 
+        // let config = {
+        //     slpMintOpReturn: mintOpReturn, 
+        //     mintReceiverAddress: this.slpAddress,
+        //     mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
+        //     batonReceiverAddress: batonAddress,
+        //     batonReceiverSatoshis: 546,
+        //     bchChangeReceiverAddress: null,
+        //     input_utxos: [{
+        //          txid: utxo.txid,
+        //          vout: utxo.vout,
+        //          satoshis: utxo.satoshis,
+        //          wif: wif
+        //     }]
+        //   }
+
+        // Check for slp format addresses
+        if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
+            throw new Error("Not an SLP address.");
+        }
+
+        if (config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)) {
+            throw new Error("Not an SLP address.");
+        }
+
+        config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
+
+        // TODO: Check for fee too large or send leftover to target address
+
+        let transactionBuilder = new this.BITBOX.TransactionBuilder('bitcoincash');
+        let satoshis = 0;
+        config.input_baton_utxos.forEach(baton_utxo => {
+            transactionBuilder.addInput(baton_utxo.txid, baton_utxo.vout);
+            satoshis += baton_utxo.satoshis;
+        });
+
+        let genesisCost = this.calculateGenesisCost(config.slpMintOpReturn.length, config.input_baton_utxos.length, config.batonReceiverAddress, config.bchChangeReceiverAddress);
+        let bchChangeAfterFeeSatoshis = satoshis - genesisCost;
+
+        // Genesis OpReturn
+        transactionBuilder.addOutput(config.slpMintOpReturn, 0);
+
+        // Genesis token mint
+        transactionBuilder.addOutput(config.mintReceiverAddress, config.mintReceiverSatoshis);
+        //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
+
+        // Baton address (optional)
+        if (config.batonReceiverAddress !== null) {
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
+            transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis);
+            //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
+        }
+
+        // Change (optional)
+        if (config.bchChangeReceiverAddress !== null && bchChangeAfterFeeSatoshis >= 546) {
+            config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
+            transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis);
+        }
+
+        // sign inputs
+        let i = 0;
+        for (const txo of config.input_baton_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
             transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis);
             i++;
