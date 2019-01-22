@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from 'axios';
 import BigNumber from 'bignumber.js';
-import { TokenTransactionDetails, TokenTransactionType } from '..';
+import { SlpTransactionDetails, SlpTransactionType } from './slpjs';
 
 export class BitdbProxy {
     bitdbUrl: string;
@@ -39,8 +39,8 @@ export class BitdbProxy {
             throw new Error('Token not found');
         }
 
-        let tokenDetails: TokenTransactionDetails = {
-            transactionType: TokenTransactionType.GENESIS,
+        let tokenDetails: SlpTransactionDetails = {
+            transactionType: SlpTransactionType.GENESIS,
             tokenIdHex: tokenId, 
             type: parseInt(list[0].token_type, 16),
             timestamp: list[0].timestamp,
@@ -49,7 +49,7 @@ export class BitdbProxy {
             documentUri: list[0].document,
             documentSha256: Buffer.from(list[0].document_sha256),
             decimals: parseInt(list[0].decimals, 16) || 0,
-            baton: Buffer.from(list[0].baton,'hex').readUIntBE(0,1) >= 2,
+            containsBaton: Buffer.from(list[0].baton,'hex').readUIntBE(0,1) >= 2,
             batonVout: Buffer.from(list[0].baton,'hex').readUIntBE(0,1),
             genesisOrMintQuantity: new BigNumber(list[0].quantity, 16).dividedBy(10**(parseInt(list[0].decimals, 16)))
         }

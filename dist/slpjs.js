@@ -1,26 +1,11 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.slpjs = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var TokenTransactionType;
-(function (TokenTransactionType) {
-    TokenTransactionType[TokenTransactionType["GENESIS"] = 0] = "GENESIS";
-    TokenTransactionType[TokenTransactionType["MINT"] = 1] = "MINT";
-    TokenTransactionType[TokenTransactionType["SEND"] = 2] = "SEND";
-})(TokenTransactionType = exports.TokenTransactionType || (exports.TokenTransactionType = {}));
-var TokenType;
-(function (TokenType) {
-    TokenType[TokenType["TokenType1"] = 1] = "TokenType1";
-})(TokenType = exports.TokenType || (exports.TokenType = {}));
-const slp = require('./lib/slp'), utils = require('./lib/utils'), bitdbproxy = require('./lib/bitdbproxy'), validation = require('./lib/proxyvalidation'), bitbox = require('./lib/bitboxnetwork');
-exports.slpjs = {
-    slp: slp,
-    utils: utils,
-    bitbox: bitbox,
-    bitdb: bitdbproxy,
-    validation: validation
-};
+const slpjs = require("./lib/slpjs");
+//export default Slpjs;
+exports.slpjs = slpjs;
 
-},{"./lib/bitboxnetwork":2,"./lib/bitdbproxy":3,"./lib/proxyvalidation":4,"./lib/slp":5,"./lib/utils":7}],2:[function(require,module,exports){
+},{"./lib/slpjs":6}],2:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -32,118 +17,51 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const bignumber_js_1 = require("bignumber.js");
-const lodash_1 = require("lodash");
-const bchaddrjs_1 = require("bchaddrjs");
+const _ = require("lodash");
+const bchaddr = require("bchaddrjs-slp");
 const slp_1 = require("./slp");
 const proxyvalidation_1 = require("./proxyvalidation");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 class BitboxNetwork {
-    constructor(BITBOX, proxyUrl = 'https://validate.simpleledger.info') {
+    constructor(BITBOX, proxyValidationUrl) {
         this.BITBOX = BITBOX;
         this.slp = new slp_1.Slp(BITBOX);
-        this.validator = new proxyvalidation_1.ProxyValidation(proxyUrl);
+        this.validator = new proxyvalidation_1.ProxyValidation(BITBOX, proxyValidationUrl);
     }
     getUtxo(address) {
         return __awaiter(this, void 0, void 0, function* () {
             // must be a cash or legacy addr
-            if (!bchaddrjs_1.default.isCashAddress(address) && !bchaddrjs_1.default.isLegacyAddress(address))
+            let res;
+            if (!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address))
                 throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
-            let res = yield this.BITBOX.Address.utxo(address);
+            res = (yield this.BITBOX.Address.utxo([address]))[0];
             return res;
         });
     }
-    getAllTokenBalancesFromUtxos(utxos) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // try to parse out SLP object from SEND or GENESIS txn type
-            for (let txOut of utxos) {
-                try {
-                    txOut.slp = this.slp.parseSlpOutputScript(txOut.tx.vout[0].scriptPubKey.hex);
-                }
-                catch (e) {
-                    if (e.message === "Possible mint baton") {
-                        txOut.baton = true;
-                    }
-                }
-            }
-            // getcset of VALID SLP txn ids
-            let validSLPTx = yield this.validator.validateTransactions([
-                ...new Set(utxos.filter(txOut => {
-                    if (txOut.slp == undefined) {
-                        return false;
-                    }
-                    return true;
-                }).map(txOut => txOut.txid))
-            ]);
-            const bals = {
-                satoshis_available: 0,
-                satoshis_locked_in_minting_baton: 0,
-                satoshis_locked_in_token: 0
-            };
-            // loop through UTXO set and accumulate balances for each valid token.
-            for (const txOut of utxos) {
-                if ("slp" in txOut && txOut.txid in validSLPTx) {
-                    if (!(txOut.slp.tokenIdHex in bals)) {
-                        bals[txOut.slp.tokenIdHex] = new bignumber_js_1.default(0);
-                    }
-                    bals[txOut.slp.tokenIdHex] = bals[txOut.slp.tokenIdHex].plus(txOut.slp.genesisOrMintQuantity);
-                    bals.satoshis_locked_in_token += txOut.satoshis;
-                }
-                else if (txOut.baton === true) {
-                    bals.satoshis_locked_in_minting_baton += txOut.satoshis;
-                }
-                else {
-                    bals.satoshis_available += txOut.satoshis;
-                }
-            }
-            return bals;
-        });
-    }
-    getAllTokenBalances(address) {
+    getAllSlpBalancesAndUtxos(address) {
         return __awaiter(this, void 0, void 0, function* () {
             // convert address to cashAddr if needed
-            address = bchaddrjs_1.default.toCashAddress(address);
+            address = bchaddr.toCashAddress(address);
             let UTXOset = yield this.getUtxoWithTxDetails(address);
-            return yield this.getAllTokenBalancesFromUtxos(UTXOset);
+            //console.log('utxos:', UTXOset);
+            return yield this.validator.processUtxosForSlp(UTXOset);
         });
     }
-    // fundingAddress and tokenReceiverAddress must be in SLP format.
-    sendToken(tokenId, sendAmount, fundingAddress, fundingWif, tokenReceiverAddress, changeReceiverAddress) {
+    // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
+    simpleTokenSend(tokenId, sendAmount, fundingAddress, fundingWif, tokenReceiverAddress, changeReceiverAddress) {
         return __awaiter(this, void 0, void 0, function* () {
             // convert address to cashAddr from SLP format.
-            let fundingAddress_cashfmt = bchaddrjs_1.default.toCashAddress(fundingAddress);
-            // 1) Get all utxos for our address and filter out UTXOs for other tokens
-            let inputUtxoSet = [];
-            let utxoSet = yield this.getUtxoWithTxDetails(fundingAddress_cashfmt);
-            for (let utxo of utxoSet) {
-                try {
-                    utxo.slp = this.slp.parseSlpOutputScript(utxo.tx.vout[0].scriptPubKey.hex);
-                    if (utxo.slp.tokenIdHex != tokenId)
-                        continue;
-                }
-                catch (_) { }
-                // sweeping inputs is easiest way to manage coin selection
-                inputUtxoSet.push(utxo);
-            }
-            // find the valid SLP tokens and compute the valid input balance.
-            let validSLPTx = yield this.validator.validateTransactions([
-                ...new Set(utxoSet.filter(txOut => {
-                    if (txOut.slp == undefined)
-                        return false;
-                    if (txOut.slp.tokenIdHex != tokenId)
-                        return false;
-                    return true;
-                }).map(txOut => txOut.txid))
-            ]);
-            let validTokenQuantity = new bignumber_js_1.default(0);
-            for (const txOut of inputUtxoSet) {
-                if ("slp" in txOut && txOut.txid in validSLPTx) {
-                    validTokenQuantity = validTokenQuantity.plus(txOut.slp.genesisOrMintQuantity);
-                }
-            }
-            //inputUtxoSet = inputUtxoSet.map(utxo => ({ txid: utxo.txid, vout: utxo.vout, satoshis: utxo.satoshis, wif: fundingWif }));
-            //console.log(inputUtxoSet);
+            let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
+            // 1) Get SLP Balances and organized UTXOs
+            let balances = yield this.getAllSlpBalancesAndUtxos(fundingAddress);
+            // 2) Get UTXOs for this token.
+            let tokenUtxos = balances.slpTokenUtxos.filter(utxo => utxo.slpTokenDetails.tokenIdHex === tokenId);
+            // 3) Set the private key for all
+            tokenUtxos.forEach(utxo => utxo.wif = fundingWif);
+            balances.nonSlpUtxos.forEach(utxo => utxo.wif = fundingWif);
+            let inputUtxoSet = [].concat(tokenUtxos).concat(balances.nonSlpUtxos);
             // 2) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
-            let tokenChangeAmount = validTokenQuantity.minus(sendAmount);
+            let tokenChangeAmount = balances.slpTokenBalances[tokenId].minus(sendAmount);
             let sendOpReturn;
             let txHex;
             if (tokenChangeAmount.isGreaterThan(new bignumber_js_1.default(0))) {
@@ -156,13 +74,11 @@ class BitboxNetwork {
                 txHex = this.slp.buildRawSendTx({
                     slpSendOpReturn: sendOpReturn,
                     input_token_utxos: inputUtxoSet,
-                    tokenReceiverAddressArray: [
-                        tokenReceiverAddress, changeReceiverAddress
-                    ],
+                    tokenReceiverAddressArray: [tokenReceiverAddress, changeReceiverAddress],
                     bchChangeReceiverAddress: changeReceiverAddress
                 });
             }
-            else {
+            else if (tokenChangeAmount.isEqualTo(new bignumber_js_1.default(0))) {
                 // 3) Create the Send OP_RETURN message
                 sendOpReturn = this.slp.buildSendOpReturn({
                     tokenIdHex: tokenId,
@@ -172,11 +88,12 @@ class BitboxNetwork {
                 txHex = this.slp.buildRawSendTx({
                     slpSendOpReturn: sendOpReturn,
                     input_token_utxos: inputUtxoSet,
-                    tokenReceiverAddressArray: [
-                        tokenReceiverAddress
-                    ],
+                    tokenReceiverAddressArray: [tokenReceiverAddress],
                     bchChangeReceiverAddress: changeReceiverAddress
                 });
+            }
+            else {
+                throw Error('Token quantity inputs less than the token inputs');
             }
             console.log(txHex);
             // 5) Broadcast the transaction over the network using this.BITBOX
@@ -187,7 +104,7 @@ class BitboxNetwork {
         return __awaiter(this, void 0, void 0, function* () {
             let result;
             let count = 0;
-            while (result == undefined) {
+            while (result === undefined) {
                 result = yield this.getUtxo(address);
                 count++;
                 if (count > retries)
@@ -199,33 +116,33 @@ class BitboxNetwork {
     }
     getUtxoWithTxDetails(address) {
         return __awaiter(this, void 0, void 0, function* () {
-            const set = yield this.getUtxoWithRetry(address)[0];
-            let txIds = set.map(i => i.txid);
+            const utxos = (yield this.getUtxoWithRetry(address));
+            let txIds = utxos.map(i => i.txid);
             if (txIds.length === 0) {
                 return [];
             }
             // Split txIds into chunks of 20 (BitBox limit), run the detail queries in parallel
-            let txDetails = yield Promise.all(lodash_1.default.chunk(txIds, 20).map(txIdchunk => {
-                return this.getTransactionDetailsWithRetry(txIdchunk);
+            let txDetails = yield Promise.all(_.chunk(txIds, 20).map((txids) => {
+                return this.getTransactionDetailsWithRetry(txids);
             }));
             // concat the chunked arrays
             txDetails = [].concat(...txDetails);
-            for (let i = 0; i < set.length; i++) {
-                set[i].tx = txDetails[i];
+            for (let i = 0; i < utxos.length; i++) {
+                utxos[i].tx = txDetails[i];
             }
-            return set;
+            return utxos;
         });
     }
-    getTransactionDetailsWithRetry(txid, retries = 40) {
+    getTransactionDetailsWithRetry(txids, retries = 40) {
         return __awaiter(this, void 0, void 0, function* () {
             let result;
             let count = 0;
-            while (result == undefined) {
-                result = yield this.BITBOX.Transaction.details(txid);
+            while (result === undefined) {
+                result = (yield this.BITBOX.Transaction.details(txids));
                 count++;
                 if (count > retries)
                     throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
-                yield sleep(250);
+                yield sleep(500);
             }
             return result;
         });
@@ -233,12 +150,12 @@ class BitboxNetwork {
     getAddressDetailsWithRetry(address, retries = 40) {
         return __awaiter(this, void 0, void 0, function* () {
             // must be a cash or legacy addr
-            if (!bchaddrjs_1.default.isCashAddress(address) && !bchaddrjs_1.default.isLegacyAddress(address))
+            if (!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address))
                 throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
             let result;
             let count = 0;
-            while (result == undefined) {
-                result = yield this.BITBOX.Address.details(address);
+            while (result === undefined) {
+                result = yield this.BITBOX.Address.details([address]);
                 count++;
                 if (count > retries)
                     throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
@@ -250,18 +167,18 @@ class BitboxNetwork {
     sendTx(hex) {
         return __awaiter(this, void 0, void 0, function* () {
             let res = yield this.BITBOX.RawTransactions.sendRawTransaction(hex);
-            console.log(res);
+            //console.log(res);
             return res;
         });
     }
     monitorForPayment(paymentAddress, fee, onPaymentCB) {
         return __awaiter(this, void 0, void 0, function* () {
             // must be a cash or legacy addr
-            if (!bchaddrjs_1.default.isCashAddress(paymentAddress) && !bchaddrjs_1.default.isLegacyAddress(paymentAddress))
+            if (!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress))
                 throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
             while (true) {
                 try {
-                    let utxo = (yield this.getUtxo(paymentAddress))[0][0];
+                    let utxo = (yield this.getUtxo(paymentAddress))[0];
                     if (utxo && utxo.satoshis >= fee) {
                         break;
                     }
@@ -269,7 +186,7 @@ class BitboxNetwork {
                 catch (ex) {
                     console.log(ex);
                 }
-                yield sleep(5000);
+                yield sleep(2000);
             }
             onPaymentCB();
         });
@@ -277,7 +194,7 @@ class BitboxNetwork {
 }
 exports.BitboxNetwork = BitboxNetwork;
 
-},{"./proxyvalidation":4,"./slp":5,"bchaddrjs":35,"bignumber.js":37,"lodash":56}],3:[function(require,module,exports){
+},{"./proxyvalidation":4,"./slp":5,"bchaddrjs-slp":36,"bignumber.js":38,"lodash":57}],3:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -291,7 +208,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const axios_1 = require("axios");
 const bignumber_js_1 = require("bignumber.js");
-const __1 = require("..");
+const slpjs_1 = require("./slpjs");
 class BitdbProxy {
     constructor(bitdbUrl = 'https://bitdb.bch.sx/q/') {
         this.bitdbUrl = bitdbUrl;
@@ -322,7 +239,7 @@ class BitdbProxy {
                 throw new Error('Token not found');
             }
             let tokenDetails = {
-                transactionType: __1.TokenTransactionType.GENESIS,
+                transactionType: slpjs_1.SlpTransactionType.GENESIS,
                 tokenIdHex: tokenId,
                 type: parseInt(list[0].token_type, 16),
                 timestamp: list[0].timestamp,
@@ -331,7 +248,7 @@ class BitdbProxy {
                 documentUri: list[0].document,
                 documentSha256: Buffer.from(list[0].document_sha256),
                 decimals: parseInt(list[0].decimals, 16) || 0,
-                baton: Buffer.from(list[0].baton, 'hex').readUIntBE(0, 1) >= 2,
+                containsBaton: Buffer.from(list[0].baton, 'hex').readUIntBE(0, 1) >= 2,
                 batonVout: Buffer.from(list[0].baton, 'hex').readUIntBE(0, 1),
                 genesisOrMintQuantity: new bignumber_js_1.default(list[0].quantity, 16).dividedBy(Math.pow(10, (parseInt(list[0].decimals, 16))))
             };
@@ -342,7 +259,8 @@ class BitdbProxy {
 exports.BitdbProxy = BitdbProxy;
 
 }).call(this,require("buffer").Buffer)
-},{"..":1,"axios":8,"bignumber.js":37,"buffer":42}],4:[function(require,module,exports){
+},{"./slpjs":6,"axios":9,"bignumber.js":38,"buffer":43}],4:[function(require,module,exports){
+(function (Buffer){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -354,9 +272,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const axios_1 = require("axios");
+const bignumber_js_1 = require("bignumber.js");
+const slp_1 = require("./slp");
+const slpjs_1 = require("./slpjs");
 class ProxyValidation {
-    constructor(proxyUrl = 'https://validate.simpleledger.info') {
+    constructor(BITBOX, proxyUrl = 'https://validate.simpleledger.info') {
         this.proxyUrl = proxyUrl;
+        this.slp = new slp_1.Slp(BITBOX);
     }
     isValidSlpTxid(txid) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -390,17 +312,114 @@ class ProxyValidation {
             return validateResults.filter((result) => result.length > 0);
         });
     }
+    processUtxosForSlp(utxos) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // 1) parse SLP OP_RETURN and cast initial SLP judgement, based on OP_RETURN only.
+            for (let txo of utxos) {
+                try {
+                    let vout = txo.tx.vout.find(vout => vout.n === 0);
+                    if (!vout)
+                        throw 'Utxo contains no Vout!';
+                    let vout0script = Buffer.from(vout.scriptPubKey.hex, 'hex');
+                    txo.slpTokenDetails = this.slp.parseSlpOutputScript(vout0script);
+                    // populate txid for GENESIS
+                    if (txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.GENESIS)
+                        txo.slpTokenDetails.tokenIdHex = txo.txid;
+                    // apply initial SLP judgement to the UTXO (based on OP_RETURN parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
+                    if (txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.GENESIS ||
+                        txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.MINT) {
+                        if (txo.slpTokenDetails.containsBaton && txo.slpTokenDetails.batonVout === txo.vout)
+                            txo.slpJudgement = slpjs_1.SlpUtxoJudgement.SLP_BATON;
+                        else if (txo.vout === 1)
+                            txo.slpJudgement = slpjs_1.SlpUtxoJudgement.SLP_TOKEN;
+                        else
+                            txo.slpJudgement = slpjs_1.SlpUtxoJudgement.NOT_SLP;
+                    }
+                    else if (txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.SEND && txo.slpTokenDetails.sendOutputs) {
+                        if (txo.vout > 0 && txo.vout < txo.slpTokenDetails.sendOutputs.length)
+                            txo.slpJudgement = slpjs_1.SlpUtxoJudgement.SLP_TOKEN;
+                        else
+                            txo.slpJudgement = slpjs_1.SlpUtxoJudgement.NOT_SLP;
+                    }
+                }
+                catch (e) {
+                    // any errors in parsing SLP OP_RETURN means the TXN is NOT SLP.
+                    txo.slpJudgement = slpjs_1.SlpUtxoJudgement.NOT_SLP;
+                }
+                if (txo.slpJudgement === slpjs_1.SlpUtxoJudgement.UNKNOWN || txo.slpJudgement === undefined)
+                    throw Error('Utxo SLP judgement has not been set, unknown error.');
+            }
+            // 2) Get list of txids with valid SLP DAGs - create distinct Set() txids from initial OP_RETURN judgements
+            let validSLPTx = yield this.validateTransactions([
+                ...new Set(utxos.filter(txOut => {
+                    if (txOut.slpTokenDetails &&
+                        txOut.slpJudgement !== slpjs_1.SlpUtxoJudgement.UNKNOWN &&
+                        txOut.slpJudgement !== slpjs_1.SlpUtxoJudgement.NOT_SLP)
+                        return true;
+                    return false;
+                }).map(txOut => txOut.txid))
+            ]);
+            // 3) Update initial judgements with results received from the proxy DAG validator
+            utxos.forEach(utxo => {
+                if (utxo.txid in validSLPTx) {
+                    if (utxo.slpJudgement === slpjs_1.SlpUtxoJudgement.SLP_TOKEN || utxo.slpJudgement === slpjs_1.SlpUtxoJudgement.SLP_BATON)
+                        utxo.slpJudgement = slpjs_1.SlpUtxoJudgement.INVALID_DAG;
+                }
+            });
+            // 4) Prepare results object
+            const result = {
+                satoshis_available_bch_not_slp: 0,
+                satoshis_in_slp_minting_baton: 0,
+                satoshis_in_slp_token: 0,
+                slpTokenBalances: {},
+                slpTokenUtxos: [],
+                slpBatonUtxos: [],
+                nonSlpUtxos: []
+            };
+            // 5) Loop through UTXO set and accumulate balances for type of utxo, organize the Utxos into their categories.
+            for (const txo of utxos) {
+                if (txo.slpJudgement === slpjs_1.SlpUtxoJudgement.SLP_TOKEN) {
+                    if (!(txo.slpTokenDetails.tokenIdHex in result.slpTokenBalances))
+                        result.slpTokenBalances[txo.slpTokenDetails.tokenIdHex] = new bignumber_js_1.default(0);
+                    if (txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.GENESIS || txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.MINT) {
+                        result.slpTokenBalances[txo.slpTokenDetails.tokenIdHex] = result.slpTokenBalances[txo.slpTokenDetails.tokenIdHex].plus(txo.slpTokenDetails.genesisOrMintQuantity);
+                    }
+                    else if (txo.slpTokenDetails.transactionType === slpjs_1.SlpTransactionType.SEND && txo.slpTokenDetails.sendOutputs) {
+                        let qty = txo.slpTokenDetails.sendOutputs[txo.vout];
+                        result.slpTokenBalances[txo.slpTokenDetails.tokenIdHex] = result.slpTokenBalances[txo.slpTokenDetails.tokenIdHex].plus(qty);
+                    }
+                    else {
+                        throw Error('Unknown Error: cannot have an SLP_TOKEN that is not from GENESIS, MINT, or SEND.');
+                    }
+                    result.satoshis_in_slp_token += txo.satoshis;
+                    result.slpTokenUtxos.push(txo);
+                }
+                else if (txo.slpJudgement === slpjs_1.SlpUtxoJudgement.SLP_BATON) {
+                    result.satoshis_in_slp_minting_baton += txo.satoshis;
+                    result.slpBatonUtxos.push(txo);
+                }
+                else {
+                    result.satoshis_available_bch_not_slp += txo.satoshis;
+                    result.nonSlpUtxos.push(txo);
+                }
+            }
+            if (utxos.length < (result.slpBatonUtxos.length + result.nonSlpUtxos.length + result.slpTokenUtxos.length))
+                throw Error('Not all UTXOs have been categorized. Unknown Error.');
+            return result;
+        });
+    }
 }
 exports.ProxyValidation = ProxyValidation;
 
-},{"axios":8}],5:[function(require,module,exports){
+}).call(this,require("buffer").Buffer)
+},{"./slp":5,"./slpjs":6,"axios":9,"bignumber.js":38,"buffer":43}],5:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const bchaddrjs_1 = require("bchaddrjs");
+const bchaddr = require("bchaddrjs-slp");
 const bignumber_js_1 = require("bignumber.js");
-const __1 = require("..");
-let slptokentype1 = require('./slptokentype1');
+const slpjs_1 = require("./slpjs");
+const slptokentype1_1 = require("./slptokentype1");
 class Slp {
     constructor(BITBOX) {
         this.BITBOX = BITBOX;
@@ -417,7 +436,10 @@ class Slp {
         //     batonVout: 2, // normally this is null (for fixed supply) or 2 for flexible
         //     initialQuantity: 1000000
         // }
-        return slptokentype1.buildGenesisOpReturn(config.ticker, config.name, config.urlOrEmail, config.hash, config.decimals, config.batonVout, config.initialQuantity);
+        return slptokentype1_1.SlpTokenType1.buildGenesisOpReturn(config.ticker, config.name, config.urlOrEmail, config.hash.toString('hex'), config.decimals, config.batonVout, config.initialQuantity);
+    }
+    buildMintOpReturn(config, type = 0x01) {
+        return slptokentype1_1.SlpTokenType1.buildMintOpReturn(config.tokenIdHex, config.batonVout, config.mintQuantity);
     }
     buildSendOpReturn(config, type = 0x01) {
         // Example config:
@@ -425,7 +447,7 @@ class Slp {
         //     tokenIdHex: "", 
         //     outputQtyArray: []
         // }
-        return slptokentype1.buildSendOpReturn(config.tokenIdHex, config.outputQtyArray);
+        return slptokentype1_1.SlpTokenType1.buildSendOpReturn(config.tokenIdHex, config.outputQtyArray);
     }
     buildRawGenesisTx(config, type = 0x01) {
         // Example config: 
@@ -444,13 +466,13 @@ class Slp {
         //     }]
         //   }
         // Check for slp format addresses
-        if (!bchaddrjs_1.default.isSlpAddress(config.mintReceiverAddress)) {
+        if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
             throw new Error("Not an SLP address.");
         }
-        if (config.batonReceiverAddress != null && !bchaddrjs_1.default.isSlpAddress(config.batonReceiverAddress)) {
+        if (config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)) {
             throw new Error("Not an SLP address.");
         }
-        config.mintReceiverAddress = bchaddrjs_1.default.toCashAddress(config.mintReceiverAddress);
+        config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
         // TODO: Check for fee too large or send leftover to target address
         let transactionBuilder = new this.BITBOX.TransactionBuilder('bitcoincash');
         let satoshis = 0;
@@ -467,13 +489,13 @@ class Slp {
         //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
         // Baton address (optional)
         if (config.batonReceiverAddress != null) {
-            config.batonReceiverAddress = bchaddrjs_1.default.toCashAddress(config.batonReceiverAddress);
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
             transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis);
             //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
         }
         // Change (optional)
         if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= 546) {
-            config.bchChangeReceiverAddress = bchaddrjs_1.default.toCashAddress(config.bchChangeReceiverAddress);
+            config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis);
         }
         // sign inputs
@@ -513,20 +535,78 @@ class Slp {
         // Token distribution outputs
         config.tokenReceiverAddressArray.forEach((outputAddress) => {
             // Check for slp format addresses
-            if (!bchaddrjs_1.default.isSlpAddress(outputAddress)) {
+            if (!bchaddr.isSlpAddress(outputAddress)) {
                 throw new Error("Not an SLP address.");
             }
-            outputAddress = bchaddrjs_1.default.toCashAddress(outputAddress);
+            outputAddress = bchaddr.toCashAddress(outputAddress);
             transactionBuilder.addOutput(outputAddress, 546);
         });
         // Change
         if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= 546) {
-            config.bchChangeReceiverAddress = bchaddrjs_1.default.toCashAddress(config.bchChangeReceiverAddress);
+            config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis);
         }
         // sign inputs
         let i = 0;
         for (const txo of config.input_token_utxos) {
+            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+            transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis);
+            i++;
+        }
+        return transactionBuilder.build().toHex();
+    }
+    buildRawMintTx(config, type = 0x01) {
+        // Example config: 
+        // let config = {
+        //     slpMintOpReturn: mintOpReturn, 
+        //     mintReceiverAddress: this.slpAddress,
+        //     mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
+        //     batonReceiverAddress: batonAddress,
+        //     batonReceiverSatoshis: 546,
+        //     bchChangeReceiverAddress: null,
+        //     input_utxos: [{
+        //          txid: utxo.txid,
+        //          vout: utxo.vout,
+        //          satoshis: utxo.satoshis,
+        //          wif: wif
+        //     }]
+        //   }
+        // Check for slp format addresses
+        if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
+            throw new Error("Not an SLP address.");
+        }
+        if (config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)) {
+            throw new Error("Not an SLP address.");
+        }
+        config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
+        // TODO: Check for fee too large or send leftover to target address
+        let transactionBuilder = new this.BITBOX.TransactionBuilder('bitcoincash');
+        let satoshis = 0;
+        config.input_baton_utxos.forEach(baton_utxo => {
+            transactionBuilder.addInput(baton_utxo.txid, baton_utxo.vout);
+            satoshis += baton_utxo.satoshis;
+        });
+        let genesisCost = this.calculateGenesisCost(config.slpMintOpReturn.length, config.input_baton_utxos.length, config.batonReceiverAddress, config.bchChangeReceiverAddress);
+        let bchChangeAfterFeeSatoshis = satoshis - genesisCost;
+        // Genesis OpReturn
+        transactionBuilder.addOutput(config.slpMintOpReturn, 0);
+        // Genesis token mint
+        transactionBuilder.addOutput(config.mintReceiverAddress, config.mintReceiverSatoshis);
+        //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
+        // Baton address (optional)
+        if (config.batonReceiverAddress !== null) {
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
+            transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis);
+            //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
+        }
+        // Change (optional)
+        if (config.bchChangeReceiverAddress !== null && bchChangeAfterFeeSatoshis >= 546) {
+            config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
+            transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis);
+        }
+        // sign inputs
+        let i = 0;
+        for (const txo of config.input_baton_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
             transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis);
             i++;
@@ -551,17 +631,17 @@ class Slp {
             throw Error("Missing token_type");
         // # check if the token version is supported
         slpMsg.type = Slp.parseChunkToInt(chunks[1], 1, 2, true);
-        if (slpMsg.type !== __1.TokenType.TokenType1)
+        if (slpMsg.type !== slpjs_1.SlpTypeVersion.TokenType1)
             throw Error('Unsupported token type:' + slpMsg.type);
         if (chunks.length === 2)
             throw Error('Missing SLP transaction type');
         try {
-            slpMsg.transactionType = __1.TokenTransactionType[chunks[2].toString('ascii')];
+            slpMsg.transactionType = slpjs_1.SlpTransactionType[chunks[2].toString('ascii')];
         }
         catch (_) {
             throw Error('Bad transaction type');
         }
-        if (slpMsg.transactionType === __1.TokenTransactionType.GENESIS) {
+        if (slpMsg.transactionType === slpjs_1.SlpTransactionType.GENESIS) {
             if (chunks.length !== 10)
                 throw Error('GENESIS with incorrect number of parameters');
             slpMsg.symbol = chunks[3] ? chunks[3].toString('utf8') : '';
@@ -579,11 +659,11 @@ class Slp {
             if (slpMsg.batonVout !== null) {
                 if (slpMsg.batonVout < 2)
                     throw Error('Mint baton cannot be on vout=0 or 1');
-                slpMsg.baton = true;
+                slpMsg.containsBaton = true;
             }
-            slpMsg.genesisOrMintQuantity = new bignumber_js_1.default(chunks[9].readUInt8(0));
+            slpMsg.genesisOrMintQuantity = (new bignumber_js_1.default(chunks[9].readUInt32BE(0).toString())).multipliedBy(Math.pow(2, 32)).plus(chunks[9].readUInt32BE(4).toString());
         }
-        else if (slpMsg.transactionType === __1.TokenTransactionType.SEND) {
+        else if (slpMsg.transactionType === slpjs_1.SlpTransactionType.SEND) {
             if (chunks.length < 4)
                 throw Error('SEND with too few parameters');
             if (chunks[3].length !== 32)
@@ -599,7 +679,7 @@ class Slp {
             chunks.slice(4).forEach(chunk => {
                 if (chunk.length !== 8)
                     throw Error('SEND quantities must be 8-bytes each.');
-                slpMsg.sendOutputs.push(new bignumber_js_1.default(chunk.readUInt8(0)));
+                slpMsg.sendOutputs.push((new bignumber_js_1.default(chunk.readUInt32BE(0).toString())).multipliedBy(Math.pow(2, 32)).plus(new bignumber_js_1.default(chunk.readUInt32BE(4).toString())));
             });
             // # maximum 19 allowed token outputs, plus 1 for the explicit [0] we inserted.
             if (slpMsg.sendOutputs.length < 2)
@@ -607,7 +687,7 @@ class Slp {
             if (slpMsg.sendOutputs.length > 20)
                 throw Error('More than 19 output amounts');
         }
-        else if (slpMsg.transactionType === __1.TokenTransactionType.MINT) {
+        else if (slpMsg.transactionType === slpjs_1.SlpTransactionType.MINT) {
             if (chunks.length != 6)
                 throw Error('MINT with incorrect number of parameters');
             if (chunks[3].length != 32)
@@ -617,9 +697,9 @@ class Slp {
             if (slpMsg.batonVout !== null) {
                 if (slpMsg.batonVout < 2)
                     throw Error('Mint baton cannot be on vout=0 or 1');
-                slpMsg.baton = true;
+                slpMsg.containsBaton = true;
             }
-            slpMsg.genesisOrMintQuantity = new bignumber_js_1.default(chunks[5].readUInt8(0));
+            slpMsg.genesisOrMintQuantity = (new bignumber_js_1.default(chunks[5].readUInt32BE(0).toString())).multipliedBy(Math.pow(2, 32)).plus((new bignumber_js_1.default(chunks[5].readUInt32BE(4).toString())));
         }
         else
             throw Error('Bad transaction type');
@@ -714,26 +794,32 @@ class Slp {
         }
         return ops;
     }
-    calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress = null, bchChangeAddress = null, feeRate = 1) {
+    calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate = 1) {
+        return this.calculateMintOrGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate);
+    }
+    calculateMintCost(mintOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate = 1) {
+        return this.calculateMintOrGenesisCost(mintOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate);
+    }
+    calculateMintOrGenesisCost(mintOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate = 1) {
         let outputs = 1;
         let nonfeeoutputs = 546;
-        if (batonAddress != null) {
+        if (batonAddress !== null && batonAddress !== undefined) {
             nonfeeoutputs += 546;
             outputs += 1;
         }
-        if (bchChangeAddress != null) {
+        if (bchChangeAddress !== null && bchChangeAddress !== undefined) {
             outputs += 1;
         }
         let fee = this.BITBOX.BitcoinCash.getByteCount({ P2PKH: inputUtxoSize }, { P2PKH: outputs });
-        fee += genesisOpReturnLength;
+        fee += mintOpReturnLength;
         fee += 10; // added to account for OP_RETURN ammount of 0000000000000000
         fee *= feeRate;
-        console.log("GENESIS cost before outputs: " + fee.toString());
+        console.log("MINT/GENESIS cost before outputs: " + fee.toString());
         fee += nonfeeoutputs;
-        console.log("GENESIS cost after outputs are added: " + fee.toString());
+        console.log("MINT/GENESIS cost after outputs are added: " + fee.toString());
         return fee;
     }
-    calculateSendCost(sendOpReturnLength, inputUtxoSize, outputAddressArraySize, bchChangeAddress = null, feeRate = 1) {
+    calculateSendCost(sendOpReturnLength, inputUtxoSize, outputAddressArraySize, bchChangeAddress, feeRate = 1) {
         let outputs = outputAddressArraySize;
         let nonfeeoutputs = outputAddressArraySize * 546;
         if (bchChangeAddress != null) {
@@ -752,7 +838,46 @@ class Slp {
 exports.Slp = Slp;
 
 }).call(this,require("buffer").Buffer)
-},{"..":1,"./slptokentype1":6,"bchaddrjs":35,"bignumber.js":37,"buffer":42}],6:[function(require,module,exports){
+},{"./slpjs":6,"./slptokentype1":7,"bchaddrjs-slp":36,"bignumber.js":38,"buffer":43}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const slp_1 = require("./slp");
+const utils_1 = require("./utils");
+const bitdbproxy_1 = require("./bitdbproxy");
+const proxyvalidation_1 = require("./proxyvalidation");
+const bitboxnetwork_1 = require("./bitboxnetwork");
+exports.Slp = slp_1.Slp;
+exports.Utils = utils_1.Utils;
+exports.BitboxNetwork = bitboxnetwork_1.BitboxNetwork;
+exports.BitdbProxy = bitdbproxy_1.BitdbProxy;
+exports.ProxyValidation = proxyvalidation_1.ProxyValidation;
+var SlpTransactionType;
+(function (SlpTransactionType) {
+    SlpTransactionType[SlpTransactionType["GENESIS"] = 0] = "GENESIS";
+    SlpTransactionType[SlpTransactionType["MINT"] = 1] = "MINT";
+    SlpTransactionType[SlpTransactionType["SEND"] = 2] = "SEND";
+})(SlpTransactionType = exports.SlpTransactionType || (exports.SlpTransactionType = {}));
+var SlpTypeVersion;
+(function (SlpTypeVersion) {
+    SlpTypeVersion[SlpTypeVersion["TokenType1"] = 1] = "TokenType1";
+})(SlpTypeVersion = exports.SlpTypeVersion || (exports.SlpTypeVersion = {}));
+// negative values are bad, 0 = NOT_SLP, possitive values are a SLP (token or baton)
+var SlpUtxoJudgement;
+(function (SlpUtxoJudgement) {
+    SlpUtxoJudgement[SlpUtxoJudgement["UNKNOWN"] = -2] = "UNKNOWN";
+    SlpUtxoJudgement[SlpUtxoJudgement["INVALID_DAG"] = -1] = "INVALID_DAG";
+    SlpUtxoJudgement[SlpUtxoJudgement["NOT_SLP"] = 0] = "NOT_SLP";
+    SlpUtxoJudgement[SlpUtxoJudgement["SLP_TOKEN"] = 1] = "SLP_TOKEN";
+    SlpUtxoJudgement[SlpUtxoJudgement["SLP_BATON"] = 2] = "SLP_BATON";
+})(SlpUtxoJudgement = exports.SlpUtxoJudgement || (exports.SlpUtxoJudgement = {}));
+class SlpAddressUtxoResult {
+    constructor() {
+        this.slpJudgement = SlpUtxoJudgement.UNKNOWN;
+    }
+}
+exports.SlpAddressUtxoResult = SlpAddressUtxoResult;
+
+},{"./bitboxnetwork":2,"./bitdbproxy":3,"./proxyvalidation":4,"./slp":5,"./utils":8}],7:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -761,7 +886,7 @@ const bignumber_js_1 = require("bignumber.js");
 class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000"; }
     static buildGenesisOpReturn(ticker, name, documentUrl, documentHashHex, decimals, batonVout, initialQuantity) {
-        let script;
+        let script = [];
         // OP Return Prefix
         script.push(0x6a);
         // Lokad Id
@@ -847,7 +972,7 @@ class SlpTokenType1 {
             throw new Error("Maximum genesis value exceeded.  Reduce input quantity below 18446744073709551615.");
         if (initialQuantity.isLessThan(0))
             throw Error("Genesis quantity must be greater than 0.");
-        if (initialQuantity.modulo(1) != new bignumber_js_1.default(0))
+        if (!initialQuantity.modulo(1).isEqualTo(new bignumber_js_1.default(0)))
             throw Error("Genesis quantity must be a whole number.");
         let initialQuantityBuf = utils_1.Utils.int2FixedBuffer(initialQuantity);
         script.push(utils_1.Utils.getPushDataOpcode(initialQuantityBuf));
@@ -859,7 +984,7 @@ class SlpTokenType1 {
         return encodedScript;
     }
     static buildSendOpReturn(tokenIdHex, outputQtyArray) {
-        let script;
+        let script = [];
         // OP Return Prefix
         script.push(0x6a);
         // Lokad Id
@@ -886,14 +1011,18 @@ class SlpTokenType1 {
             throw Error("Cannot have less than 1 SLP token output.");
         }
         outputQtyArray.forEach((outputQty) => {
-            if (!outputQty._isBigNumber)
+            try {
+                outputQty.absoluteValue();
+            }
+            catch (_) {
                 throw Error("Amount must be an instance of BigNumber");
+            }
             let MAX_QTY = new bignumber_js_1.default('18446744073709551615');
             if (outputQty.isGreaterThan(MAX_QTY))
                 throw new Error("Maximum value exceeded.  Reduce input quantity below 18446744073709551615.");
             if (outputQty.isLessThan(0))
                 throw Error("All Send outputs must be greater than 0.");
-            if (outputQty.modulo(1) != 0)
+            if (!outputQty.modulo(1).isEqualTo(new bignumber_js_1.default(0)))
                 throw Error("All Send outputs must be a whole number.");
             let qtyBuffer = utils_1.Utils.int2FixedBuffer(outputQty);
             script.push(utils_1.Utils.getPushDataOpcode(qtyBuffer));
@@ -905,27 +1034,80 @@ class SlpTokenType1 {
         }
         return encodedScript;
     }
+    static buildMintOpReturn(tokenIdHex, batonVout, mintQuantity) {
+        let script = [];
+        // OP Return Prefix
+        script.push(0x6a);
+        // Lokad Id
+        let lokadId = Buffer.from(this.lokadIdHex, 'hex');
+        script.push(utils_1.Utils.getPushDataOpcode(lokadId));
+        lokadId.forEach((item) => script.push(item));
+        // Token Type
+        let tokenType = 0x01;
+        script.push(utils_1.Utils.getPushDataOpcode([tokenType]));
+        script.push(tokenType);
+        // Transaction Type
+        let transactionType = Buffer.from('MINT');
+        script.push(utils_1.Utils.getPushDataOpcode(transactionType));
+        transactionType.forEach((item) => script.push(item));
+        // Token Id
+        let tokenId = Buffer.from(tokenIdHex, 'hex');
+        script.push(utils_1.Utils.getPushDataOpcode(tokenId));
+        tokenId.forEach((item) => script.push(item));
+        // Baton Vout
+        if (batonVout == null) {
+            [0x4c, 0x00].forEach((item) => script.push(item));
+        }
+        else {
+            if (batonVout <= 1 || !(typeof batonVout == 'number'))
+                throw Error("Baton vout must a number and greater than 1");
+            script.push(utils_1.Utils.getPushDataOpcode([batonVout]));
+            script.push(batonVout);
+        }
+        // Initial Quantity
+        let MAX_QTY = new bignumber_js_1.default('18446744073709551615');
+        try {
+            mintQuantity.absoluteValue();
+        }
+        catch (_) {
+            throw Error("Amount must be an instance of BigNumber");
+        }
+        if (mintQuantity.isGreaterThan(MAX_QTY))
+            throw new Error("Maximum genesis value exceeded.  Reduce input quantity below 18446744073709551615.");
+        if (mintQuantity.isLessThan(0))
+            throw Error("Genesis quantity must be greater than 0.");
+        if (!mintQuantity.modulo(1).isEqualTo(new bignumber_js_1.default(0)))
+            throw Error("Genesis quantity must be a whole number.");
+        let initialQuantityBuf = utils_1.Utils.int2FixedBuffer(mintQuantity);
+        script.push(utils_1.Utils.getPushDataOpcode(initialQuantityBuf));
+        initialQuantityBuf.forEach((item) => script.push(item));
+        let encodedScript = utils_1.Utils.encodeScript(script);
+        if (encodedScript.length > 223) {
+            throw Error("Script too long, must be less than 223 bytes.");
+        }
+        return encodedScript;
+    }
 }
 exports.SlpTokenType1 = SlpTokenType1;
 
 }).call(this,require("buffer").Buffer)
-},{"./utils":7,"bignumber.js":37,"buffer":42}],7:[function(require,module,exports){
+},{"./utils":8,"bignumber.js":38,"buffer":43}],8:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const bchaddrjs_1 = require("bchaddrjs");
+const bchaddr = require("bchaddrjs-slp");
 class Utils {
     constructor(BITBOX) {
         this.BITBOX = this.BITBOX;
     }
     toCashAddress(address) {
-        return bchaddrjs_1.default.toCashAddress(address);
+        return bchaddr.toCashAddress(address);
     }
     toSlpAddress(address) {
-        return bchaddrjs_1.default.toSlpAddress(address);
+        return bchaddr.toSlpAddress(address);
     }
     isSlpAddress(address) {
-        return bchaddrjs_1.default.isSlpAddress(address);
+        return bchaddr.isSlpAddress(address);
     }
     static getPushDataOpcode(data) {
         let length = data.length;
@@ -990,9 +1172,9 @@ class Utils {
 exports.Utils = Utils;
 
 }).call(this,require("buffer").Buffer)
-},{"bchaddrjs":35,"buffer":42}],8:[function(require,module,exports){
+},{"bchaddrjs-slp":36,"buffer":43}],9:[function(require,module,exports){
 module.exports = require('./lib/axios');
-},{"./lib/axios":10}],9:[function(require,module,exports){
+},{"./lib/axios":11}],10:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -1176,7 +1358,7 @@ module.exports = function xhrAdapter(config) {
 };
 
 }).call(this,require('_process'))
-},{"../core/createError":16,"./../core/settle":19,"./../helpers/btoa":23,"./../helpers/buildURL":24,"./../helpers/cookies":26,"./../helpers/isURLSameOrigin":28,"./../helpers/parseHeaders":30,"./../utils":32,"_process":59}],10:[function(require,module,exports){
+},{"../core/createError":17,"./../core/settle":20,"./../helpers/btoa":24,"./../helpers/buildURL":25,"./../helpers/cookies":27,"./../helpers/isURLSameOrigin":29,"./../helpers/parseHeaders":31,"./../utils":33,"_process":60}],11:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -1230,7 +1412,7 @@ module.exports = axios;
 // Allow use of default import syntax in TypeScript
 module.exports.default = axios;
 
-},{"./cancel/Cancel":11,"./cancel/CancelToken":12,"./cancel/isCancel":13,"./core/Axios":14,"./defaults":21,"./helpers/bind":22,"./helpers/spread":31,"./utils":32}],11:[function(require,module,exports){
+},{"./cancel/Cancel":12,"./cancel/CancelToken":13,"./cancel/isCancel":14,"./core/Axios":15,"./defaults":22,"./helpers/bind":23,"./helpers/spread":32,"./utils":33}],12:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1251,7 +1433,7 @@ Cancel.prototype.__CANCEL__ = true;
 
 module.exports = Cancel;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 var Cancel = require('./Cancel');
@@ -1310,14 +1492,14 @@ CancelToken.source = function source() {
 
 module.exports = CancelToken;
 
-},{"./Cancel":11}],13:[function(require,module,exports){
+},{"./Cancel":12}],14:[function(require,module,exports){
 'use strict';
 
 module.exports = function isCancel(value) {
   return !!(value && value.__CANCEL__);
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 var defaults = require('./../defaults');
@@ -1398,7 +1580,7 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 
 module.exports = Axios;
 
-},{"./../defaults":21,"./../utils":32,"./InterceptorManager":15,"./dispatchRequest":17}],15:[function(require,module,exports){
+},{"./../defaults":22,"./../utils":33,"./InterceptorManager":16,"./dispatchRequest":18}],16:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1452,7 +1634,7 @@ InterceptorManager.prototype.forEach = function forEach(fn) {
 
 module.exports = InterceptorManager;
 
-},{"./../utils":32}],16:[function(require,module,exports){
+},{"./../utils":33}],17:[function(require,module,exports){
 'use strict';
 
 var enhanceError = require('./enhanceError');
@@ -1472,7 +1654,7 @@ module.exports = function createError(message, config, code, request, response) 
   return enhanceError(error, config, code, request, response);
 };
 
-},{"./enhanceError":18}],17:[function(require,module,exports){
+},{"./enhanceError":19}],18:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1560,7 +1742,7 @@ module.exports = function dispatchRequest(config) {
   });
 };
 
-},{"../cancel/isCancel":13,"../defaults":21,"./../helpers/combineURLs":25,"./../helpers/isAbsoluteURL":27,"./../utils":32,"./transformData":20}],18:[function(require,module,exports){
+},{"../cancel/isCancel":14,"../defaults":22,"./../helpers/combineURLs":26,"./../helpers/isAbsoluteURL":28,"./../utils":33,"./transformData":21}],19:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1583,7 +1765,7 @@ module.exports = function enhanceError(error, config, code, request, response) {
   return error;
 };
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 var createError = require('./createError');
@@ -1611,7 +1793,7 @@ module.exports = function settle(resolve, reject, response) {
   }
 };
 
-},{"./createError":16}],20:[function(require,module,exports){
+},{"./createError":17}],21:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1633,7 +1815,7 @@ module.exports = function transformData(data, headers, fns) {
   return data;
 };
 
-},{"./../utils":32}],21:[function(require,module,exports){
+},{"./../utils":33}],22:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -1733,7 +1915,7 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 module.exports = defaults;
 
 }).call(this,require('_process'))
-},{"./adapters/http":9,"./adapters/xhr":9,"./helpers/normalizeHeaderName":29,"./utils":32,"_process":59}],22:[function(require,module,exports){
+},{"./adapters/http":10,"./adapters/xhr":10,"./helpers/normalizeHeaderName":30,"./utils":33,"_process":60}],23:[function(require,module,exports){
 'use strict';
 
 module.exports = function bind(fn, thisArg) {
@@ -1746,7 +1928,7 @@ module.exports = function bind(fn, thisArg) {
   };
 };
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 // btoa polyfill for IE<10 courtesy https://github.com/davidchambers/Base64.js
@@ -1784,7 +1966,7 @@ function btoa(input) {
 
 module.exports = btoa;
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1852,7 +2034,7 @@ module.exports = function buildURL(url, params, paramsSerializer) {
   return url;
 };
 
-},{"./../utils":32}],25:[function(require,module,exports){
+},{"./../utils":33}],26:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1868,7 +2050,7 @@ module.exports = function combineURLs(baseURL, relativeURL) {
     : baseURL;
 };
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1923,7 +2105,7 @@ module.exports = (
   })()
 );
 
-},{"./../utils":32}],27:[function(require,module,exports){
+},{"./../utils":33}],28:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1939,7 +2121,7 @@ module.exports = function isAbsoluteURL(url) {
   return /^([a-z][a-z\d\+\-\.]*:)?\/\//i.test(url);
 };
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -2009,7 +2191,7 @@ module.exports = (
   })()
 );
 
-},{"./../utils":32}],29:[function(require,module,exports){
+},{"./../utils":33}],30:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -2023,7 +2205,7 @@ module.exports = function normalizeHeaderName(headers, normalizedName) {
   });
 };
 
-},{"../utils":32}],30:[function(require,module,exports){
+},{"../utils":33}],31:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -2078,7 +2260,7 @@ module.exports = function parseHeaders(headers) {
   return parsed;
 };
 
-},{"./../utils":32}],31:[function(require,module,exports){
+},{"./../utils":33}],32:[function(require,module,exports){
 'use strict';
 
 /**
@@ -2107,7 +2289,7 @@ module.exports = function spread(callback) {
   };
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 var bind = require('./helpers/bind');
@@ -2412,7 +2594,7 @@ module.exports = {
   trim: trim
 };
 
-},{"./helpers/bind":22,"is-buffer":54}],33:[function(require,module,exports){
+},{"./helpers/bind":23,"is-buffer":55}],34:[function(require,module,exports){
 // base-x encoding / decoding
 // Copyright (c) 2018 base-x contributors
 // Copyright (c) 2014-2018 The Bitcoin Core developers (base58.cpp)
@@ -2564,7 +2746,7 @@ module.exports = function base (ALPHABET) {
   }
 }
 
-},{"safe-buffer":75}],34:[function(require,module,exports){
+},{"safe-buffer":76}],35:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -2717,7 +2899,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (Buffer){
 /***
  * @license
@@ -2728,7 +2910,7 @@ function fromByteArray (uint8) {
  */
 
 var bs58check = require('bs58check')
-var cashaddr = require('cashaddrjs')
+var cashaddr = require('cashaddrjs-slp')
 
 /**
  * General purpose Bitcoin Cash address detection and translation.<br />
@@ -2750,6 +2932,7 @@ var Format = {}
 Format.Legacy = 'legacy'
 Format.Bitpay = 'bitpay'
 Format.Cashaddr = 'cashaddr'
+Format.Slpaddr = 'slpaddr'
 
 /**
  * @static
@@ -2843,6 +3026,18 @@ function toCashAddress (address) {
 }
 
 /**
+ * Translates the given address into cashaddr format.
+ * @static
+ * @param {string} address - A valid SLP address in any format.
+ * @return {string}
+ * @throws {InvalidAddressError}
+ */
+function toSlpAddress (address) {
+  var decoded = decodeAddress(address)
+  return encodeAsSlpaddr(decoded)
+}
+
+/**
  * Version byte table for base58 formats.
  * @private
  */
@@ -2876,6 +3071,10 @@ function decodeAddress (address) {
   }
   try {
     return decodeCashAddress(address)
+  } catch (error) {
+  }
+  try {
+    return decodeSlpAddress(address)
   } catch (error) {
   }
   throw new InvalidAddressError()
@@ -3013,6 +3212,65 @@ function decodeCashAddressWithPrefix (address) {
 }
 
 /**
+ * Attempts to decode the given address assuming it is a slpaddr address.
+ * @private
+ * @param {string} address - A valid SLP address in any format.
+ * @return {object}
+ * @throws {InvalidAddressError}
+ */
+function decodeSlpAddress (address) {
+  if (address.indexOf(':') !== -1) {
+    try {
+      return decodeSlpAddressWithPrefix(address)
+    } catch (error) {
+    }
+  } else {
+    var prefixes = ['simpleledger', 'slptest']
+    for (var i = 0; i < prefixes.length; ++i) {
+      try {
+        var prefix = prefixes[i]
+        return decodeSlpAddressWithPrefix(prefix + ':' + address)
+      } catch (error) {
+      }
+    }
+  }
+  throw new InvalidAddressError()
+}
+
+/**
+ * Attempts to decode the given address assuming it is a slpaddr address with explicit prefix.
+ * @private
+ * @param {string} address - A valid SLP address in any format.
+ * @return {object}
+ * @throws {InvalidAddressError}
+ */
+function decodeSlpAddressWithPrefix (address) {
+  try {
+    var decoded = cashaddr.decode(address)
+    var hash = Array.prototype.slice.call(decoded.hash, 0)
+    var type = decoded.type === 'P2PKH' ? Type.P2PKH : Type.P2SH
+    switch (decoded.prefix) {
+      case 'simpleledger':
+        return {
+          hash: hash,
+          format: Format.Slpaddr,
+          network: Network.Mainnet,
+          type: type
+        }
+      case 'slptest':
+        return {
+          hash: hash,
+          format: Format.Slpaddr,
+          network: Network.Testnet,
+          type: type
+        }
+    }
+  } catch (error) {
+  }
+  throw new InvalidAddressError()
+}
+
+/**
  * Encodes the given decoded address into legacy format.
  * @private
  * @param {object} decoded
@@ -3054,6 +3312,19 @@ function encodeAsCashaddr (decoded) {
 }
 
 /**
+ * Encodes the given decoded address into slpaddr format.
+ * @private
+ * @param {object} decoded
+ * @returns {string}
+ */
+function encodeAsSlpaddr (decoded) {
+  var prefix = decoded.network === Network.Mainnet ? 'simpleledger' : 'slptest'
+  var type = decoded.type === Type.P2PKH ? 'P2PKH' : 'P2SH'
+  var hash = Uint8Array.from(decoded.hash)
+  return cashaddr.encode(prefix, type, hash)
+}
+
+/**
  * Returns a boolean indicating whether the address is in legacy format.
  * @static
  * @param {string} address - A valid Bitcoin Cash address in any format.
@@ -3084,6 +3355,17 @@ function isBitpayAddress (address) {
  */
 function isCashAddress (address) {
   return detectAddressFormat(address) === Format.Cashaddr
+}
+
+/**
+ * Returns a boolean indicating whether the address is in cashaddr format.
+ * @static
+ * @param {string} address - A valid Bitcoin Cash address in any format.
+ * @returns {boolean}
+ * @throws {InvalidAddressError}
+ */
+function isSlpAddress (address) {
+  return detectAddressFormat(address) === Format.Slpaddr
 }
 
 /**
@@ -3151,12 +3433,19 @@ module.exports = {
   detectAddressFormat: detectAddressFormat,
   detectAddressNetwork: detectAddressNetwork,
   detectAddressType: detectAddressType,
+  decodeAddress: decodeAddress,
   toLegacyAddress: toLegacyAddress,
   toBitpayAddress: toBitpayAddress,
+  encodeAsCashaddr: encodeAsCashaddr,
   toCashAddress: toCashAddress,
+  encodeAsSlpaddr: encodeAsSlpaddr,
+  toSlpAddress: toSlpAddress,
+  encodeAsLegacy: encodeAsLegacy,
   isLegacyAddress: isLegacyAddress,
+  encodeAsBitpay: encodeAsBitpay,
   isBitpayAddress: isBitpayAddress,
   isCashAddress: isCashAddress,
+  isSlpAddress: isSlpAddress,
   isMainnetAddress: isMainnetAddress,
   isTestnetAddress: isTestnetAddress,
   isP2PKHAddress: isP2PKHAddress,
@@ -3165,7 +3454,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"bs58check":41,"buffer":42,"cashaddrjs":44}],36:[function(require,module,exports){
+},{"bs58check":42,"buffer":43,"cashaddrjs-slp":45}],37:[function(require,module,exports){
 var bigInt = (function (undefined) {
     "use strict";
 
@@ -4603,7 +4892,7 @@ if (typeof define === "function" && define.amd) {
     });
 }
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 ;(function (globalObject) {
   'use strict';
 
@@ -7419,15 +7708,15 @@ if (typeof define === "function" && define.amd) {
   }
 })(this);
 
-},{}],38:[function(require,module,exports){
-
 },{}],39:[function(require,module,exports){
+
+},{}],40:[function(require,module,exports){
 var basex = require('base-x')
 var ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 module.exports = basex(ALPHABET)
 
-},{"base-x":33}],40:[function(require,module,exports){
+},{"base-x":34}],41:[function(require,module,exports){
 'use strict'
 
 var base58 = require('bs58')
@@ -7479,7 +7768,7 @@ module.exports = function (checksumFn) {
   }
 }
 
-},{"bs58":39,"safe-buffer":75}],41:[function(require,module,exports){
+},{"bs58":40,"safe-buffer":76}],42:[function(require,module,exports){
 'use strict'
 
 var createHash = require('create-hash')
@@ -7493,7 +7782,7 @@ function sha256x2 (buffer) {
 
 module.exports = bs58checkBase(sha256x2)
 
-},{"./base":40,"create-hash":49}],42:[function(require,module,exports){
+},{"./base":41,"create-hash":50}],43:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -9272,7 +9561,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":34,"ieee754":52}],43:[function(require,module,exports){
+},{"base64-js":35,"ieee754":53}],44:[function(require,module,exports){
 /**
  * @license
  * https://github.com/bitcoincashjs/cashaddr
@@ -9351,7 +9640,7 @@ module.exports = {
   decode: decode,
 };
 
-},{"./validation":46}],44:[function(require,module,exports){
+},{"./validation":47}],45:[function(require,module,exports){
 /**
  * @license
  * https://github.com/bitcoincashjs/cashaddr
@@ -9437,7 +9726,7 @@ var ValidationError = validation.ValidationError;
  *
  * @private
  */
-var VALID_PREFIXES = ['bitcoincash', 'bchtest', 'bchreg'];
+var VALID_PREFIXES = ['bitcoincash', 'bchtest', 'bchreg', 'simpleledger', 'slptest'];
 
 /**
  * Checks whether a string is a valid prefix; ie., it has a single letter case
@@ -9684,7 +9973,7 @@ module.exports = {
   ValidationError: ValidationError,
 };
 
-},{"./base32":43,"./convertBits":45,"./validation":46,"big-integer":36}],45:[function(require,module,exports){
+},{"./base32":44,"./convertBits":46,"./validation":47,"big-integer":37}],46:[function(require,module,exports){
 // Copyright (c) 2017-2018 Emilio Almansi
 // Copyright (c) 2017 Pieter Wuille
 //
@@ -9757,7 +10046,7 @@ module.exports = function(data, from, to, strictMode) {
   return result;
 };
 
-},{"./validation":46}],46:[function(require,module,exports){
+},{"./validation":47}],47:[function(require,module,exports){
 /**
  * @license
  * https://github.com/bitcoincashjs/cashaddr
@@ -9808,7 +10097,7 @@ module.exports = {
   validate: validate,
 };
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 var Transform = require('stream').Transform
 var StringDecoder = require('string_decoder').StringDecoder
@@ -9909,7 +10198,7 @@ CipherBase.prototype._toString = function (value, enc, fin) {
 
 module.exports = CipherBase
 
-},{"inherits":53,"safe-buffer":75,"stream":84,"string_decoder":85}],48:[function(require,module,exports){
+},{"inherits":54,"safe-buffer":76,"stream":85,"string_decoder":86}],49:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -10020,7 +10309,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":54}],49:[function(require,module,exports){
+},{"../../is-buffer/index.js":55}],50:[function(require,module,exports){
 'use strict'
 var inherits = require('inherits')
 var MD5 = require('md5.js')
@@ -10052,7 +10341,7 @@ module.exports = function createHash (alg) {
   return new Hash(sha(alg))
 }
 
-},{"cipher-base":47,"inherits":53,"md5.js":57,"ripemd160":74,"sha.js":77}],50:[function(require,module,exports){
+},{"cipher-base":48,"inherits":54,"md5.js":58,"ripemd160":75,"sha.js":78}],51:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -10577,7 +10866,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 'use strict'
 var Buffer = require('safe-buffer').Buffer
 var Transform = require('stream').Transform
@@ -10674,7 +10963,7 @@ HashBase.prototype._digest = function () {
 
 module.exports = HashBase
 
-},{"inherits":53,"safe-buffer":75,"stream":84}],52:[function(require,module,exports){
+},{"inherits":54,"safe-buffer":76,"stream":85}],53:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -10760,7 +11049,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -10785,7 +11074,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -10808,14 +11097,14 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -27926,7 +28215,7 @@ module.exports = Array.isArray || function (arr) {
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict'
 var inherits = require('inherits')
 var HashBase = require('hash-base')
@@ -28074,7 +28363,7 @@ function fnI (a, b, c, d, m, k, s) {
 
 module.exports = MD5
 
-},{"hash-base":51,"inherits":53,"safe-buffer":75}],58:[function(require,module,exports){
+},{"hash-base":52,"inherits":54,"safe-buffer":76}],59:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -28122,7 +28411,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 
 }).call(this,require('_process'))
-},{"_process":59}],59:[function(require,module,exports){
+},{"_process":60}],60:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -28308,10 +28597,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 module.exports = require('./lib/_stream_duplex.js');
 
-},{"./lib/_stream_duplex.js":61}],61:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":62}],62:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -28443,7 +28732,7 @@ Duplex.prototype._destroy = function (err, cb) {
 
   pna.nextTick(cb, err);
 };
-},{"./_stream_readable":63,"./_stream_writable":65,"core-util-is":48,"inherits":53,"process-nextick-args":58}],62:[function(require,module,exports){
+},{"./_stream_readable":64,"./_stream_writable":66,"core-util-is":49,"inherits":54,"process-nextick-args":59}],63:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -28491,7 +28780,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":64,"core-util-is":48,"inherits":53}],63:[function(require,module,exports){
+},{"./_stream_transform":65,"core-util-is":49,"inherits":54}],64:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -29513,7 +29802,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":61,"./internal/streams/BufferList":66,"./internal/streams/destroy":67,"./internal/streams/stream":68,"_process":59,"core-util-is":48,"events":50,"inherits":53,"isarray":55,"process-nextick-args":58,"safe-buffer":75,"string_decoder/":69,"util":38}],64:[function(require,module,exports){
+},{"./_stream_duplex":62,"./internal/streams/BufferList":67,"./internal/streams/destroy":68,"./internal/streams/stream":69,"_process":60,"core-util-is":49,"events":51,"inherits":54,"isarray":56,"process-nextick-args":59,"safe-buffer":76,"string_decoder/":70,"util":39}],65:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -29728,7 +30017,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":61,"core-util-is":48,"inherits":53}],65:[function(require,module,exports){
+},{"./_stream_duplex":62,"core-util-is":49,"inherits":54}],66:[function(require,module,exports){
 (function (process,global,setImmediate){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -30418,7 +30707,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"./_stream_duplex":61,"./internal/streams/destroy":67,"./internal/streams/stream":68,"_process":59,"core-util-is":48,"inherits":53,"process-nextick-args":58,"safe-buffer":75,"timers":86,"util-deprecate":87}],66:[function(require,module,exports){
+},{"./_stream_duplex":62,"./internal/streams/destroy":68,"./internal/streams/stream":69,"_process":60,"core-util-is":49,"inherits":54,"process-nextick-args":59,"safe-buffer":76,"timers":87,"util-deprecate":88}],67:[function(require,module,exports){
 'use strict';
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -30498,7 +30787,7 @@ if (util && util.inspect && util.inspect.custom) {
     return this.constructor.name + ' ' + obj;
   };
 }
-},{"safe-buffer":75,"util":38}],67:[function(require,module,exports){
+},{"safe-buffer":76,"util":39}],68:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -30573,10 +30862,10 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":58}],68:[function(require,module,exports){
+},{"process-nextick-args":59}],69:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":50}],69:[function(require,module,exports){
+},{"events":51}],70:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -30873,10 +31162,10 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":75}],70:[function(require,module,exports){
+},{"safe-buffer":76}],71:[function(require,module,exports){
 module.exports = require('./readable').PassThrough
 
-},{"./readable":71}],71:[function(require,module,exports){
+},{"./readable":72}],72:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -30885,13 +31174,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":61,"./lib/_stream_passthrough.js":62,"./lib/_stream_readable.js":63,"./lib/_stream_transform.js":64,"./lib/_stream_writable.js":65}],72:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":62,"./lib/_stream_passthrough.js":63,"./lib/_stream_readable.js":64,"./lib/_stream_transform.js":65,"./lib/_stream_writable.js":66}],73:[function(require,module,exports){
 module.exports = require('./readable').Transform
 
-},{"./readable":71}],73:[function(require,module,exports){
+},{"./readable":72}],74:[function(require,module,exports){
 module.exports = require('./lib/_stream_writable.js');
 
-},{"./lib/_stream_writable.js":65}],74:[function(require,module,exports){
+},{"./lib/_stream_writable.js":66}],75:[function(require,module,exports){
 'use strict'
 var Buffer = require('buffer').Buffer
 var inherits = require('inherits')
@@ -31056,7 +31345,7 @@ function fn5 (a, b, c, d, e, m, k, s) {
 
 module.exports = RIPEMD160
 
-},{"buffer":42,"hash-base":51,"inherits":53}],75:[function(require,module,exports){
+},{"buffer":43,"hash-base":52,"inherits":54}],76:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -31120,7 +31409,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":42}],76:[function(require,module,exports){
+},{"buffer":43}],77:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 
 // prototype class for hash functions
@@ -31203,7 +31492,7 @@ Hash.prototype._update = function () {
 
 module.exports = Hash
 
-},{"safe-buffer":75}],77:[function(require,module,exports){
+},{"safe-buffer":76}],78:[function(require,module,exports){
 var exports = module.exports = function SHA (algorithm) {
   algorithm = algorithm.toLowerCase()
 
@@ -31220,7 +31509,7 @@ exports.sha256 = require('./sha256')
 exports.sha384 = require('./sha384')
 exports.sha512 = require('./sha512')
 
-},{"./sha":78,"./sha1":79,"./sha224":80,"./sha256":81,"./sha384":82,"./sha512":83}],78:[function(require,module,exports){
+},{"./sha":79,"./sha1":80,"./sha224":81,"./sha256":82,"./sha384":83,"./sha512":84}],79:[function(require,module,exports){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-0, as defined
  * in FIPS PUB 180-1
@@ -31316,7 +31605,7 @@ Sha.prototype._hash = function () {
 
 module.exports = Sha
 
-},{"./hash":76,"inherits":53,"safe-buffer":75}],79:[function(require,module,exports){
+},{"./hash":77,"inherits":54,"safe-buffer":76}],80:[function(require,module,exports){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-1, as defined
  * in FIPS PUB 180-1
@@ -31417,7 +31706,7 @@ Sha1.prototype._hash = function () {
 
 module.exports = Sha1
 
-},{"./hash":76,"inherits":53,"safe-buffer":75}],80:[function(require,module,exports){
+},{"./hash":77,"inherits":54,"safe-buffer":76}],81:[function(require,module,exports){
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
  * in FIPS 180-2
@@ -31472,7 +31761,7 @@ Sha224.prototype._hash = function () {
 
 module.exports = Sha224
 
-},{"./hash":76,"./sha256":81,"inherits":53,"safe-buffer":75}],81:[function(require,module,exports){
+},{"./hash":77,"./sha256":82,"inherits":54,"safe-buffer":76}],82:[function(require,module,exports){
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
  * in FIPS 180-2
@@ -31609,7 +31898,7 @@ Sha256.prototype._hash = function () {
 
 module.exports = Sha256
 
-},{"./hash":76,"inherits":53,"safe-buffer":75}],82:[function(require,module,exports){
+},{"./hash":77,"inherits":54,"safe-buffer":76}],83:[function(require,module,exports){
 var inherits = require('inherits')
 var SHA512 = require('./sha512')
 var Hash = require('./hash')
@@ -31668,7 +31957,7 @@ Sha384.prototype._hash = function () {
 
 module.exports = Sha384
 
-},{"./hash":76,"./sha512":83,"inherits":53,"safe-buffer":75}],83:[function(require,module,exports){
+},{"./hash":77,"./sha512":84,"inherits":54,"safe-buffer":76}],84:[function(require,module,exports){
 var inherits = require('inherits')
 var Hash = require('./hash')
 var Buffer = require('safe-buffer').Buffer
@@ -31930,7 +32219,7 @@ Sha512.prototype._hash = function () {
 
 module.exports = Sha512
 
-},{"./hash":76,"inherits":53,"safe-buffer":75}],84:[function(require,module,exports){
+},{"./hash":77,"inherits":54,"safe-buffer":76}],85:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -32059,9 +32348,9 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":50,"inherits":53,"readable-stream/duplex.js":60,"readable-stream/passthrough.js":70,"readable-stream/readable.js":71,"readable-stream/transform.js":72,"readable-stream/writable.js":73}],85:[function(require,module,exports){
-arguments[4][69][0].apply(exports,arguments)
-},{"dup":69,"safe-buffer":75}],86:[function(require,module,exports){
+},{"events":51,"inherits":54,"readable-stream/duplex.js":61,"readable-stream/passthrough.js":71,"readable-stream/readable.js":72,"readable-stream/transform.js":73,"readable-stream/writable.js":74}],86:[function(require,module,exports){
+arguments[4][70][0].apply(exports,arguments)
+},{"dup":70,"safe-buffer":76}],87:[function(require,module,exports){
 (function (setImmediate,clearImmediate){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -32140,7 +32429,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":59,"timers":86}],87:[function(require,module,exports){
+},{"process/browser.js":60,"timers":87}],88:[function(require,module,exports){
 (function (global){
 
 /**

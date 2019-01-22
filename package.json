@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.2.2",
+  "version": "0.9.0",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "bchaddrjs-slp": "git+https://github.com/simpleledger/bchaddrjs.git",
+    "bchaddrjs-slp": "git://github.com/simpleledger/bchaddrjs.git#master",
     "bignumber.js": "^7.2.1",
     "slp-balances": "^0.1.0"
   }

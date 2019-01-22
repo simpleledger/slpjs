@@ -90,6 +90,11 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
+"@types/node@^10.12.18":
+  version "10.12.18"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.12.18.tgz#1d3ca764718915584fcd9f6344621b7672665c67"
+  integrity sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==
+
 JSONStream@^1.0.3:
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/JSONStream/-/JSONStream-1.3.5.tgz#3208c1f08d3a4d99261ab64f92302bc15e111ca0"
@@ -305,7 +310,7 @@ arraybuffer.slice@~0.0.7:
   resolved "https://registry.yarnpkg.com/arraybuffer.slice/-/arraybuffer.slice-0.0.7.tgz#3bbc4275dd584cc1b10809b89d4e8b63a69e7675"
   integrity sha512-wGUIVQXuehL5TCqQun8OW81jGzAWycqzFF8lFp+GOM5BXLYj3bKNsYC4daB7n6XjCqxQA/qgTJ+8ANR3acjrog==
 
-arrify@^1.0.1:
+arrify@^1.0.0, arrify@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/arrify/-/arrify-1.0.1.tgz#898508da2226f380df904728456849c1501a4b0d"
   integrity sha1-iYUI2iIm84DfkEcoRWhJwVAaSw0=
@@ -1004,9 +1009,9 @@ bch-wallet-bridge-provider-interface@^0.1.1:
     bchaddrjs "^0.2.2"
     bitcoincashjs "^0.1.10"
 
-"bchaddrjs-slp@git+https://github.com/simpleledger/bchaddrjs.git":
+"bchaddrjs-slp@git://github.com/simpleledger/bchaddrjs.git#master":
   version "0.2.6"
-  resolved "git+https://github.com/simpleledger/bchaddrjs.git#ea05d679783a6737f2f99adc37ebf485dc64f006"
+  resolved "git://github.com/simpleledger/bchaddrjs.git#ea05d679783a6737f2f99adc37ebf485dc64f006"
   dependencies:
     bs58check "^2.1.2"
     cashaddrjs-slp "^0.2.11"
@@ -1061,13 +1066,13 @@ bindings@^1.2.1:
   resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.3.1.tgz#21fc7c6d67c18516ec5aaa2815b145ff77b26ea5"
   integrity sha512-i47mqjF9UbjxJhxGf+pZ6kSxrnI3wBLlnGI2ArWJ4r0VrvDS7ZYXkprq/pLaBWYq4GM0r4zdHY+NNRqEMU7uew==
 
-"bip21@github:Bitcoin-com/bip21":
+bip21@Bitcoin-com/bip21:
   version "2.0.1"
   resolved "https://codeload.github.com/Bitcoin-com/bip21/tar.gz/28f8d03a3a16ed11eb5b963248ed1be8c46c6d6f"
   dependencies:
     qs "^6.3.0"
 
-"bip32-utils@github:Bitcoin-com/bip32-utils#0.13.0":
+bip32-utils@Bitcoin-com/bip32-utils#0.13.0:
   version "0.13.0"
   resolved "https://codeload.github.com/Bitcoin-com/bip32-utils/tar.gz/966fb8f0e0d4c667e4ee89adfa20c2078d66887c"
   dependencies:
@@ -1155,14 +1160,14 @@ bitbox-sdk@^2.3.0:
     touch "^3.1.0"
     wif "^2.0.6"
 
+bitcoin-ops@Bitcoin-com/bitcoincash-ops#1.5.0:
+  version "1.5.0"
+  resolved "https://codeload.github.com/Bitcoin-com/bitcoincash-ops/tar.gz/f1363d462fd044f35f94a220bf9568e25d985646"
+
 bitcoin-ops@^1.3.0:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/bitcoin-ops/-/bitcoin-ops-1.4.1.tgz#e45de620398e22fd4ca6023de43974ff42240278"
   integrity sha512-pef6gxZFztEhaE9RY9HmWVmiIHqCb2OyS4HPKkpc6CIiiOa3Qmuoylxc5P2EkU3w+5eTSifI9SEZC88idAIGow==
-
-"bitcoin-ops@github:Bitcoin-com/bitcoincash-ops#1.5.0":
-  version "1.5.0"
-  resolved "https://codeload.github.com/Bitcoin-com/bitcoincash-ops/tar.gz/f1363d462fd044f35f94a220bf9568e25d985646"
 
 bitcoin-txdecoder@0.0.3:
   version "0.0.3"
@@ -1171,7 +1176,7 @@ bitcoin-txdecoder@0.0.3:
   dependencies:
     bitcoinjs-lib "3.3.*"
 
-"bitcoincashjs-lib@github:Bitcoin-com/bitcoincashjs-lib#3.3.4":
+bitcoincashjs-lib@Bitcoin-com/bitcoincashjs-lib#3.3.4:
   version "3.3.4"
   resolved "https://codeload.github.com/Bitcoin-com/bitcoincashjs-lib/tar.gz/12fa5fe9b535816b54b9efedd6caf278d3e55b90"
   dependencies:
@@ -1442,7 +1447,7 @@ buffer-equals@^1.0.3:
   resolved "https://registry.yarnpkg.com/buffer-equals/-/buffer-equals-1.0.4.tgz#0353b54fd07fd9564170671ae6f66b9cf10d27f5"
   integrity sha1-A1O1T9B/2VZBcGca5vZrnPENJ/U=
 
-buffer-from@^1.0.0:
+buffer-from@^1.0.0, buffer-from@^1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/buffer-from/-/buffer-from-1.1.1.tgz#32713bc028f75c02fdb710d7c7bcec1f2c6070ef"
   integrity sha512-MQcXEUbCKtEo7bhqEs6560Hyd4XaovZlO/k9V3hjVUF/zwW7KBVdSK4gIt/bzwS9MbR5qob+F5jusZsb0YQK2A==
@@ -1658,7 +1663,7 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
-"coininfo@github:Bitcoin-com/coininfo":
+coininfo@Bitcoin-com/coininfo:
   version "4.0.0"
   resolved "https://codeload.github.com/Bitcoin-com/coininfo/tar.gz/eece2c6141d08c3e7783929f2a1e1e681aa1a82c"
   dependencies:
@@ -2050,7 +2055,7 @@ detective@^5.0.2:
     defined "^1.0.0"
     minimist "^1.1.1"
 
-diff@3.5.0:
+diff@3.5.0, diff@^3.1.0:
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/diff/-/diff-3.5.0.tgz#800c0dd1e0a8bfbc95835c202ad220fe317e5a12"
   integrity sha512-A46qtFgd+g7pDZinpnwiRJtxbC1hpgf0uzP3iG89scHk0AUC7A1TGxf5OiiOUv/JMZR8GOt8hL900hV0bOy5xA==
@@ -3557,6 +3562,11 @@ make-dir@^1.0.0, make-dir@^1.3.0:
   dependencies:
     pify "^3.0.0"
 
+make-error@^1.1.1:
+  version "1.3.5"
+  resolved "https://registry.yarnpkg.com/make-error/-/make-error-1.3.5.tgz#efe4e81f6db28cadd605c70f29c831b58ef776c8"
+  integrity sha512-c3sIjNUow0+8swNwVpqoH4YCShKNFkMaw6oH1mNS2haDZQqkeZFlHS3dhoeEbKKmJB4vXpJucU6oH75aDYeE9g==
+
 map-age-cleaner@^0.1.1:
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/map-age-cleaner/-/map-age-cleaner-0.1.3.tgz#7d583a7306434c055fe474b0f45078e6e1b4b92a"
@@ -5039,6 +5049,14 @@ source-map-support@^0.4.15:
   dependencies:
     source-map "^0.5.6"
 
+source-map-support@^0.5.6:
+  version "0.5.10"
+  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.10.tgz#2214080bc9d51832511ee2bab96e3c2f9353120c"
+  integrity sha512-YfQ3tQFTK/yzlGJuX8pTwa4tifQj4QS2Mj7UegOu8jAz59MqIiMGPXxQhVQiIMNzayuUSF/jEuVnfFF5JqybmQ==
+  dependencies:
+    buffer-from "^1.0.0"
+    source-map "^0.6.0"
+
 source-map-url@^0.4.0:
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/source-map-url/-/source-map-url-0.4.0.tgz#3e935d7ddd73631b97659956d55128e87b5084a3"
@@ -5049,7 +5067,7 @@ source-map@^0.5.0, source-map@^0.5.6, source-map@^0.5.7, source-map@~0.5.3:
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.5.7.tgz#8a039d2d1021d22d1ea14c80d8ea468ba2ef3fcc"
   integrity sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w=
 
-source-map@^0.6.1, source-map@~0.6.1:
+source-map@^0.6.0, source-map@^0.6.1, source-map@~0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
@@ -5424,6 +5442,20 @@ trim-right@^1.0.1:
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"
   integrity sha1-yy4SAwZ+DI3h9hQJS5/kVwTqYAM=
 
+ts-node@^7.0.1:
+  version "7.0.1"
+  resolved "https://registry.yarnpkg.com/ts-node/-/ts-node-7.0.1.tgz#9562dc2d1e6d248d24bc55f773e3f614337d9baf"
+  integrity sha512-BVwVbPJRspzNh2yfslyT1PSbl5uIk03EZlb493RKHN4qej/D06n1cEhjlOJG69oFsE7OT8XjpTUcYf6pKTLMhw==
+  dependencies:
+    arrify "^1.0.0"
+    buffer-from "^1.1.0"
+    diff "^3.1.0"
+    make-error "^1.1.1"
+    minimist "^1.2.0"
+    mkdirp "^0.5.1"
+    source-map-support "^0.5.6"
+    yn "^2.0.0"
+
 tsconfig@^5.0.3:
   version "5.0.3"
   resolved "https://registry.yarnpkg.com/tsconfig/-/tsconfig-5.0.3.tgz#5f4278e701800967a8fc383fd19648878f2a6e3a"
@@ -5763,3 +5795,8 @@ yeast@0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/yeast/-/yeast-0.1.2.tgz#008e06d8094320c372dbc2f8ed76a0ca6c8ac419"
   integrity sha1-AI4G2AlDIMNy28L47XagymyKxBk=
+
+yn@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/yn/-/yn-2.0.0.tgz#e5adabc8acf408f6385fc76495684c88e6af689a"
+  integrity sha1-5a2ryKz0CPY4X8dklWhMiOavaJo=

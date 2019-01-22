@@ -1,6 +1,7 @@
-const BitdbProxy = require('../lib/bitdbproxy').BitdbProxy;
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
+
+const BitdbProxy = require('../lib/bitdbproxy').BitdbProxy;
 
 describe('BitdbProxy', function() {
     describe('getTokenInformation()', function() {
@@ -19,7 +20,7 @@ describe('BitdbProxy', function() {
                 documentUri: '',
                 documentSha256: new Buffer.from(''),
                 decimals: 8,
-                baton: true,
+                containsBaton: true,
                 batonVout: 2, 
                 genesisOrMintQuantity: new BigNumber("21000000")
             }

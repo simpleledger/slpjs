@@ -1,5 +1,5 @@
 import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
-import bchaddr from "bchaddrjs";
+import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 
 export class Utils {
@@ -47,7 +47,7 @@ export class Utils {
     }
 
     // This is for encoding Script in scriptPubKey OP_RETURN scripts, where BIP62.3 does not apply
-    static encodeScript(script: [number | number[]]) {
+    static encodeScript(script: (number|number[])[]) {
         const bufferSize = <number>script.reduce((acc: number, cur) => {
             if (Array.isArray(cur)) return acc + cur.length
             else return acc + 1

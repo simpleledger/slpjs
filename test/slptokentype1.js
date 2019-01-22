@@ -1,5 +1,3 @@
-// const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default;
-// const BITBOX = new BITBOXSDK();
 const assert = require('assert');
 const type1 = require('../lib/slptokentype1').SlpTokenType1;
 

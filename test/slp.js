@@ -1,8 +1,10 @@
+const assert = require('assert');
 const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default;
 const BITBOX = new BITBOXSDK();
-const assert = require('assert');
 
+const Slp = require('../lib/slp').Slp;
 const scriptUnitTestData = require('../node_modules/slp-unit-test-data/script_tests.json');
+
 let slp = new Slp(BITBOX);
 
 describe('Slp', function() {
@@ -22,14 +24,17 @@ describe('Slp', function() {
     });
     describe('buildRawGenesisTx()', function() {
         it('works', () => {
+            assert.equal(true, false);
         });
     });
     describe('buildRawSendTx()', function() {
         it('works', () => {
+            assert.equal(true, false);
         });
     });
     describe('()', function() {
         it('works', () => {
+            assert.equal(true, false);
         });
     });
 });

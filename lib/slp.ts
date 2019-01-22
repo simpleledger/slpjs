@@ -1,12 +1,12 @@
 import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
-import bchaddr from 'bchaddrjs';
+import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
-import { AddressUtxoResultExtended, TokenTransactionDetails, TokenTransactionType, TxnDetailsModified, TokenType } from '..';
-let slptokentype1 = require('./slptokentype1');
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, TxnDetailsDeep, SlpTypeVersion } from './slpjs';
+import { SlpTokenType1 } from './slptokentype1';
 
 export interface PushDataOperation {
     opcode: number, 
-    data: Buffer | null
+    data: Buffer|null
 }
 
 export interface configBuildGenesisOpReturn {
@@ -84,11 +84,11 @@ export class Slp {
         //     batonVout: 2, // normally this is null (for fixed supply) or 2 for flexible
         //     initialQuantity: 1000000
         // }
-        return slptokentype1.buildGenesisOpReturn(
+        return SlpTokenType1.buildGenesisOpReturn(
             config.ticker,
             config.name,
             config.urlOrEmail,
-            config.hash,
+            config.hash.toString('hex'),
             config.decimals,
             config.batonVout,
             config.initialQuantity
@@ -96,7 +96,7 @@ export class Slp {
     }
 
     buildMintOpReturn(config: configBuildMintOpReturn, type = 0x01) {
-        return slptokentype1.buildMintOpReturn(
+        return SlpTokenType1.buildMintOpReturn(
             config.tokenIdHex,
             config.batonVout,
             config.mintQuantity
@@ -109,7 +109,7 @@ export class Slp {
         //     tokenIdHex: "", 
         //     outputQtyArray: []
         // }
-        return slptokentype1.buildSendOpReturn(
+        return SlpTokenType1.buildSendOpReturn(
             config.tokenIdHex,
             config.outputQtyArray
         )
@@ -313,8 +313,8 @@ export class Slp {
     }
 
     parseSlpOutputScript(outputScript: Buffer) {
-        let slpMsg = <TokenTransactionDetails>{};
-        let chunks: Buffer[];
+        let slpMsg = <SlpTransactionDetails>{};
+        let chunks: (Buffer|null)[];
         try {
             chunks = this.parseOpReturnToChunks(outputScript);
         } catch(e) { 
@@ -329,16 +329,16 @@ export class Slp {
             throw Error("Missing token_type");
         // # check if the token version is supported
         slpMsg.type = Slp.parseChunkToInt(chunks[1], 1, 2, true);
-        if(slpMsg.type !== TokenType.TokenType1)
+        if(slpMsg.type !== SlpTypeVersion.TokenType1)
             throw Error('Unsupported token type:' + slpMsg.type);
         if(chunks.length === 2)
             throw Error('Missing SLP transaction type');
         try {
-            slpMsg.transactionType = TokenTransactionType[chunks[2].toString('ascii')]
+            slpMsg.transactionType = SlpTransactionType[chunks[2].toString('ascii')]
         } catch(_){
             throw Error('Bad transaction type');
         }
-        if(slpMsg.transactionType === TokenTransactionType.GENESIS) {
+        if(slpMsg.transactionType === SlpTransactionType.GENESIS) {
             if(chunks.length !== 10)
                 throw Error('GENESIS with incorrect number of parameters');
             slpMsg.symbol = chunks[3] ? chunks[3].toString('utf8') : '';
@@ -356,11 +356,11 @@ export class Slp {
             if(slpMsg.batonVout !== null){
                 if (slpMsg.batonVout < 2) 
                     throw Error('Mint baton cannot be on vout=0 or 1');
-                slpMsg.baton = true;
+                slpMsg.containsBaton = true;
             }
-            slpMsg.genesisOrMintQuantity = new BigNumber(chunks[9].readUInt8(0))
+            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[9].readUInt32BE(0).toString())).multipliedBy(2**32).plus(chunks[9].readUInt32BE(4).toString());
         }
-        else if(slpMsg.transactionType === TokenTransactionType.SEND) {
+        else if(slpMsg.transactionType === SlpTransactionType.SEND) {
             if(chunks.length < 4)
                 throw Error('SEND with too few parameters');
             if(chunks[3].length !== 32)
@@ -376,7 +376,7 @@ export class Slp {
             chunks.slice(4).forEach(chunk => {
                 if(chunk.length !== 8)
                     throw Error('SEND quantities must be 8-bytes each.');
-                slpMsg.sendOutputs.push(new BigNumber(chunk.readUInt8(0)));
+                slpMsg.sendOutputs.push((new BigNumber(chunk.readUInt32BE(0).toString())).multipliedBy(2**32).plus(new BigNumber(chunk.readUInt32BE(4).toString())));
             });
             // # maximum 19 allowed token outputs, plus 1 for the explicit [0] we inserted.
             if(slpMsg.sendOutputs.length < 2)
@@ -384,7 +384,7 @@ export class Slp {
             if(slpMsg.sendOutputs.length > 20)
                 throw Error('More than 19 output amounts');
         }
-        else if(slpMsg.transactionType === TokenTransactionType.MINT) {
+        else if(slpMsg.transactionType === SlpTransactionType.MINT) {
             if(chunks.length != 6)
                 throw Error('MINT with incorrect number of parameters');
             if(chunks[3].length != 32)
@@ -394,16 +394,15 @@ export class Slp {
             if(slpMsg.batonVout !== null){
                 if(slpMsg.batonVout < 2)
                     throw Error('Mint baton cannot be on vout=0 or 1');
-                slpMsg.baton = true;
+                slpMsg.containsBaton = true;
             }
-            slpMsg.genesisOrMintQuantity = new BigNumber(chunks[5].readUInt8(0));
+            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[5].readUInt32BE(0).toString())).multipliedBy(2**32).plus((new BigNumber(chunks[5].readUInt32BE(4).toString())));
         }
         else
             throw Error('Bad transaction type');
         return slpMsg;
     }
-
-    
+ 
     static parseChunkToInt(intBytes: Buffer, minByteLen: number, maxByteLen: number, raise_on_Null = false) {
         // # Parse data as unsigned-big-endian encoded integer.
         // # For empty data different possibilities may occur:
@@ -434,7 +433,7 @@ export class Slp {
         if(ops[0].opcode != this.BITBOX.Script.opcodes.OP_RETURN)
             throw Error('No OP_RETURN');
     
-        let chunks: Buffer[] = [];
+        let chunks: (Buffer|null)[] = [];
         ops.slice(1).forEach(opitem => {
             if(opitem.opcode > this.BITBOX.Script.opcodes.OP_16)
                 throw Error("Non-push opcode");
@@ -497,30 +496,38 @@ export class Slp {
         return ops;
     }
 
-    calculateGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress = null, bchChangeAddress = null, feeRate = 1) {
+    calculateGenesisCost(genesisOpReturnLength: number, inputUtxoSize: number, batonAddress?: string, bchChangeAddress?: string, feeRate = 1) {
+        return this.calculateMintOrGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate);
+    }
+
+    calculateMintCost(mintOpReturnLength: number, inputUtxoSize: number, batonAddress?: string, bchChangeAddress?: string, feeRate = 1) {
+        return this.calculateMintOrGenesisCost(mintOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate);
+    }
+
+    calculateMintOrGenesisCost(mintOpReturnLength: number, inputUtxoSize: number, batonAddress?: string, bchChangeAddress?: string, feeRate: number = 1) {
         let outputs = 1
         let nonfeeoutputs = 546
-        if (batonAddress != null) {
+        if (batonAddress !== null && batonAddress !== undefined) {
             nonfeeoutputs += 546
             outputs += 1
         }
 
-        if (bchChangeAddress != null) {
+        if (bchChangeAddress !== null && bchChangeAddress !== undefined) {
             outputs += 1
         }
 
         let fee = this.BITBOX.BitcoinCash.getByteCount({ P2PKH: inputUtxoSize }, { P2PKH: outputs })
-        fee += genesisOpReturnLength
+        fee += mintOpReturnLength
         fee += 10 // added to account for OP_RETURN ammount of 0000000000000000
         fee *= feeRate
-        console.log("GENESIS cost before outputs: " + fee.toString());
+        console.log("MINT/GENESIS cost before outputs: " + fee.toString());
         fee += nonfeeoutputs
-        console.log("GENESIS cost after outputs are added: " + fee.toString());
+        console.log("MINT/GENESIS cost after outputs are added: " + fee.toString());
 
         return fee
     }
 
-    calculateSendCost(sendOpReturnLength, inputUtxoSize, outputAddressArraySize, bchChangeAddress = null, feeRate = 1) {
+    calculateSendCost(sendOpReturnLength: number, inputUtxoSize: number, outputAddressArraySize: number, bchChangeAddress?: string, feeRate = 1) {
         let outputs = outputAddressArraySize
         let nonfeeoutputs = outputAddressArraySize * 546
 

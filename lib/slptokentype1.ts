@@ -5,7 +5,7 @@ export class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
     static buildGenesisOpReturn(ticker: string, name: string, documentUrl:string, documentHashHex: string, decimals: number, batonVout:number, initialQuantity:BigNumber) {
-        let script: [number|number[]];
+        let script: (number|number[])[] = [];
 
         // OP Return Prefix
         script.push(0x6a)
@@ -100,7 +100,7 @@ export class SlpTokenType1 {
         if (initialQuantity.isLessThan(0))
             throw Error("Genesis quantity must be greater than 0.");
 
-        if (initialQuantity.modulo(1) != new BigNumber(0))
+        if (!initialQuantity.modulo(1).isEqualTo(new BigNumber(0)))
             throw Error("Genesis quantity must be a whole number.");
 
         let initialQuantityBuf = Utils.int2FixedBuffer(initialQuantity)
@@ -115,7 +115,7 @@ export class SlpTokenType1 {
     }
 
     static buildSendOpReturn(tokenIdHex: string, outputQtyArray: BigNumber[]) {
-        let script: [number|number[]];
+        let script: (number|number[])[] = [];
 
         // OP Return Prefix
         script.push(0x6a)
@@ -162,7 +162,7 @@ export class SlpTokenType1 {
             if (outputQty.isLessThan(0))
                 throw Error("All Send outputs must be greater than 0.");
 
-            if (outputQty.modulo(1) != new BigNumber(0))
+            if (!outputQty.modulo(1).isEqualTo(new BigNumber(0)))
                 throw Error("All Send outputs must be a whole number.");
 
             let qtyBuffer = Utils.int2FixedBuffer(outputQty)
@@ -178,7 +178,7 @@ export class SlpTokenType1 {
     }
 
     static buildMintOpReturn(tokenIdHex: string, batonVout: number, mintQuantity: BigNumber) {
-        let script: [number|number[]];
+        let script: (number|number[])[] = [];
 
         // OP Return Prefix
         script.push(0x6a)
@@ -229,7 +229,7 @@ export class SlpTokenType1 {
         if (mintQuantity.isLessThan(0))
             throw Error("Genesis quantity must be greater than 0.");
 
-        if (mintQuantity.modulo(1) != new BigNumber(0))
+        if (!mintQuantity.modulo(1).isEqualTo(new BigNumber(0)))
             throw Error("Genesis quantity must be a whole number.");
 
         let initialQuantityBuf = Utils.int2FixedBuffer(mintQuantity)
