@@ -1,17 +1,391 @@
-const assert = require('assert');
-const type1 = require('../lib/slptokentype1').SlpTokenType1;
+const assert = require('assert')
+const BigNumber = require('bignumber.js')
+const version1Token = require('../lib/slptokentype1').SlpTokenType1
 
 describe('SlpTokenType1', function() {
     describe('buildGenesisOpReturn()', function() {
-        it('works', () => {
-        });
-    });
+        it('Succeeds with Minimal OP_RETURN', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber(100)
+            let op_return = version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity)
+            assert.equal(op_return.toString('hex'), '6a04534c500001010747454e455349534c004c004c004c0001004c00080000000000000064')
+        })
+        it('Throws without BigNumber', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = 100
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Amount must be an instance of BigNumber"))
+        })
+        it('Throws with initial quantity too large', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551616')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Maximum genesis value exceeded. Reduce input quantity below 18446744073709551615."))
+        })
+        it('Throws with negative initial quantity', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('-1')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Genesis quantity must be greater than 0."))
+        })
+        it('Throws with a decimal initial quantity', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('1.1')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Genesis quantity must be a whole number."))
+        })
+        it('Throws when allocated OP_RETURN space is exceeded', () => {
+            let ticker = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            let name = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            let documentUri = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Script too long, must be less than 223 bytes."))
+        })
+        it('Succeeds with batonVout is 2 and max inital quantity is used', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = 2
+            let initialQuantity = new BigNumber('18446744073709551615')
+            let op_return = version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity)
+            assert.equal(op_return.toString('hex'), '6a04534c500001010747454e455349534c004c004c004c000100010208ffffffffffffffff')
+        })
+        it('Throws when batonVout is less than 2', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = 1
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Baton vout must a number and greater than 1 and less than 256."))
+        })
+        it('Throws when batonVout is less than 2', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = 0
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Baton vout must a number and greater than 1 and less than 256."))
+        })
+        it('Throws when batonVout is less than 2', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = -1
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Baton vout must a number and greater than 1 and less than 256."))
+        })
+        it('Throws when batonVout is greater than 255', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = 256
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Baton vout must a number and greater than 1 and less than 256."))
+        })
+        it('Throws when decimals is too high', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 10
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Decimals property must be in range 0 to 9"))
+        })
+        it('Throws when decimals is negative', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = -1
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Decimals property must be in range 0 to 9"))
+        })
+        it('Throws when decimals is null', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = null
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Decimals property must be in range 0 to 9"))
+        })
+        it('Throws when initialQuantity is null', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = null
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Amount must be an instance of BigNumber"))
+        })
+        it('Throws when documentUri is provided as Buffer', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = Buffer.from('00', 'hex')
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Document hash must be provided as a 64 character hex string"))
+        })
+        it('Throws when documentUri is provided as non-hex string', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Document hash must be provided as a 64 character hex string"))
+        })
+        it('Throws when ticker is not a string', () => {
+            let ticker = ['a']
+            let name = null
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("ticker must be a string"))
+        })
+        it('Throws when name is not a string', () => {
+            let ticker = null
+            let name = ['a']
+            let documentUri = null
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("name must be a string"))
+        })
+        it('Throws when documentUri is not a string', () => {
+            let ticker = null
+            let name = null
+            let documentUri = 1
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("documentUri must be a string"))
+        })
+        it('Throws when documentHashHex is not a string', () => {
+            let ticker = null
+            let name = null
+            let documentUri = null
+            let documentHashHex = 1
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber('18446744073709551615')
+            assert.throws(function () { version1Token.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Document hash must be provided as a 64 character hex string"))
+        })
+    })
     describe('buildSendOpReturn()', function() {
-        it('works', () => {
-        });
-    });
+        it('Succeeds with 1 output', () => {
+            let expectedResult = "6a04534c500001010453454e44208888888888888888888888888888888888888888888888888888888888888888080000000000000042";
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66') ]
+            let result = version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray).toString('hex')
+            assert.equal(result, expectedResult)
+        })
+        it('Succeeds with 2 outputs', () => {
+            let expectedResult = "6a04534c500001010453454e44208888888888888888888888888888888888888888888888888888888888888888080000000000000042080000000000000063";
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66'), new BigNumber('99') ]
+            let result = version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray).toString('hex')
+            assert.equal(result, expectedResult)
+        })
+        it('Succeeds with 19 outputs', () => {
+            let expectedResult = "6a04534c500001010453454e44208888888888888888888888888888888888888888888888888888888888888888080000000000000042080000000000000063080000000000000063080000000000000063080000000000000063080000000000000042080000000000000063080000000000000063080000000000000063080000000000000063080000000000000042080000000000000063080000000000000063080000000000000063080000000000000063080000000000000042080000000000000063080000000000000063080000000000000063";
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'),
+                                    new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'),
+                                    new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'),
+                                    new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99') ]
+            let result = version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray).toString('hex')
+            assert.equal(result, expectedResult)
+        })
+        it('Throws with 20 outputs', () => {
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'),
+                                    new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'),
+                                    new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'),
+                                    new BigNumber('66'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99'), new BigNumber('99') ]
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)} , Error("Cannot have more than 19 SLP token outputs."))
+        })
+        it('Throws with 0 outputs', () => {
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = []
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, Error("Cannot have less than 1 SLP token output."))
+        })
+        it('Throws with null outputs', () => {
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = null
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, TypeError)
+        })
+        it('Throws with BigNumber outputs', () => {
+            let tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = new BigNumber('100')
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, TypeError)
+        })
+        it('Throws with tokenIdHex too short', () => {
+            let tokenIdHex = "88888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66') ]
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex too long', () => {
+            let tokenIdHex = "888888888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66') ]
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex non-hex string', () => {
+            let tokenIdHex = "zz88888888888888888888888888888888888888888888888888888888888888"
+            let outputQtyArray = [ new BigNumber('66') ]
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex not a string', () => {
+            let tokenIdHex = 1
+            let outputQtyArray = [ new BigNumber('66') ]
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex not as null', () => {
+            let tokenIdHex = null
+            let outputQtyArray = [ new BigNumber('66') ]
+            assert.throws(function() {version1Token.buildSendOpReturn(tokenIdHex, outputQtyArray)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+    })
     describe('buildMintOpReturn()', function() {
-        it('works', () => {
-        });
-    });
-});
+        it('Succeeds when batonVout = null', () => {
+            let expectedResult = "6a04534c50000101044d494e5420ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4c00080000000000000064"
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = new BigNumber('100')
+            let result = version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity).toString('hex')
+            assert.equal(result, expectedResult)
+        })
+        it('Succeeds when batonVout is 2', () => {
+            let expectedResult = "6a04534c50000101044d494e5420ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0102080000000000000064"
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = 2
+            let mintQuantity = new BigNumber('100')
+            let result = version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity).toString('hex')
+            assert.equal(result, expectedResult)
+        })
+        it('Throws when batonVout is 1', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = 1
+            let mintQuantity = new BigNumber('66')
+            //version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Baton vout must a number and greater than 1 and less than 256."))
+        })
+        it('Throws when batonVout is 256', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = 256
+            let mintQuantity = new BigNumber('66')
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Baton vout must a number and greater than 1 and less than 256."))
+        })
+        it('Throws when mintQuantity is a number', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = 1
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Amount must be an instance of BigNumber"))
+        })
+        it('Throws when mintQuantity is null', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = null
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Amount must be an instance of BigNumber"))
+        })
+        it('Throws when mintQuantity is too large', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = new BigNumber('18446744073709551616')
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Maximum mint value exceeded. Reduce input quantity below 18446744073709551615."))
+        })
+        it('Throws when mintQuantity is negative', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = new BigNumber('-1')
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Mint quantity must be greater than 0."))
+        })
+        it('Throws when mintQuantity is decimal', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = new BigNumber('1.1')
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Mint quantity must be a whole number."))
+        })
+        it('Throws when mintQuantity is array', () => {
+            let tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            let batonVout = null
+            let mintQuantity = [ new BigNumber('1') ]
+            assert.throws(function(){version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("Amount must be an instance of BigNumber"))
+        })
+        it('Throws with tokenIdHex too short', () => {
+            let tokenIdHex = "888888888888888888888888888888888888888888888888888888888888"
+            let batonVout = null
+            let mintQuantity = new BigNumber('66')
+            assert.throws(function() {version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex too long', () => {
+            let tokenIdHex = "888888888888888888888888888888888888888888888888888888888888888888"
+            let batonVout = null
+            let mintQuantity = new BigNumber('66')
+            assert.throws(function() {version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex non-hex string', () => {
+            let tokenIdHex = "zz88888888888888888888888888888888888888888888888888888888888888"
+            let batonVout = null
+            let mintQuantity = new BigNumber('66')
+            assert.throws(function() {version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex not a string', () => {
+            let tokenIdHex = 1
+            let batonVout = null
+            let mintQuantity = new BigNumber('66')
+            assert.throws(function() {version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+        it('Throws with tokenIdHex not as null', () => {
+            let tokenIdHex = null
+            let batonVout = null
+            let mintQuantity = new BigNumber('66')
+            assert.throws(function() {version1Token.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity)}, Error("TokenIdHex must be provided as a 64 character hex string."))
+        })
+    })
+})

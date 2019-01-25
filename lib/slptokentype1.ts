@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 export class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
-    static buildGenesisOpReturn(ticker: string, name: string, documentUrl:string, documentHashHex: string, decimals: number, batonVout:number, initialQuantity:BigNumber) {
+    static buildGenesisOpReturn(ticker: string|null, name: string|null, documentUri:string|null, documentHashHex: string|null, decimals: number, batonVout:number|null, initialQuantity:BigNumber) {
         let script: (number|number[])[] = [];
 
         // OP Return Prefix
@@ -15,10 +15,10 @@ export class SlpTokenType1 {
         script.push(Utils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
-        // Token Type
-        let tokenType = 0x01
-        script.push(Utils.getPushDataOpcode([tokenType]))
-        script.push(tokenType)
+        // Token Version/Type
+        let tokenVersionType = 0x01
+        script.push(Utils.getPushDataOpcode([tokenVersionType]))
+        script.push(tokenVersionType)
 
         // Transaction Type
         let transactionType = Buffer.from('GENESIS')
@@ -26,7 +26,9 @@ export class SlpTokenType1 {
         transactionType.forEach((item) => script.push(item))
 
         // Ticker
-        if (ticker == null || ticker.length === 0) {
+        if (ticker !== null && typeof ticker !== 'string'){
+            throw Error("ticker must be a string")
+        } else if (ticker === null || ticker.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             let tickerBuf = Buffer.from(ticker, 'utf8')
@@ -35,7 +37,9 @@ export class SlpTokenType1 {
         }
 
         // Name
-        if (name == null || name.length === 0) {
+        if (name !== null && typeof name !== 'string') {
+            throw Error("name must be a string")
+        } else if (name == null || name.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             let nameBuf = Buffer.from(name, 'utf8')
@@ -44,12 +48,14 @@ export class SlpTokenType1 {
         }
 
         // Document URL
-        if (documentUrl == null || documentUrl.length === 0) {
+        if (documentUri !== null &&  typeof documentUri !== 'string') {
+            throw Error("documentUri must be a string")
+        } else if (documentUri == null || documentUri.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
-            let documentUrlBuf = Buffer.from(documentUrl, 'ascii')
-            script.push(Utils.getPushDataOpcode(documentUrlBuf))
-            documentUrlBuf.forEach((item) => script.push(item))
+            let documentUriBuf = Buffer.from(documentUri, 'ascii')
+            script.push(Utils.getPushDataOpcode(documentUriBuf))
+            documentUriBuf.forEach((item) => script.push(item))
         }
 
         // check Token Document Hash should be hexademical chracters.
@@ -67,7 +73,7 @@ export class SlpTokenType1 {
         }
 
         // Decimals
-        if (decimals < 0 || decimals > 9) {
+        if (decimals === null || decimals < 0 || decimals > 9) {
             throw Error("Decimals property must be in range 0 to 9")
         } else {
             script.push(Utils.getPushDataOpcode([decimals]))
@@ -78,8 +84,8 @@ export class SlpTokenType1 {
         if (batonVout == null) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
-            if (batonVout <= 1 || !(typeof batonVout == 'number'))
-                throw Error("Baton vout must a number and greater than 1")
+            if (batonVout < 2 || batonVout > 255 || !(typeof batonVout == 'number'))
+                throw Error("Baton vout must a number and greater than 1 and less than 256.")
 
             script.push(Utils.getPushDataOpcode([batonVout]))
             script.push(batonVout)
@@ -95,7 +101,7 @@ export class SlpTokenType1 {
         }
 
         if (initialQuantity.isGreaterThan(MAX_QTY))
-            throw new Error("Maximum genesis value exceeded.  Reduce input quantity below 18446744073709551615.");
+            throw new Error("Maximum genesis value exceeded. Reduce input quantity below 18446744073709551615.");
 
         if (initialQuantity.isLessThan(0))
             throw Error("Genesis quantity must be greater than 0.");
@@ -125,10 +131,10 @@ export class SlpTokenType1 {
         script.push(Utils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
-        // Token Type
-        let tokenType = 0x01
-        script.push(Utils.getPushDataOpcode([tokenType]))
-        script.push(tokenType)
+        // Token Version/Type
+        let tokenVersionType = 0x01
+        script.push(Utils.getPushDataOpcode([tokenVersionType]))
+        script.push(tokenVersionType)
 
         // Transaction Type
         let transactionType = Buffer.from('SEND')
@@ -136,6 +142,11 @@ export class SlpTokenType1 {
         transactionType.forEach((item) => script.push(item))
 
         // Token Id
+        // check Token Id should be hexademical chracters.
+        let re = /^([A-Fa-f0-9]{2}){32,32}$/;
+        if (typeof tokenIdHex !== 'string' || !re.test(tokenIdHex)) {
+            throw Error("TokenIdHex must be provided as a 64 character hex string.")
+        }
         let tokenId = Buffer.from(tokenIdHex, 'hex')
         script.push(Utils.getPushDataOpcode(tokenId))
         tokenId.forEach((item) => script.push(item))
@@ -157,7 +168,7 @@ export class SlpTokenType1 {
             let MAX_QTY = new BigNumber('18446744073709551615');
 
             if (outputQty.isGreaterThan(MAX_QTY))
-                throw new Error("Maximum value exceeded.  Reduce input quantity below 18446744073709551615.");
+                throw new Error("Maximum value exceeded. Reduce input quantity below 18446744073709551615.");
 
             if (outputQty.isLessThan(0))
                 throw Error("All Send outputs must be greater than 0.");
@@ -177,7 +188,7 @@ export class SlpTokenType1 {
         return encodedScript
     }
 
-    static buildMintOpReturn(tokenIdHex: string, batonVout: number, mintQuantity: BigNumber) {
+    static buildMintOpReturn(tokenIdHex: string, batonVout: number|null, mintQuantity: BigNumber) {
         let script: (number|number[])[] = [];
 
         // OP Return Prefix
@@ -188,10 +199,10 @@ export class SlpTokenType1 {
         script.push(Utils.getPushDataOpcode(lokadId))
         lokadId.forEach((item) => script.push(item))
 
-        // Token Type
-        let tokenType = 0x01
-        script.push(Utils.getPushDataOpcode([tokenType]))
-        script.push(tokenType)
+        // Token Version/Type
+        let tokenVersionType = 0x01
+        script.push(Utils.getPushDataOpcode([tokenVersionType]))
+        script.push(tokenVersionType)
 
         // Transaction Type
         let transactionType = Buffer.from('MINT')
@@ -199,6 +210,11 @@ export class SlpTokenType1 {
         transactionType.forEach((item) => script.push(item))
 
         // Token Id
+        // check Token Id should be hexademical chracters.
+        let re = /^([A-Fa-f0-9]{2}){32,32}$/;
+        if (typeof tokenIdHex !== 'string' || !re.test(tokenIdHex)) {
+            throw Error("TokenIdHex must be provided as a 64 character hex string.")
+        }
         let tokenId = Buffer.from(tokenIdHex, 'hex')
         script.push(Utils.getPushDataOpcode(tokenId))
         tokenId.forEach((item) => script.push(item))
@@ -207,8 +223,8 @@ export class SlpTokenType1 {
         if (batonVout == null) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
-            if (batonVout <= 1 || !(typeof batonVout == 'number'))
-                throw Error("Baton vout must a number and greater than 1")
+            if (batonVout < 2 || batonVout > 255 || !(typeof batonVout == 'number'))
+                throw Error("Baton vout must a number and greater than 1 and less than 256.")
 
             script.push(Utils.getPushDataOpcode([batonVout]))
             script.push(batonVout)
@@ -224,13 +240,13 @@ export class SlpTokenType1 {
         }
 
         if (mintQuantity.isGreaterThan(MAX_QTY))
-            throw new Error("Maximum genesis value exceeded.  Reduce input quantity below 18446744073709551615.");
+            throw new Error("Maximum mint value exceeded. Reduce input quantity below 18446744073709551615.");
 
         if (mintQuantity.isLessThan(0))
-            throw Error("Genesis quantity must be greater than 0.");
+            throw Error("Mint quantity must be greater than 0.");
 
         if (!mintQuantity.modulo(1).isEqualTo(new BigNumber(0)))
-            throw Error("Genesis quantity must be a whole number.");
+            throw Error("Mint quantity must be a whole number.");
 
         let initialQuantityBuf = Utils.int2FixedBuffer(mintQuantity)
         script.push(Utils.getPushDataOpcode(initialQuantityBuf))

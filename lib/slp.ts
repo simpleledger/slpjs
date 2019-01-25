@@ -10,18 +10,18 @@ export interface PushDataOperation {
 }
 
 export interface configBuildGenesisOpReturn {
-    ticker: string;
-    name: string;
-    urlOrEmail: string;
-    hash: Buffer,
+    ticker: string|null;
+    name: string|null;
+    documentUri: string|null;
+    hash: Buffer|null,
     decimals: number;
-    batonVout: number; // normally this is null (for fixed supply) or 2+ for flexible
+    batonVout: number|null; // normally this is null (for fixed supply) or 2+ for flexible
     initialQuantity: BigNumber
 }
 
 export interface configBuildMintOpReturn {
     tokenIdHex: string;
-    batonVout: number; // normally this is null (for fixed supply) or 2+ for flexible
+    batonVout: number|null; // normally this is null (for fixed supply) or 2+ for flexible
     mintQuantity: BigNumber;
 }
 
@@ -87,7 +87,7 @@ export class Slp {
         return SlpTokenType1.buildGenesisOpReturn(
             config.ticker,
             config.name,
-            config.urlOrEmail,
+            config.documentUri,
             config.hash.toString('hex'),
             config.decimals,
             config.batonVout,
