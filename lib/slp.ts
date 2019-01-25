@@ -40,9 +40,9 @@ export interface utxo {
 export interface configBuildRawGenesisTx {
     slpGenesisOpReturn: Buffer; 
     mintReceiverAddress: string;
-    mintReceiverSatoshis: number;
+    mintReceiverSatoshis?: number;
     batonReceiverAddress: string;
-    batonReceiverSatoshis: number;
+    batonReceiverSatoshis?: number;
     bchChangeReceiverAddress: string;
     input_utxos: utxo[];
 }
@@ -57,9 +57,9 @@ export interface configBuildRawSendTx {
 export interface configBuildRawMintTx {
     slpMintOpReturn: Buffer;
     mintReceiverAddress: string;
-    mintReceiverSatoshis: number;
+    mintReceiverSatoshis?: number;
     batonReceiverAddress: string;
-    batonReceiverSatoshis: number;
+    batonReceiverSatoshis?: number;
     bchChangeReceiverAddress: string;
     input_baton_utxos: utxo[];
 }
@@ -120,9 +120,9 @@ export class Slp {
         // let config = {
         //     slpGenesisOpReturn: genesisOpReturn, 
         //     mintReceiverAddress: this.slpAddress,
-        //     mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
+        //     (optional) mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
         //     batonReceiverAddress: batonAddress,
-        //     batonReceiverSatoshis: 546,
+        //     (optional) batonReceiverSatoshis: 546,
         //     bchChangeReceiverAddress: null,
         //     input_utxos: [{
         //          txid: utxo.txid,
@@ -131,6 +131,12 @@ export class Slp {
         //          wif: wif
         //     }]
         //   }
+
+        if(config.mintReceiverSatoshis === undefined)
+            config.mintReceiverSatoshis = 546;
+
+        if(config.batonReceiverSatoshis === undefined)
+            config.batonReceiverSatoshis = 546; 
 
         // Check for slp format addresses
         if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
@@ -165,6 +171,8 @@ export class Slp {
         // Baton address (optional)
         if (config.batonReceiverAddress != null) {
             config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
+            if(this.parseSlpOutputScript(config.slpGenesisOpReturn).batonVout !== 2)
+                throw Error("batonVout in transaction does not match OP_RETURN data.")
             transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis);
             //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
         }
@@ -246,9 +254,9 @@ export class Slp {
         // let config = {
         //     slpMintOpReturn: mintOpReturn, 
         //     mintReceiverAddress: this.slpAddress,
-        //     mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
+        //     (optional) mintReceiverSatoshis: config.utxo_satoshis - slp.calculateGenesisFee(batonAddress) + 546
         //     batonReceiverAddress: batonAddress,
-        //     batonReceiverSatoshis: 546,
+        //     (optional) batonReceiverSatoshis: 546,
         //     bchChangeReceiverAddress: null,
         //     input_utxos: [{
         //          txid: utxo.txid,
@@ -257,6 +265,12 @@ export class Slp {
         //          wif: wif
         //     }]
         //   }
+
+        if(config.mintReceiverSatoshis === undefined)
+            config.mintReceiverSatoshis = 546;
+
+        if(config.batonReceiverSatoshis === undefined)
+            config.batonReceiverSatoshis = 546; 
 
         // Check for slp format addresses
         if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
@@ -281,16 +295,18 @@ export class Slp {
         let genesisCost = this.calculateGenesisCost(config.slpMintOpReturn.length, config.input_baton_utxos.length, config.batonReceiverAddress, config.bchChangeReceiverAddress);
         let bchChangeAfterFeeSatoshis = satoshis - genesisCost;
 
-        // Genesis OpReturn
+        // Mint OpReturn
         transactionBuilder.addOutput(config.slpMintOpReturn, 0);
 
-        // Genesis token mint
+        // Mint token mint
         transactionBuilder.addOutput(config.mintReceiverAddress, config.mintReceiverSatoshis);
         //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
 
         // Baton address (optional)
         if (config.batonReceiverAddress !== null) {
             config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
+            if(this.parseSlpOutputScript(config.slpMintOpReturn).batonVout !== 2)
+                throw Error("batonVout in transaction does not match OP_RETURN data.")
             transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis);
             //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
         }

@@ -100,6 +100,33 @@ export class BitboxNetwork {
         return await this.sendTx(txHex);
     }
 
+    // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
+    async simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string) {  
+        // // convert address to cashAddr from SLP format.
+        // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
+
+        // 1) Create the Send OP_RETURN message
+        let mintOpReturn = this.slp.buildMintOpReturn({
+            tokenIdHex: tokenId,
+            mintQuantity: mintAmount,
+            batonVout: 2
+        });
+
+        // 4) Create the raw Mint transaction hex
+        let txHex = this.slp.buildRawMintTx({
+            input_baton_utxos: inputUtxos,
+            slpMintOpReturn: mintOpReturn,
+            mintReceiverAddress: tokenReceiverAddress,
+            batonReceiverAddress: batonReceiverAddress,
+            bchChangeReceiverAddress: changeReceiverAddress
+        });
+        
+        console.log(txHex);
+
+        // 5) Broadcast the transaction over the network using this.BITBOX
+        return await this.sendTx(txHex);
+    }
+
     async getUtxoWithRetry(address: string, retries = 40) {
 		let result: AddressUtxoResult[] | undefined;
 		let count = 0;
