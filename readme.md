@@ -71,8 +71,8 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
 const BigNumber = require('bignumber.js');
 
 const slpjs = require('./').slpjs;
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, 'https://validate.simpleledger.info');
-const bitdbProxy = new slpjs.BitdbProxy();
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
+const bitdbNetwork = new slpjs.BitdbNetwork();
 
 // Start User Inputs
 const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
@@ -94,7 +94,7 @@ let balances;
 // 2) Fetch critical token decimals information using bitdb
 let tokenDecimals;
 (async function() {
-    const tokenInfo = await bitdbProxy.getTokenInformation(tokenIdHexToMint);
+    const tokenInfo = await bitdbNetwork.getTokenInformation(tokenIdHexToMint);
     tokenDecimals = tokenInfo.decimals; 
     console.log("Token precision: " + tokenDecimals.toString());
 })();
@@ -150,8 +150,8 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
 const BigNumber = require('bignumber.js');
 
 const slpjs = require('./').slpjs;
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, 'https://validate.simpleledger.info');
-const bitdbProxy = new slpjs.BitdbProxy();
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
+const bitdbNetwork = new slpjs.BitdbNetwork();
 
 const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
 const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF"; // <-- compressed WIF format
@@ -164,7 +164,7 @@ let tokenId = "4458aa2b84cc336c3948642def94af473395ace3689bf70f6183c40f14842911"
 // 2) Fetch critical token information using bitdb
 let tokenDecimals;
 (async function() {
-    const tokenInfo = await bitdbProxy.getTokenInformation(tokenId);
+    const tokenInfo = await bitdbNetwork.getTokenInformation(tokenId);
     tokenDecimals = tokenInfo.decimals; 
     console.log("Token precision: " + tokenDecimals.toString());
 })();

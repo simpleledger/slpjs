@@ -1,15 +1,15 @@
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 
-const BitdbProxy = require('../lib/bitdbproxy').BitdbProxy;
+const BitdbNetwork = require('../lib/BitdbNetwork').BitdbNetwork;
 
-describe('BitdbProxy', function() {
+describe('BitdbNetwork', function() {
     describe('getTokenInformation()', function() {
-        //console.log(JSON.stringify(BitdbProxy));
-        let proxy = new BitdbProxy();
+        //console.log(JSON.stringify(BitdbNetwork));
+        let net = new BitdbNetwork();
         it('returns token information for a given valid tokenId', async () => {
             let tokenId = '667b28d5885717e6d164c832504ae6b0c4db3c92072119ddfc5ff0db2c433456';
-            let tokenInfo = await proxy.getTokenInformation(tokenId);
+            let tokenInfo = await net.getTokenInformation(tokenId);
             let expectedTokenInfo = { 
                 timestamp: '2019-01-19 14:33',
                 tokenIdHex: '667b28d5885717e6d164c832504ae6b0c4db3c92072119ddfc5ff0db2c433456',
@@ -30,7 +30,7 @@ describe('BitdbProxy', function() {
             let tokenId = '000028d5885717e6d164c832504ae6b0c4db3c92072119ddfc5ff0db2c433456';
             let threw = false;
             try {
-                await proxy.getTokenInformation(tokenId);
+                await net.getTokenInformation(tokenId);
             } catch(error) {
                 threw = true;
                 assert.equal(error.message, 'Token not found');

@@ -1,15 +1,15 @@
 
 import { Slp } from './slp';
 import { Utils } from './utils';
-import { BitdbProxy } from './bitdbproxy';
-import { ProxyValidation } from './proxyvalidation';
+import { BitdbNetwork } from './bitdbnetwork';
+import { JsonRpcProxyValidator } from './jsonrpcvalidator';
 import { BitboxNetwork } from './bitboxnetwork';
 
 exports.Slp = Slp;
 exports.Utils = Utils;
 exports.BitboxNetwork = BitboxNetwork;
-exports.BitdbProxy = BitdbProxy;
-exports.ProxyValidation = ProxyValidation;
+exports.BitdbNetwork = BitdbNetwork;
+exports.JsonRpcProxyValidator = JsonRpcProxyValidator;
 
 import BigNumber from "bignumber.js";
 import { AddressUtxoResult } from "bitbox-sdk/typings/Address";

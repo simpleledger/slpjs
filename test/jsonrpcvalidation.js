@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const ProxyValidator = require('../lib/proxyvalidation').ProxyValidation;
+const ProxyValidator = require('../lib/jsonrpcvalidator').ProxyValidation;
 
 describe('ProxyValidator', function() {
     describe('isValidSlpTxid()', function() {

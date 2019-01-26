@@ -2,7 +2,7 @@ import axios, { AxiosRequestConfig } from 'axios';
 import BigNumber from 'bignumber.js';
 import { SlpTransactionDetails, SlpTransactionType } from './slpjs';
 
-export class BitdbProxy {
+export class BitdbNetwork {
     bitdbUrl: string;
 
     constructor(bitdbUrl='https://bitdb.bch.sx/q/'){
