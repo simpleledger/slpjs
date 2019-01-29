@@ -69,8 +69,19 @@ export class SlpAddressUtxoResult implements AddressUtxoResult {
     cashAddress: string;
     wif: string;
     tx: TxnDetailsDeep;
-    slpTokenDetails: SlpTransactionDetails;
-    slpJudgement: SlpUtxoJudgement = SlpUtxoJudgement.UNKNOWN;
+    slpTransactionDetails: SlpTransactionDetails;
+    slpUtxoJudgement: SlpUtxoJudgement = SlpUtxoJudgement.UNKNOWN;
+    slpUtxoJudgementAmount: BigNumber
+}
+
+export interface utxo {
+    txid: string;
+    vout: number;
+    satoshis: BigNumber;
+    wif: string;
+    slpTransactionDetails: SlpTransactionDetails;
+    slpUtxoJudgement: SlpUtxoJudgement;
+    slpUtxoJudgementAmount: BigNumber;
 }
 
 export interface ScriptPubKey{

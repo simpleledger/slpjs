@@ -1,6 +1,7 @@
 import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
+import { SlpAddressUtxoResult, utxo } from './slpjs';
 
 export class Utils {
     BITBOX: BITBOX;
@@ -19,6 +20,21 @@ export class Utils {
 
     isSlpAddress(address: string) {
         return <string>bchaddr.isSlpAddress(address);
+    }
+
+    static toUtxoArray(utxos: SlpAddressUtxoResult[]){
+        return utxos.map(txo => 
+        {
+            return <utxo> { 
+                satoshis: new BigNumber(txo.satoshis),
+                wif: txo.wif,
+                txid: txo.txid,
+                vout: txo.vout,
+                slpTransactionDetails: txo.slpTransactionDetails,
+                slpUtxoJudgement: txo.slpUtxoJudgement,
+                slpUtxoJudgementAmount: txo.slpUtxoJudgementAmount
+            }
+        })
     }
 
     static getPushDataOpcode(data: number[]|Buffer) {
