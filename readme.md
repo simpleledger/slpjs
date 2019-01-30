@@ -29,7 +29,7 @@ NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is use
 ```js
 // Bring your own BITBOX instance for blockchain access
 const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
-const slpjs = require('./').slpjs;
+const slpjs = require('slpjs').slpjs;
 
 // FOR MAINNET UNCOMMENT
 // let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
@@ -76,7 +76,7 @@ GENESIS is the most simple type of SLP transaction since no special inputs are r
 const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
 
-const slpjs = require('./').slpjs;
+const slpjs = require('slpjs').slpjs;
 
 // FOR TESTNET UNCOMMENT
 const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
@@ -151,7 +151,7 @@ Adding additional tokens for a token that already exists is possible if you are 
 const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
 
-const slpjs = require('./').slpjs;
+const slpjs = require('slpjs').slpjs;
 
 // FOR TESTNET UNCOMMENT
 const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
@@ -235,9 +235,9 @@ This example shows the general workflow for sending an existing token.
 ```js
 const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
-const slpjs = require('./').slpjs;
+const slpjs = require('slpjs').slpjs;
 
-// FOR MAINNET 
+// FOR MAINNET UNCOMMENT
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
 // const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 // const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
@@ -247,7 +247,7 @@ const slpjs = require('./').slpjs;
 // let tokenId = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
 // let sendAmount = 10;
 
-// FOR TESTNET 
+// FOR TESTNET UNCOMMENT
 const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
 const slpValidator = new slpjs.JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
@@ -307,7 +307,7 @@ let sendTxid;
 ## SLP Address Conversion
 
 ```javascript
-let Utils = require('./').slpjs.Utils;
+let Utils = require('slpjs').slpjs.Utils;
 
 let slpAddr = Utils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
 console.log(slpAddr);

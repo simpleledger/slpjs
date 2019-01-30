@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -17,12 +17,12 @@
   },
   "keywords": [
     "bitcoin",
-    "cash",
+    "bch",
+    "bitcoin cash",
+    "tokens",
     "slp",
-    "simple",
     "ledger",
-    "node",
-    "browser"
+    "simpleledger"
   ],
   "author": "Simple Ledger Protocol",
   "license": "MIT",
@@ -45,7 +45,6 @@
     "axios": "^0.18.0",
     "bchaddrjs-slp": "git://github.com/simpleledger/bchaddrjs.git#master",
     "bignumber.js": "^7.2.1",
-    "slp-balances": "^0.1.0",
     "bitcore-lib-cash": "^0.19.0"
   }
 }
