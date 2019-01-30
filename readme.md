@@ -84,7 +84,7 @@ const slpValidator = new slpjs.JsonRpcProxyValidator(BITBOX, 'https://testnet-va
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
-const tokenReceiverAddress     = "slptest:qr0mkh2lf6w4cz79n8rwjtf65e0swqqleu3eyzn6s4";
+const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 
@@ -181,7 +181,7 @@ let balances;
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
   console.log("'balances' variable is set.");
-  if(balances.slpBatonUtxos.find(txo => txo.slpTransactionDetails.tokenIdHex === tokenIdHexToMint))
+  if(balances.slpBatonUtxos[tokenIdHexToMint])
     console.log("You have the minting baton for this token");
   else
     throw Error("You don't have the minting baton for this token");
@@ -258,20 +258,20 @@ const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
 let sendAmount = 10;
 
-// 1) Check that token balance is greater than our desired sendAmount
-let balances; 
-(async function() {
-  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
-  console.log("Token balance:", balances.slpTokenBalances[tokenId].toNumber())
-})();
-
-// 2) Fetch critical token information
+// 1) Fetch critical token information
 let tokenDecimals;
 (async function() {
     const tokenInfo = await bitboxNetwork.getTokenInformation(tokenId);
     tokenDecimals = tokenInfo.decimals; 
     console.log("Token precision: " + tokenDecimals.toString());
+})();
+
+// 2) Check that token balance is greater than our desired sendAmount
+let balances; 
+(async function() {
+  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+  console.log("'balances' variable is set.");
+  console.log("Token balance:", balances.slpTokenBalances[tokenId].toNumber() / 10**tokenDecimals)
 })();
 
 // Wait for network responses...
