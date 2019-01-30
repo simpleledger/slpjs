@@ -1,9 +1,14 @@
 const assert = require('assert');
 const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default;
-const BITBOX = new BITBOXSDK();
+const BITBOX = new BITBOXSDK({ restURL: "https://trest.bitcoin.com/v1/" });
 
 const Slp = require('../lib/slp').Slp;
 const scriptUnitTestData = require('../node_modules/slp-unit-test-data/script_tests.json');
+
+const BitboxNetwork = require("../lib/bitboxnetwork").BitboxNetwork;
+const JsonRpcProxyValidator = require('../lib/jsonrpcvalidator').JsonRpcProxyValidator;
+const slpValidator = new JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
+const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
 
 let slp = new Slp(BITBOX);
 
@@ -22,9 +27,50 @@ describe('Slp', function() {
             });
         });
     });
+
+    let genesisTxid;
+    let batonTxid;
+    let sendTxid;
+
     describe('buildRawGenesisTx()', function() {
-        it('works', () => {
-            assert.equal(true, false);
+        const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+        const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
+        const tokenReceiverAddress     = "slptest:qr0mkh2lf6w4cz79n8rwjtf65e0swqqleu3eyzn6s4";
+        const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+        const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+
+        it('Succeeds in creating a valid genesis transaction with override on validateSlpTransactions', async () => {
+            this.timeout(5000);
+            let balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+            console.log(balances);
+            let decimals = 9;
+            let initialQty = (new BigNumber(1000000)).times(10**decimals);
+            
+            let genesisOpReturn = slp.buildGenesisOpReturn({ 
+                ticker: null,
+                name: null,
+                documentUri: null,
+                hash: null, 
+                decimals: decimals,
+                batonVout: 2,
+                initialQuantity: initialQty,
+            });
+
+            balances.nonSlpUtxos.forEach(utxo => utxo.wif = fundingWif)
+
+            let genesisTxHex = slp.buildRawGenesisTx({
+                slpGenesisOpReturn: genesisOpReturn, 
+                mintReceiverAddress: tokenReceiverAddress,
+                batonReceiverAddress: batonReceiverAddress,
+                bchChangeReceiverAddress: bchChangeReceiverAddress, 
+                input_utxos: balances.nonSlpUtxos
+            });
+
+            genesisTxid = await BITBOX.RawTransactions.sendRawTransaction(genesisTxHex);
+            
+            let re = /^([A-Fa-f0-9]{2}){32,32}$/;
+            console.log(genesisTxHex);
+            assert.equal(true, re.test(genesisTxid));
         });
     });
     describe('buildRawSendTx()', function() {

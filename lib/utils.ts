@@ -1,25 +1,29 @@
-import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 import { SlpAddressUtxoResult, utxo } from './slpjs';
 
 export class Utils {
-    BITBOX: BITBOX;
 
-    constructor(BITBOX) {
-        this.BITBOX = this.BITBOX;
-    }
-
-    toCashAddress(address: string) {
+    static toCashAddress(address: string) {
         return <string>bchaddr.toCashAddress(address);
     }
 
-    toSlpAddress(address: string) {
+    static toSlpAddress(address: string) {
         return <string>bchaddr.toSlpAddress(address);
     }
 
-    isSlpAddress(address: string) {
+    static isSlpAddress(address: string) {
         return <string>bchaddr.isSlpAddress(address);
+    }
+
+    static isMainnet(address: string) {
+        if(bchaddr.decodeAddress(address).network === 'mainnet')
+            return true
+        return false
+    }
+
+    static txnBuilderString(address: string) {
+        return Utils.isMainnet(address) ? 'bitcoincash' : 'bchtest';
     }
 
     static toUtxoArray(utxos: SlpAddressUtxoResult[]){
@@ -86,19 +90,19 @@ export class Utils {
         return buffer
     }
 
-    txidFromHex(hex) {
-        let buffer = Buffer.from(hex, "hex")
-        let hash = this.BITBOX.Crypto.hash256(buffer).toString('hex')
-        return hash.match(/[a-fA-F0-9]{2}/g).reverse().join('')
-    }
+    // txidFromHex(hex) {
+    //     let buffer = Buffer.from(hex, "hex")
+    //     let hash = this.BITBOX.Crypto.hash256(buffer).toString('hex')
+    //     return hash.match(/[a-fA-F0-9]{2}/g).reverse().join('')
+    // }
 
     // Method to get Script 32-bit integer (little-endian signed magnitude representation)
-	readScriptInt32(buffer) {
-		let number;
-		if(buffer.readUInt32LE(0) > 2147483647)
-			number = -1 * (buffer.readUInt32LE(0) - 2147483648);
-		else
-			number = buffer.readUInt32LE(0);
-		return number;
-	}
+	// readScriptInt32(buffer) {
+	// 	let number;
+	// 	if(buffer.readUInt32LE(0) > 2147483647)
+	// 		number = -1 * (buffer.readUInt32LE(0) - 2147483648);
+	// 	else
+	// 		number = buffer.readUInt32LE(0);
+	// 	return number;
+    // }
 }

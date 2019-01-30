@@ -3,6 +3,7 @@ import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpTypeVersion, SlpUtxoJudgement, SlpBalancesResult, utxo } from './slpjs';
 import { SlpTokenType1 } from './slptokentype1';
+import { Utils } from './utils';
 
 export interface PushDataOperation {
     opcode: number, 
@@ -57,15 +58,17 @@ export interface configBuildRawMintTx {
     input_baton_utxos: utxo[];
 }
 
-type AsyncValidatorFunction = (tokenIds: string[], proxyUrl?: string) => Promise<string[]>
+type AsyncValidatorFunction = (tokenIds: string[]) => Promise<string[]>
 
-export interface AsyncSlpValidator {
+export interface SlpProxyValidator {
+    validatorUrl: string;
     validateSlpTransactions: AsyncValidatorFunction;
-    processUtxosForSlp(utxos: SlpAddressUtxoResult[]): Promise<SlpBalancesResult>;
+    processUtxosForSlp(utxos: SlpAddressUtxoResult[], validatorOverride?: SlpProxyValidator): Promise<SlpBalancesResult>;
 } 
 
 export class Slp {
     BITBOX: BITBOX;
+    networkstring: string;
     constructor(BITBOX) {
         this.BITBOX = BITBOX;
     }
@@ -73,11 +76,15 @@ export class Slp {
     get lokadIdHex() { return "534c5000" }
 
     buildGenesisOpReturn(config: configBuildGenesisOpReturn, type = 0x01) {
+        let hash;
+        try { hash = config.hash.toString('hex')
+        } catch (_) { hash = null }
+        
         return SlpTokenType1.buildGenesisOpReturn(
             config.ticker,
             config.name,
             config.documentUri,
-            config.hash.toString('hex'),
+            hash,
             config.decimals,
             config.batonVout,
             config.initialQuantity
@@ -116,6 +123,8 @@ export class Slp {
             }
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
                 throw Error("Cannot spend a minting baton.")
+            if(txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG || txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG)
+                throw Error("Cannot currently spend tokens and baton with invalid DAGs.")
             throw Error("Cannot spend utxo with no SLP judgement.")
         })
 
@@ -127,7 +136,7 @@ export class Slp {
 
         config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
 
-        let transactionBuilder = new this.BITBOX.TransactionBuilder('bitcoincash');
+        let transactionBuilder = new this.BITBOX.TransactionBuilder(Utils.txnBuilderString(config.mintReceiverAddress));
         let satoshis = new BigNumber(0);
         config.input_utxos.forEach(token_utxo => {
             transactionBuilder.addInput(token_utxo.txid, token_utxo.vout);
@@ -154,7 +163,7 @@ export class Slp {
         }
 
         // Change (optional)
-        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= new BigNumber(546)) {
+        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -170,7 +179,6 @@ export class Slp {
         let tx = transactionBuilder.build().toHex();
 
         // Check For Low Fee
-        console.log(transactionBuilder.transaction.tx.outs)
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v,o)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
@@ -203,6 +211,8 @@ export class Slp {
             }
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
                 throw Error("Cannot spend a minting baton.")
+            if(txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG || txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG)
+                throw Error("Cannot currently spend UTXOs with invalid DAGs.")
             throw Error("Cannot spend utxo with no SLP judgement.")
         })
 
@@ -216,7 +226,7 @@ export class Slp {
         if(!tokenInputQty.isEqualTo(outputTokenQty))
             throw Error("Token input quantity does not match token outputs.")
 
-        let transactionBuilder = new this.BITBOX.TransactionBuilder('bitcoincash');
+        let transactionBuilder = new this.BITBOX.TransactionBuilder(Utils.txnBuilderString(config.tokenReceiverAddressArray[0]));
         let inputSatoshis = new BigNumber(0);
         config.input_token_utxos.forEach(token_utxo => {
             transactionBuilder.addInput(token_utxo.txid, token_utxo.vout);
@@ -236,7 +246,7 @@ export class Slp {
         })
 
         // Change
-        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis >= new BigNumber(546)) {
+        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -252,7 +262,6 @@ export class Slp {
         let tx = transactionBuilder.build().toHex();
 
         // Check For Low Fee
-        console.log(transactionBuilder.transaction.tx.outs)
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v,o)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_token_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
@@ -294,6 +303,8 @@ export class Slp {
                     throw Error("Cannot spend a minting baton.")
                 return
             }
+            if(txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG || txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG)
+                throw Error("Cannot currently spend UTXOs with invalid DAGs.")
             throw Error("Cannot spend utxo with no SLP judgement.")
         })
 
@@ -301,7 +312,7 @@ export class Slp {
         if(!config.input_baton_utxos.find(o => o.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON))
             Error("There is no baton included with the input UTXOs.")
 
-        let transactionBuilder = new this.BITBOX.TransactionBuilder('bitcoincash');
+        let transactionBuilder = new this.BITBOX.TransactionBuilder(Utils.txnBuilderString(config.mintReceiverAddress));
         let satoshis = new BigNumber(0);
         config.input_baton_utxos.forEach(baton_utxo => {
             transactionBuilder.addInput(baton_utxo.txid, baton_utxo.vout);
@@ -328,7 +339,7 @@ export class Slp {
         }
 
         // Change (optional)
-        if (config.bchChangeReceiverAddress !== null && bchChangeAfterFeeSatoshis >= new BigNumber(546)) {
+        if (config.bchChangeReceiverAddress !== null && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -344,7 +355,6 @@ export class Slp {
         let tx = transactionBuilder.build().toHex();
 
         // Check For Low Fee
-        console.log(transactionBuilder.transaction.tx.outs)
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v,o)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_baton_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
@@ -563,10 +573,9 @@ export class Slp {
         fee += mintOpReturnLength
         fee += 10 // added to account for OP_RETURN ammount of 0000000000000000
         fee *= feeRate
-        console.log("MINT/GENESIS cost before outputs: " + fee.toString());
+        //console.log("MINT/GENESIS cost before outputs: " + fee.toString());
         fee += nonfeeoutputs
-        console.log("MINT/GENESIS cost after outputs are added: " + fee.toString());
-
+        //console.log("MINT/GENESIS cost after outputs are added: " + fee.toString());
         return fee
     }
 
@@ -582,125 +591,172 @@ export class Slp {
         fee += sendOpReturnLength
         fee += 10 // added to account for OP_RETURN ammount of 0000000000000000
         fee *= feeRate
-        console.log("SEND cost before outputs: " + fee.toString());
+        //console.log("SEND cost before outputs: " + fee.toString());
         fee += nonfeeoutputs
-        console.log("SEND cost after outputs are added: " + fee.toString());
+        //console.log("SEND cost after outputs are added: " + fee.toString());
         return fee
     }
 
-    static checkForSlpSendTokenJudgement(txo: SlpAddressUtxoResult, tokenId: string){
+    static preSendSlpJudgementCheck(txo: SlpAddressUtxoResult, tokenId: string){
         if (txo.slpUtxoJudgement === undefined || txo.slpUtxoJudgement === null || txo.slpUtxoJudgement === SlpUtxoJudgement.UNKNOWN)
             throw Error("There at least one input UTXO that does not have a proper SLP judgement")
         if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
             throw Error("There is at least one input UTXO that is a baton.  You can only spend batons in a MINT transaction.")
         if (txo.slpTransactionDetails) {
-            if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN && txo.slpTransactionDetails.tokenIdHex !== tokenId)
-                throw Error("There is at least one input UTXO that is a different SLP token than the one specified.")
-            if(!txo.slpUtxoJudgementAmount)
-                throw Error("There is at least one input token that does not have the 'slpUtxoJudgementAmount' property set.")
-            return txo.slpTransactionDetails.tokenIdHex === tokenId;
+            if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
+                if(!txo.slpUtxoJudgementAmount)
+                    throw Error("There is at least one input token that does not have the 'slpUtxoJudgementAmount' property set.")
+                if(txo.slpTransactionDetails.tokenIdHex !== tokenId)
+                    throw Error("There is at least one input UTXO that is a different SLP token than the one specified.")
+                return txo.slpTransactionDetails.tokenIdHex === tokenId;
+            }
         } 
         return false;
     }
 
-    async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], asyncSlpValidator: AsyncValidatorFunction, validatorUrl: string) {
+    async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], asyncSlpValidator: SlpProxyValidator) {
+        
         // 1) parse SLP OP_RETURN and cast initial SLP judgement, based on OP_RETURN only.
         for(let txo of utxos) {
-            try {
-                let vout = txo.tx.vout.find(vout => vout.n === 0);
-                if(!vout)
-                    throw 'Utxo contains no Vout!';
-                let vout0script = Buffer.from(vout.scriptPubKey.hex, 'hex');
-                txo.slpTransactionDetails = this.parseSlpOutputScript(vout0script);
-    
-                // populate txid for GENESIS
-                if(txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS)
-                    txo.slpTransactionDetails.tokenIdHex = txo.txid;
-    
-                // apply initial SLP judgement to the UTXO (based on OP_RETURN parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
-                if(txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS ||
-                    txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
-                    if (txo.slpTransactionDetails.containsBaton && txo.slpTransactionDetails.batonVout === txo.vout)
-                        txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_BATON;
-                    else if(txo.vout === 1) {
-                        txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
-                        txo.slpUtxoJudgementAmount = txo.slpTransactionDetails.genesisOrMintQuantity;
-                    }
-                    else
-                        txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-                } else if(txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND && txo.slpTransactionDetails.sendOutputs) {
-                    if(txo.vout > 0 && txo.vout < txo.slpTransactionDetails.sendOutputs.length) {
-                        txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
-                    }
-                    else 
-                        txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-                }
-            } catch(e) {
-                // any errors in parsing SLP OP_RETURN means the TXN is NOT SLP.
-                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-            }
-    
+            this.applyInitialSlpJudgement(txo);
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.UNKNOWN || txo.slpUtxoJudgement === undefined)
                 throw Error('Utxo SLP judgement has not been set, unknown error.')
         }
     
-        // 2) Get list of txids with valid SLP DAGs - create distinct Set() txids from initial OP_RETURN judgements
-        let validSLPTx: string[] = await asyncSlpValidator([
+        // 2) Cast final SLP judgement using the supplied async validator
+        await this.applyFinalSlpJudgement(asyncSlpValidator, utxos);
+    
+        // 3) Prepare results object
+        const result: SlpBalancesResult = this.computeSlpBalances(utxos);
+    
+        // 4) Check that all UTXOs have been categorized
+        let tokenTxoCount = 0;
+        for(let id in result.slpTokenUtxos) tokenTxoCount += result.slpTokenUtxos[id].length;
+        let batonTxoCount = 0;
+        for(let id in result.slpBatonUtxos) batonTxoCount += result.slpBatonUtxos[id].length;
+        if(utxos.length !== (tokenTxoCount + batonTxoCount + result.nonSlpUtxos.length + result.invalidBatonUtxos.length + result.invalidTokenUtxos.length))
+            throw Error('Not all UTXOs have been categorized. Unknown Error.');
+    
+        return result;
+    }
+
+    private computeSlpBalances(utxos: SlpAddressUtxoResult[]) {
+        const result: SlpBalancesResult = {
+            satoshis_available_bch: 0,
+            satoshis_in_slp_baton: 0,
+            satoshis_in_slp_token: 0,
+            satoshis_in_invalid_token_dag: 0,
+            satoshis_in_invalid_baton_dag: 0,
+            slpTokenBalances: {},
+            slpTokenUtxos: {},
+            slpBatonUtxos: {},
+            nonSlpUtxos: [],
+            invalidTokenUtxos: [],
+            invalidBatonUtxos: []
+        };
+        // 5) Loop through UTXO set and accumulate balances for type of utxo, organize the Utxos into their categories.
+        for (const txo of utxos) {
+            if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
+                if (!(txo.slpTransactionDetails.tokenIdHex in result.slpTokenBalances))
+                    result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = new BigNumber(0);
+                if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS || txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
+                    result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex].plus(<BigNumber>txo.slpTransactionDetails.genesisOrMintQuantity);
+                }
+                else if (txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND && txo.slpTransactionDetails.sendOutputs) {
+                    let qty = txo.slpTransactionDetails.sendOutputs[txo.vout];
+                    result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex].plus(qty);
+                }
+                else {
+                    throw Error('Unknown Error: cannot have an SLP_TOKEN that is not from GENESIS, MINT, or SEND.');
+                }
+                result.satoshis_in_slp_token += txo.satoshis;
+                if(!(txo.slpTransactionDetails.tokenIdHex in result.slpTokenUtxos))
+                    result.slpTokenUtxos[txo.slpTransactionDetails.tokenIdHex] = [];
+                result.slpTokenUtxos[txo.slpTransactionDetails.tokenIdHex].push(txo);
+            }
+            else if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
+                result.satoshis_in_slp_baton += txo.satoshis;
+                if(!(txo.slpTransactionDetails.tokenIdHex in result.slpBatonUtxos))
+                    result.slpBatonUtxos[txo.slpTransactionDetails.tokenIdHex] = [];
+                result.slpBatonUtxos[txo.slpTransactionDetails.tokenIdHex].push(txo);
+            }
+            else if (txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG) {
+                result.satoshis_in_invalid_token_dag += txo.satoshis;
+                result.invalidTokenUtxos.push(txo);
+            }
+            else if (txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG) {
+                result.satoshis_in_invalid_baton_dag += txo.satoshis;
+                result.invalidBatonUtxos.push(txo);
+            }
+            else {
+                result.satoshis_available_bch += txo.satoshis;
+                result.nonSlpUtxos.push(txo);
+            }
+        }
+        return result;
+    }
+
+    private applyInitialSlpJudgement(txo: SlpAddressUtxoResult) {
+        try {
+            let vout = txo.tx.vout.find(vout => vout.n === 0);
+            if (!vout)
+                throw 'Utxo contains no Vout!';
+            let vout0script = Buffer.from(vout.scriptPubKey.hex, 'hex');
+            txo.slpTransactionDetails = this.parseSlpOutputScript(vout0script);
+            // populate txid for GENESIS
+            if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS)
+                txo.slpTransactionDetails.tokenIdHex = txo.txid;
+            // apply initial SLP judgement to the UTXO (based on OP_RETURN parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
+            if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS ||
+                txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
+                if (txo.slpTransactionDetails.containsBaton && txo.slpTransactionDetails.batonVout === txo.vout) {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_BATON;
+                }
+                else if (txo.vout === 1 && txo.slpTransactionDetails.genesisOrMintQuantity.isGreaterThan(0)) {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
+                    txo.slpUtxoJudgementAmount = txo.slpTransactionDetails.genesisOrMintQuantity;
+                }
+                else
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+            }
+            else if (txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND && txo.slpTransactionDetails.sendOutputs) {
+                if (txo.vout > 0 && txo.vout < txo.slpTransactionDetails.sendOutputs.length) {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
+                    txo.slpUtxoJudgementAmount = txo.slpTransactionDetails.sendOutputs[txo.vout];
+                }
+                else
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+            } else {
+                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+            }
+        }
+        catch (e) {
+            // any errors in parsing SLP OP_RETURN means the TXN is NOT SLP.
+            txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+        }
+    }
+
+    private async applyFinalSlpJudgement(asyncSlpValidator: SlpProxyValidator, utxos: SlpAddressUtxoResult[]) {
+
+        let validSLPTx: string[] = await asyncSlpValidator.validateSlpTransactions([
             ...new Set(utxos.filter(txOut => {
-                if(txOut.slpTransactionDetails && 
-                    txOut.slpUtxoJudgement !== SlpUtxoJudgement.UNKNOWN && 
+                if (txOut.slpTransactionDetails &&
+                    txOut.slpUtxoJudgement !== SlpUtxoJudgement.UNKNOWN &&
                     txOut.slpUtxoJudgement !== SlpUtxoJudgement.NOT_SLP)
                     return true;
                 return false;
             }).map(txOut => txOut.txid))
-        ], validatorUrl);
-    
-        // 3) Update initial judgements with results received from the proxy DAG validator
+        ]);
+
         utxos.forEach(utxo => {
-            if(utxo.txid !in validSLPTx) {
-                if(utxo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN || utxo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
-                    utxo.slpUtxoJudgement = SlpUtxoJudgement.INVALID_DAG;
+            if (!(validSLPTx.includes(utxo.txid))) {
+                if (utxo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
+                    utxo.slpUtxoJudgement = SlpUtxoJudgement.INVALID_TOKEN_DAG;
+                }
+                else if (utxo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
+                    utxo.slpUtxoJudgement = SlpUtxoJudgement.INVALID_BATON_DAG;
+                }
             }
         });
-    
-        // 4) Prepare results object
-        const result: SlpBalancesResult = {
-            satoshis_available_bch_not_slp: 0,
-            satoshis_in_slp_minting_baton: 0,
-            satoshis_in_slp_token: 0,
-            slpTokenBalances: {},
-            slpTokenUtxos: [],
-            slpBatonUtxos: [],
-            nonSlpUtxos: []
-        };
-    
-        // 5) Loop through UTXO set and accumulate balances for type of utxo, organize the Utxos into their categories.
-        for (const txo of utxos) {
-            if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
-                if (!(txo.slpTransactionDetails.tokenIdHex in result.slpTokenBalances))
-                    result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = new BigNumber(0);
-                if(txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS || txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT){
-                    result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex].plus(<BigNumber>txo.slpTransactionDetails.genesisOrMintQuantity);
-                } else if(txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND && txo.slpTransactionDetails.sendOutputs) {
-                    let qty = txo.slpTransactionDetails.sendOutputs[txo.vout];
-                    result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex].plus(qty);
-                } else {
-                    throw Error('Unknown Error: cannot have an SLP_TOKEN that is not from GENESIS, MINT, or SEND.')
-                }
-                result.satoshis_in_slp_token += txo.satoshis;
-                result.slpTokenUtxos.push(txo);
-            } else if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
-                result.satoshis_in_slp_minting_baton += txo.satoshis;
-                result.slpBatonUtxos.push(txo);
-            } else {
-                result.satoshis_available_bch_not_slp += txo.satoshis;
-                result.nonSlpUtxos.push(txo);
-            }
-        }
-    
-        if(utxos.length < (result.slpBatonUtxos.length + result.nonSlpUtxos.length + result.slpTokenUtxos.length))
-            throw Error('Not all UTXOs have been categorized. Unknown Error.');
-    
-        return result;
     }
 }

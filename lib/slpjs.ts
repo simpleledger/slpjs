@@ -22,9 +22,9 @@ export enum SlpTypeVersion {
     "TokenType1" = 1
 }
 
-// negative values are bad, 0 = NOT_SLP, possitive values are a SLP (token or baton)
+// negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)
 export enum SlpUtxoJudgement {
-    "UNKNOWN" = -2, "INVALID_DAG", "NOT_SLP", "SLP_TOKEN", "SLP_BATON"
+    "UNKNOWN" = -3, "INVALID_BATON_DAG", "INVALID_TOKEN_DAG", "NOT_SLP", "SLP_TOKEN", "SLP_BATON"
 }
 
 export interface SlpTransactionDetails {
@@ -43,18 +43,18 @@ export interface SlpTransactionDetails {
     sendOutputs?: BigNumber[]|null;
 }
 
-export interface SlpTokenBalanceMap {
-    [key: string]: BigNumber;
-}
-
 export interface SlpBalancesResult {
-    satoshis_available_bch_not_slp: number;
-    satoshis_in_slp_minting_baton: number;
+    satoshis_available_bch: number;
+    satoshis_in_slp_baton: number;
     satoshis_in_slp_token: number;
-    slpTokenBalances: SlpTokenBalanceMap;
-    slpTokenUtxos: SlpAddressUtxoResult[];
-    slpBatonUtxos: SlpAddressUtxoResult[];
+    satoshis_in_invalid_token_dag: number;
+    satoshis_in_invalid_baton_dag: number;
+    slpTokenBalances: {[key: string]: BigNumber};
+    slpTokenUtxos: {[key: string]: SlpAddressUtxoResult[]};
+    slpBatonUtxos: {[key: string]: SlpAddressUtxoResult[]};
     nonSlpUtxos: SlpAddressUtxoResult[];
+    invalidTokenUtxos: SlpAddressUtxoResult[];
+    invalidBatonUtxos: SlpAddressUtxoResult[];
 }
 
 export class SlpAddressUtxoResult implements AddressUtxoResult {

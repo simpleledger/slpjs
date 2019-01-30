@@ -4,22 +4,39 @@ import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
 import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/typings/Address';
 import { SlpAddressUtxoResult } from './slpjs';
-import { Slp, AsyncSlpValidator } from './slp';
+import { Slp, SlpProxyValidator } from './slp';
 import { TxnDetails } from 'bitbox-sdk/typings/Transaction';
 import Axios from 'axios';
 import { Utils } from './utils';
 
+let bitcore = require('../node_modules/bitcore-lib-cash');
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-export class BitboxNetwork implements AsyncSlpValidator {
+export class BitboxNetwork implements SlpProxyValidator {
     BITBOX: BITBOX;
     slp: Slp;
+    validator?: SlpProxyValidator;
+    validatorUrl: string;
 
-    constructor(BITBOX: BITBOX) {
+    constructor(BITBOX: BITBOX, validator?: SlpProxyValidator) {
         this.BITBOX = BITBOX;
         this.slp = new Slp(BITBOX);
+        if(validator)
+            this.validator = validator
+        else {
+            this.validatorUrl = BITBOX.restURL.replace('v1','v2')
+            this.validatorUrl = this.validatorUrl.concat('/slp/validate');
+            this.validatorUrl = this.validatorUrl.replace('//slp', '/slp');
+        }
     }
     
+    async getTokenInformation(txid: string) {
+        let txhex = await this.BITBOX.RawTransactions.getRawTransaction(txid);
+        let txn = new bitcore.Transaction(txhex)
+        return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
+    }
+
     async getUtxo(address: string) {
         // must be a cash or legacy addr
         let res: AddressUtxoResult[];
@@ -36,33 +53,29 @@ export class BitboxNetwork implements AsyncSlpValidator {
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
-    async simpleTokenSend(tokenId: string, sendAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, changeReceiverAddress: string, processInputUtxos=true) {  
+    async simpleTokenSend(tokenId: string, sendAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, changeReceiverAddress: string) {  
         
-        // 1) Re-process the utxo set just to be sure it has been done.
-        if(processInputUtxos)
-            throw Error("Not yet implemented")
+        // 1) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
+        let totalTokenInputAmount: BigNumber = 
+            inputUtxos
+            .filter(txo => {
+                return Slp.preSendSlpJudgementCheck(txo, tokenId);
+            })
+            .reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => { 
+                return tot.plus(txo.slpUtxoJudgementAmount)
+            }, new BigNumber(0))
 
-        // 2) Get the subset of tokenUtxos for which are for this tokenId
-        let tokenUtxos = inputUtxos.filter(txo => {
-            return Slp.checkForSlpSendTokenJudgement(txo, tokenId);
-        });
-
-        // 3) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
-        let totalTokenInputAmount: BigNumber = tokenUtxos.reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => { 
-            return tot.plus(txo.slpUtxoJudgementAmount)
-        }, new BigNumber(0))
-
-        // 4) Compute the token Change amount.
+        // 2) Compute the token Change amount.
         let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(sendAmount);
         
         let txHex;
         if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
-            // 5) Create the Send OP_RETURN message
+            // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
                 outputQtyArray: [ sendAmount, tokenChangeAmount ],
             });
-            // 6) Create the raw Send transaction hex
+            // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
                 input_token_utxos: Utils.toUtxoArray(inputUtxos),
@@ -70,12 +83,12 @@ export class BitboxNetwork implements AsyncSlpValidator {
                 bchChangeReceiverAddress: changeReceiverAddress
             });
         } else if (tokenChangeAmount.isEqualTo(new BigNumber(0))) {
-            // 5) Create the Send OP_RETURN message
+            // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
                 outputQtyArray: [ sendAmount ],
             });
-            // 6) Create the raw Send transaction hex
+            // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
                 input_token_utxos: Utils.toUtxoArray(inputUtxos),
@@ -83,13 +96,35 @@ export class BitboxNetwork implements AsyncSlpValidator {
                 bchChangeReceiverAddress: changeReceiverAddress
             });
         } else {
-            throw Error('Token quantity inputs less than the token inputs')
+            throw Error('Token inputs less than the token outputs')
         }
 
-        console.log(txHex);
-
-        // 6) Broadcast the transaction over the network using this.BITBOX
+        // 5) Broadcast the transaction over the network using this.BITBOX
         return await this.sendTx(txHex);
+    }
+
+    async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
+        
+        let genesisOpReturn = this.slp.buildGenesisOpReturn({ 
+            ticker: tokenTicker,
+            name: tokenName,
+            documentUri: documentUri,
+            hash: documentHash, 
+            decimals: decimals,
+            batonVout: 2,
+            initialQuantity: tokenAmount,
+        });
+
+        // 4) Create/sign the raw transaction hex for Genesis
+        let genesisTxHex = this.slp.buildRawGenesisTx({
+            slpGenesisOpReturn: genesisOpReturn, 
+            mintReceiverAddress: tokenReceiverAddress,
+            batonReceiverAddress: batonReceiverAddress,
+            bchChangeReceiverAddress: bchChangeReceiverAddress, 
+            input_utxos: Utils.toUtxoArray(inputUtxos)
+        });
+
+        return await this.sendTx(genesisTxHex);
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
@@ -113,7 +148,7 @@ export class BitboxNetwork implements AsyncSlpValidator {
             bchChangeReceiverAddress: changeReceiverAddress
         });
         
-        console.log(txHex);
+        //console.log(txHex);
 
         // 5) Broadcast the transaction over the network using this.BITBOX
         return await this.sendTx(txHex);
@@ -212,10 +247,10 @@ export class BitboxNetwork implements AsyncSlpValidator {
         onPaymentCB()
     }
 
-    async validateSlpTransactions(txids: string[], url: string) {
+    async validateSlpTransactions(txids: string[]) {
         const result = await Axios({
             method: "post",
-            url: url,
+            url: this.validatorUrl,
             data: {
                 txids: txids
             }
@@ -228,6 +263,8 @@ export class BitboxNetwork implements AsyncSlpValidator {
     }
 
     async processUtxosForSlp(utxos: SlpAddressUtxoResult[]) {
-        return await this.slp.processUtxosForSlpAbstract(utxos, this.validateSlpTransactions, 'https://rest.bitcoin.com/v2/slp/validate')
+        if(this.validator)
+            return await this.slp.processUtxosForSlpAbstract(utxos, this.validator)
+        return await this.slp.processUtxosForSlpAbstract(utxos, this)
     }
 }

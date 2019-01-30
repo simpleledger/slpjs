@@ -1,10 +1,13 @@
 const assert = require('assert');
 
-const ProxyValidator = require('../lib/jsonrpcvalidator').ProxyValidation;
+const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default;
+const BITBOX = new BITBOXSDK({ restURL: "rest.bitcoin.com/v1/" });
 
-describe('ProxyValidator', function() {
+const JsonRpcProxyValidator = require('../lib/jsonrpcvalidator').JsonRpcProxyValidator;
+
+describe('JsonRpcProxyValidator', function() {
+    let proxy = new JsonRpcProxyValidator(BITBOX, 'https://validate.simpleledger.info');
     describe('isValidSlpTxid()', function() {
-        let proxy = new ProxyValidator();
         it('returns true for a valid SEND token transaction', async function() {
             let tokenTxnId = '2504b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45';
             let isValid = await proxy.isValidSlpTxid(tokenTxnId);
@@ -21,18 +24,17 @@ describe('ProxyValidator', function() {
             assert.equal(isValid, true);
         });
     });
-    describe('validateTransactions()', function() {
-        let proxy = new ProxyValidator();
+    describe('validateSlpTransactions()', function() {
         it('works for valid SEND token transactions', async function() {
             this.timeout(5000);
             let tokenTxnIds = ['2504b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45', '2504b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45', '0004b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45'];
-            let isValid = await proxy.validateTransactions(tokenTxnIds);
+            let isValid = await proxy.validateSlpTransactions(tokenTxnIds);
             assert.deepEqual(isValid, ['2504b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45', '2504b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45']);
         });
         it('works for invalid SEND token transactions', async function() {
             this.timeout(5000);
             let tokenTxnIds = ['0004b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45', '0004b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45'];
-            let isValid = await proxy.validateTransactions(tokenTxnIds);
+            let isValid = await proxy.validateSlpTransactions(tokenTxnIds);
             assert.deepEqual(isValid, []);
         });
     });
