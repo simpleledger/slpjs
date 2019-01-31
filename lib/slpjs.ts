@@ -12,7 +12,6 @@ exports.BitdbNetwork = BitdbNetwork;
 exports.JsonRpcProxyValidator = JsonRpcProxyValidator;
 
 import BigNumber from "bignumber.js";
-import { AddressUtxoResult } from "bitbox-sdk/typings/Address";
 
 export enum SlpTransactionType {
     "GENESIS", "MINT", "SEND"
@@ -57,7 +56,7 @@ export interface SlpBalancesResult {
     invalidBatonUtxos: SlpAddressUtxoResult[];
 }
 
-export class SlpAddressUtxoResult implements AddressUtxoResult {
+export class SlpAddressUtxoResult {
     txid: string;
     vout: number;
     scriptPubKey: string;

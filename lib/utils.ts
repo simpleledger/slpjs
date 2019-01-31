@@ -1,6 +1,7 @@
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 import { SlpAddressUtxoResult, utxo } from './slpjs';
+import { AddressUtxoResult } from 'bitbox-sdk/typings/Address';
 
 export class Utils {
 
@@ -26,7 +27,24 @@ export class Utils {
         return Utils.isMainnet(address) ? 'bitcoincash' : 'bchtest';
     }
 
-    static toUtxoArray(utxos: SlpAddressUtxoResult[]){
+    static mapToSlpAddressUtxoResultArray(bitboxResult: AddressUtxoResult) {
+        console.log("MAP:",bitboxResult)
+        return bitboxResult.utxos.map(txo => {
+            return <SlpAddressUtxoResult> {
+                satoshis: txo.satoshis,
+                txid: txo.txid,
+                amount: txo.amount,
+                confirmations: txo.confirmations,
+                height: txo.height,
+                vout: txo.vout,
+                cashAddress: bitboxResult.cashAddress,
+                legacyAddress: bitboxResult.legacyAddress,
+                scriptPubKey: bitboxResult.scriptPubKey
+            }
+        })
+    }
+
+    static mapToUtxoArray(utxos: SlpAddressUtxoResult[]) {
         return utxos.map(txo => 
         {
             return <utxo> { 

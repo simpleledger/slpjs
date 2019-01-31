@@ -37,9 +37,9 @@ export class BitboxNetwork implements SlpProxyValidator {
         return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
     }
 
-    async getUtxo(address: string) {
+    async getUtxos(address: string) {
         // must be a cash or legacy addr
-        let res: AddressUtxoResult[];
+        let res: AddressUtxoResult;
         if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         res = (await this.BITBOX.Address.utxo([address]))[0];
@@ -48,8 +48,8 @@ export class BitboxNetwork implements SlpProxyValidator {
 
     async getAllSlpBalancesAndUtxos(address: string) {
         address = bchaddr.toCashAddress(address);
-        let utxos = await this.getUtxoWithTxDetails(address);
-        return await this.processUtxosForSlp(utxos);
+        let result = await this.getUtxoWithTxDetails(address);
+        return await this.processUtxosForSlp(result);
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
@@ -78,7 +78,7 @@ export class BitboxNetwork implements SlpProxyValidator {
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
-                input_token_utxos: Utils.toUtxoArray(inputUtxos),
+                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
                 tokenReceiverAddressArray: [ tokenReceiverAddress, changeReceiverAddress ],
                 bchChangeReceiverAddress: changeReceiverAddress
             });
@@ -91,7 +91,7 @@ export class BitboxNetwork implements SlpProxyValidator {
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
-                input_token_utxos: Utils.toUtxoArray(inputUtxos),
+                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
                 tokenReceiverAddressArray: [ tokenReceiverAddress ],
                 bchChangeReceiverAddress: changeReceiverAddress
             });
@@ -121,7 +121,7 @@ export class BitboxNetwork implements SlpProxyValidator {
             mintReceiverAddress: tokenReceiverAddress,
             batonReceiverAddress: batonReceiverAddress,
             bchChangeReceiverAddress: bchChangeReceiverAddress, 
-            input_utxos: Utils.toUtxoArray(inputUtxos)
+            input_utxos: Utils.mapToUtxoArray(inputUtxos)
         });
 
         return await this.sendTx(genesisTxHex);
@@ -141,7 +141,7 @@ export class BitboxNetwork implements SlpProxyValidator {
 
         // 2) Create the raw Mint transaction hex
         let txHex = this.slp.buildRawMintTx({
-            input_baton_utxos: Utils.toUtxoArray(inputUtxos),
+            input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
             slpMintOpReturn: mintOpReturn,
             mintReceiverAddress: tokenReceiverAddress,
             batonReceiverAddress: batonReceiverAddress,
@@ -155,10 +155,10 @@ export class BitboxNetwork implements SlpProxyValidator {
     }
 
     async getUtxoWithRetry(address: string, retries = 40) {
-		let result: AddressUtxoResult[] | undefined;
+		let result: AddressUtxoResult | undefined;
 		let count = 0;
 		while(result === undefined){
-			result = await this.getUtxo(address)
+			result = await this.getUtxos(address)
 			count++;
 			if(count > retries)
 				throw new Error("this.BITBOX.Address.utxo endpoint experienced a problem");
@@ -168,38 +168,28 @@ export class BitboxNetwork implements SlpProxyValidator {
     }
 
     async getUtxoWithTxDetails(address: string) {
-        const utxos = <SlpAddressUtxoResult[]>(await this.getUtxoWithRetry(address));
-        
+        let utxos = Utils.mapToSlpAddressUtxoResultArray(await this.getUtxoWithRetry(address));
         let txIds = utxos.map(i => i.txid)
-    
-        if(txIds.length === 0){
+        if(txIds.length === 0)
             return [];
-        }
-    
         // Split txIds into chunks of 20 (BitBox limit), run the detail queries in parallel
-        let txDetails: any[] = await Promise.all(_.chunk(txIds, 20).map((txids: string[]) => {
-            return this.getTransactionDetailsWithRetry(txids);
-        }));
-    
+        let txDetails: any[] = (await Promise.all(_.chunk(txIds, 20).map((txids: string[]) => {
+            return this.getTransactionDetailsWithRetry([...new Set(txids)]);
+        })));
         // concat the chunked arrays
         txDetails = <TxnDetails[]>[].concat(...txDetails);
-    
-        for(let i = 0; i < utxos.length; i++){
-            utxos[i].tx = txDetails[i];
-        }
-    
+        utxos = utxos.map(i => { i.tx = txDetails.find((d: TxnDetails) => d.txid === i.txid ); return i;})
         return utxos;
     }
     
     async getTransactionDetailsWithRetry(txids: string[], retries = 40) {
-        let result: TxnDetails|TxnDetails[];
+        let result: TxnDetails[];
         let count = 0;
         while(result === undefined){
-            result = (await this.BITBOX.Transaction.details(txids));
+            result = await this.BITBOX.Transaction.details(txids);
             count++;
             if(count > retries)
                 throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
-
             await sleep(500);
         }
         return result; 
@@ -229,16 +219,17 @@ export class BitboxNetwork implements SlpProxyValidator {
     }
 
     async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function) {
+        let utxo: AddressUtxoResult | undefined;
         // must be a cash or legacy addr
         if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         
         while (true) {
             try {
-                let utxo = (await this.getUtxo(paymentAddress))[0];
-                if (utxo && utxo.satoshis >= fee) {
+                utxo = await this.getUtxos(paymentAddress);
+                if (utxo)
+                    if(utxo.utxos[0].satoshis >= fee)
                     break
-                }
             } catch (ex) {
                 console.log(ex)
             }
