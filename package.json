@@ -34,7 +34,7 @@
   "homepage": "https://github.com/simpleledger/slpjs#readme",
   "devDependencies": {
     "@types/node": "^10.12.18",
-    "bitbox-sdk": "^3.0.1",
+    "bitbox-sdk": "^3.0.2",
     "browserify": "^16.2.2",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
