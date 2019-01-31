@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -33,7 +33,7 @@
   "homepage": "https://github.com/simpleledger/slpjs#readme",
   "devDependencies": {
     "@types/node": "^10.12.18",
-    "bitbox-sdk": "^2.3.0",
+    "bitbox-sdk": "^3.0.1",
     "browserify": "^16.2.2",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",

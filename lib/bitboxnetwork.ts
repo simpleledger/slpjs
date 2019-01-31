@@ -1,15 +1,14 @@
-import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
+import BITBOX from 'bitbox-sdk/typings/bitbox-sdk';
 import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
+import * as bitcore from 'bitcore-lib-cash';
 import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/typings/Address';
 import { SlpAddressUtxoResult } from './slpjs';
 import { Slp, SlpProxyValidator } from './slp';
 import { TxnDetails } from 'bitbox-sdk/typings/Transaction';
 import Axios from 'axios';
 import { Utils } from './utils';
-
-let bitcore = require('../node_modules/bitcore-lib-cash');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -169,7 +168,7 @@ export class BitboxNetwork implements SlpProxyValidator {
 
     async getUtxoWithTxDetails(address: string) {
         let utxos = Utils.mapToSlpAddressUtxoResultArray(await this.getUtxoWithRetry(address));
-        let txIds = utxos.map(i => i.txid)
+        let txIds = utxos.map(i => i.txid)    
         if(txIds.length === 0)
             return [];
         // Split txIds into chunks of 20 (BitBox limit), run the detail queries in parallel
@@ -229,7 +228,7 @@ export class BitboxNetwork implements SlpProxyValidator {
                 utxo = await this.getUtxos(paymentAddress);
                 if (utxo)
                     if(utxo.utxos[0].satoshis >= fee)
-                    break
+                        break
             } catch (ex) {
                 console.log(ex)
             }

@@ -1,4 +1,4 @@
-import BITBOX from '../node_modules/bitbox-sdk/typings/bitbox-sdk';
+import BITBOX from 'bitbox-sdk/typings/bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpTypeVersion, SlpUtxoJudgement, SlpBalancesResult, utxo } from './slpjs';
@@ -625,7 +625,7 @@ export class Slp {
     
         // 2) Cast final SLP judgement using the supplied async validator
         await this.applyFinalSlpJudgement(asyncSlpValidator, utxos);
-    
+        
         // 3) Prepare results object
         const result: SlpBalancesResult = this.computeSlpBalances(utxos);
     
