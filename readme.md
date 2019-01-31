@@ -27,20 +27,21 @@ NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is use
 ## Get Balances
 
 ```js
-// Bring your own BITBOX instance for blockchain access
-const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
+// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const slpjs = require('slpjs').slpjs;
-
-// FOR MAINNET UNCOMMENT
-// let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
-// const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // FOR TESTNET UNCOMMENT
 let addr = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
+const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 const slpValidator = new slpjs.JsonRpcProxyValidator(BITBOX, "https://testnet-validate.simpleledger.info")
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+
+// FOR MAINNET UNCOMMENT
+// let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
+// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+// const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 let balances;
 (async function() {
@@ -73,9 +74,10 @@ let balances;
 GENESIS is the most simple type of SLP transaction since no special inputs are required.
 
 ```js
-const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
+// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
-
 const slpjs = require('slpjs').slpjs;
 
 // FOR TESTNET UNCOMMENT
@@ -148,9 +150,10 @@ let genesisTxid;
 Adding additional tokens for a token that already exists is possible if you are in control of the minting "baton".  This minting baton is a special UTXO that gives authority to add to the token's circulating supply.  
 
 ```javascript
-const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
+// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
-
 const slpjs = require('slpjs').slpjs;
 
 // FOR TESTNET UNCOMMENT
@@ -233,7 +236,9 @@ let mintTxid;
 This example shows the general workflow for sending an existing token.
 
 ```js
-const BITBOXSDK = require('../node_modules/bitbox-sdk/lib/bitbox-sdk').default
+// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs').slpjs;
 
