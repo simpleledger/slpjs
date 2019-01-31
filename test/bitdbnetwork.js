@@ -1,7 +1,7 @@
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 
-const BitdbNetwork = require('../lib/BitdbNetwork').BitdbNetwork;
+const BitdbNetwork = require('../lib/bitdbnetwork').BitdbNetwork;
 
 describe('BitdbNetwork', function() {
     describe('getTokenInformation()', function() {
