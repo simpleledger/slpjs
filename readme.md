@@ -7,6 +7,7 @@ GENESIS, MINT, and SEND transaction functions are currently supported.
 [![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
 
 
+
 # Installation
 
 #### For node.js
@@ -14,6 +15,7 @@ GENESIS, MINT, and SEND transaction functions are currently supported.
 
 #### For browser
 ```<script src='https://unpkg.com/slpjs'></script>```
+
 
 
 # Example Usage
@@ -325,6 +327,21 @@ console.log(cashAddr);
 
 
 
-## Caveats
+# Caveats
 
 * All SLPJS methods require token quantities to be expressed in the smallest possible unit of account for the token (i.e., token satoshis).  This requires the token's precision to be used to calculate the quantity. For example, token having a decimal precision of 9 sending an amount of 1.01 tokens would need to first calculate the sending amount using `1.01 x 10^9 => 1010000000`.
+
+
+
+# Building & Testing
+
+Building this project creates lib/*.js files and then creates browserified versions in the dist folder.
+
+## Requirements
+Running the unit tests require node.js v8.15+. 
+
+## Build
+`npm run build`
+
+## Test
+`npm run test`
