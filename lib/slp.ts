@@ -1,4 +1,4 @@
-import BITBOX from 'bitbox-sdk/typings/bitbox-sdk';
+import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpTypeVersion, SlpUtxoJudgement, SlpBalancesResult, utxo } from './slpjs';

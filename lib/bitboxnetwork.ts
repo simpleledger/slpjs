@@ -1,12 +1,12 @@
-import BITBOX from 'bitbox-sdk/typings/bitbox-sdk';
+import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
+import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/lib/Address';
+import { TxnDetails } from 'bitbox-sdk/lib/Transaction';
 import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
 import * as bitcore from 'bitcore-lib-cash';
-import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/typings/Address';
 import { SlpAddressUtxoResult } from './slpjs';
 import { Slp, SlpProxyValidator } from './slp';
-import { TxnDetails } from 'bitbox-sdk/typings/Transaction';
 import Axios from 'axios';
 import { Utils } from './utils';
 

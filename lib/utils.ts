@@ -1,7 +1,7 @@
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 import { SlpAddressUtxoResult, utxo } from './slpjs';
-import { AddressUtxoResult } from 'bitbox-sdk/typings/Address';
+import { AddressUtxoResult } from 'bitbox-sdk/lib/Address';
 
 export class Utils {
 
