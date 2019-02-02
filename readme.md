@@ -83,7 +83,7 @@ const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs').slpjs;
 
 // FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
+const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 const slpValidator = new slpjs.JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
@@ -93,7 +93,7 @@ const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 
 // FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
+// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 // const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 // const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 // const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF"; // <-- compressed WIF format
@@ -159,7 +159,7 @@ const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs').slpjs;
 
 // FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
+const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 const slpValidator = new slpjs.JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
@@ -171,7 +171,7 @@ const tokenIdHexToMint = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523
 let additionalTokenQty = 1000
 
 // FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
+// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 // const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 // const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 // const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF"; // <-- compressed WIF format
@@ -245,7 +245,7 @@ const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs').slpjs;
 
 // FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v1/' });
+// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 // const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 // const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
 // const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
@@ -255,7 +255,7 @@ const slpjs = require('slpjs').slpjs;
 // let sendAmount = 10;
 
 // FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v1/' });
+const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 const slpValidator = new slpjs.JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
