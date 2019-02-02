@@ -58,13 +58,15 @@ export interface configBuildRawMintTx {
     input_baton_utxos: utxo[];
 }
 
-type AsyncValidatorFunction = (tokenIds: string[]) => Promise<string[]>
+export interface SlpValidator {
+    isValidSlpTxid(txid: string): Promise<boolean>;
+    getRawTransactions: (txid: string[]) => Promise<string[]>;
+    validateSlpTransactions(txids: string[]): Promise<string[]>;
+}
 
-export interface SlpProxyValidator {
+export interface SlpProxyValidator extends SlpValidator {
     validatorUrl: string;
-    validateSlpTransactions: AsyncValidatorFunction;
-    processUtxosForSlp(utxos: SlpAddressUtxoResult[], validatorOverride?: SlpProxyValidator): Promise<SlpBalancesResult>;
-} 
+}
 
 export class Slp {
     BITBOX: BITBOX;
@@ -614,7 +616,7 @@ export class Slp {
         return false;
     }
 
-    async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], asyncSlpValidator: SlpProxyValidator) {
+    async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], asyncSlpValidator: SlpValidator) {
         
         // 1) parse SLP OP_RETURN and cast initial SLP judgement, based on OP_RETURN only.
         for(let txo of utxos) {
@@ -736,7 +738,7 @@ export class Slp {
         }
     }
 
-    private async applyFinalSlpJudgement(asyncSlpValidator: SlpProxyValidator, utxos: SlpAddressUtxoResult[]) {
+    private async applyFinalSlpJudgement(asyncSlpValidator: SlpValidator, utxos: SlpAddressUtxoResult[]) {
 
         let validSLPTx: string[] = await asyncSlpValidator.validateSlpTransactions([
             ...new Set(utxos.filter(txOut => {

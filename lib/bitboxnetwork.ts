@@ -6,19 +6,20 @@ import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
 import * as bitcore from 'bitcore-lib-cash';
 import { SlpAddressUtxoResult } from './slpjs';
-import { Slp, SlpProxyValidator } from './slp';
+import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import Axios from 'axios';
 import { Utils } from './utils';
+import { BitcoreTransaction } from './global';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export class BitboxNetwork implements SlpProxyValidator {
     BITBOX: BITBOX;
     slp: Slp;
-    validator?: SlpProxyValidator;
+    validator?: SlpValidator;
     validatorUrl: string;
 
-    constructor(BITBOX: BITBOX, validator?: SlpProxyValidator) {
+    constructor(BITBOX: BITBOX, validator?: SlpValidator) {
         this.BITBOX = BITBOX;
         this.slp = new Slp(BITBOX);
         if(validator)
@@ -31,8 +32,8 @@ export class BitboxNetwork implements SlpProxyValidator {
     }
     
     async getTokenInformation(txid: string) {
-        let txhex = await this.BITBOX.RawTransactions.getRawTransaction(txid);
-        let txn = new bitcore.Transaction(txhex)
+        let txhex: string = (await this.BITBOX.RawTransactions.getRawTransaction([txid]))[0];
+        let txn: BitcoreTransaction = new bitcore.Transaction(txhex)
         return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
     }
 
@@ -237,6 +238,10 @@ export class BitboxNetwork implements SlpProxyValidator {
         onPaymentCB()
     }
 
+    isValidSlpTxid(txid: string): Promise<boolean> {
+        throw new Error("Method not implemented.");
+    }
+
     async validateSlpTransactions(txids: string[]) {
         const result = await Axios({
             method: "post",
@@ -250,6 +255,10 @@ export class BitboxNetwork implements SlpProxyValidator {
         } else {
             return []
         }
+    }
+
+    getRawTransactions(txid: string[]): Promise<string[]> {
+        throw Error("Method not implemented.")
     }
 
     async processUtxosForSlp(utxos: SlpAddressUtxoResult[]) {

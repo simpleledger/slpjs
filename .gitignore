@@ -9,7 +9,7 @@ yarn.lock
 # ignore built js files
 lib/*.js
 index.js
-
+*.js.map
 # testing
 /coverage
 

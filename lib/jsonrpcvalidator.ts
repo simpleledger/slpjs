@@ -1,4 +1,4 @@
-import BITBOX from 'bitbox-sdk/typings/bitbox-sdk';
+import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
 import axios from 'axios';
 
 import { Slp, SlpProxyValidator } from './slp';
@@ -30,6 +30,10 @@ export class JsonRpcProxyValidator implements SlpProxyValidator {
             return false
         }
     }
+
+    async getRawTransactions(txid: string[]): Promise<string[]> {
+        throw new Error("Not implemented.")
+    };
     
     async validateSlpTransactions(txids: string[]) {
         // Validate each txid
@@ -41,11 +45,5 @@ export class JsonRpcProxyValidator implements SlpProxyValidator {
         // Filter array to only valid txid results
         const validateResults = await axios.all(validatePromises)
         return validateResults.filter((result) => result.length > 0);
-    }
-
-    async processUtxosForSlp(utxos: SlpAddressUtxoResult[], validatorOverride?: SlpProxyValidator) {
-        if(validatorOverride)
-            throw Error('Cannot override validator for JsonRpcProxyValidator.')
-        return await this.slp.processUtxosForSlpAbstract(utxos, this)
     }
 }

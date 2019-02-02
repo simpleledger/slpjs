@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default;
-const BITBOX = new BITBOXSDK({ restURL: "rest.bitcoin.com/v1/" });
+const BITBOX = new BITBOXSDK({ restURL: "https://rest.bitcoin.com/v2/" });
 
 const JsonRpcProxyValidator = require('../lib/jsonrpcvalidator').JsonRpcProxyValidator;
 
