@@ -10,23 +10,21 @@ describe('Slp', function() {
     describe('isValidSlpTxid() -- SLP Transaction Validation Unit Tests', function() {
         txUnitTestData.forEach(test => {
             it(test.description, async () => {
-                this.timeout(20000);
                 let getRawUnitTestTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
                     let allTxns: SlpTestTxn[] = test.when.concat(test.should);
-                    console.log('looking for:',txids[0])
-                    let txn = allTxns.find(i => { 
-                        let hash = BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(i.tx, 'hex'))).toString('hex');
-                        console.log(hash)
+                    let txn = allTxns.find(i => {
+                        let hash = (<Buffer>BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(i.tx, 'hex'))).reverse()).toString('hex');
                         return hash === txids[0] 
                     });
                     if(txn)
                         return [txn.tx];
-                    return undefined
+                    return null
                 }
     
                 const slpValidator = new LocalValidator(BITBOX, getRawUnitTestTransactions);
+                test.when.forEach(w=>slpValidator.addValidationFromStore(w.tx, w.valid));
 
-                let txid = BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).toString('hex');
+                let txid = (<Buffer>BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).reverse()).toString('hex');
                 let shouldBeValid = test.should[0].valid;
                 let isValid = await slpValidator.isValidSlpTxid(txid);
 
