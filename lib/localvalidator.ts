@@ -4,18 +4,23 @@ import { SlpTransactionType, SlpTransactionDetails } from './slpjs';
 import * as bitcore from 'bitcore-lib-cash';
 import { BitcoreTransaction } from './global';
 import BigNumber from 'bignumber.js';
+import axios from 'axios';
 
-export interface Validation { hex: string|null; validity: boolean|null; parents: string[]|null, details: SlpTransactionDetails|null } 
+export interface Validation { hex: string|null; validity: boolean|null; parents: Parent[], details: SlpTransactionDetails|null } 
 export type GetRawTransactionsAsync = (txid: string[]) => Promise<string[]|null>;
-// export type GetRawTransactions = (txid: string[]) => string[];
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+interface Parent {
+    txid: string;
+    valid: boolean|null;
+    inputQty: BigNumber|null;
+}
 
 export class LocalValidator implements SlpValidator {
     BITBOX: BITBOX;
     cachedRawTransactions: { [txid: string]: string }
     cachedValidations: { [txid: string]: Validation }
-    jobQueue: { [jobId: string]: boolean }
     getRawTransactions: GetRawTransactionsAsync;
     slp: Slp;
 
@@ -29,7 +34,7 @@ export class LocalValidator implements SlpValidator {
 
     addValidationFromStore(txhex: string, isValid: boolean) {
         let id = (<Buffer>this.BITBOX.Crypto.sha256(this.BITBOX.Crypto.sha256(Buffer.from(txhex, 'hex'))).reverse()).toString('hex');
-        this.cachedValidations[id] = { hex: txhex, validity: isValid, parents: null, details: null }
+        this.cachedValidations[id] = { hex: txhex, validity: isValid, parents: [], details: null }
     }
 
     async waitForParentValidation(txid: string) {
@@ -44,8 +49,8 @@ export class LocalValidator implements SlpValidator {
         while(true) {
             let slpParentCount = cached.parents.length;
             let count = 0;
-            cached.parents.forEach(txid => {
-                let parent = this.cachedValidations[txid];
+            cached.parents.forEach(p => {
+                let parent = this.cachedValidations[p.txid];
                 if(parent) {
                     if(parent.validity)
                         count += 1;
@@ -120,7 +125,7 @@ export class LocalValidator implements SlpValidator {
                         if(input_slpmsg.tokenIdHex === slpmsg.tokenIdHex) {
                             if(input_slpmsg.transactionType === SlpTransactionType.GENESIS || input_slpmsg.transactionType === SlpTransactionType.MINT) {
                                 if(txn.inputs[i].outputIndex === input_slpmsg.batonVout)
-                                    this.cachedValidations[txid].parents.push(txn.inputs[i].prevTxId.toString('hex'))
+                                    this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), valid: null, inputQty: null })
                             }
                         }
                     } catch(_) {}
@@ -142,27 +147,40 @@ export class LocalValidator implements SlpValidator {
                         if(input_slpmsg.transactionType === SlpTransactionType.GENESIS)
                             input_slpmsg.tokenIdHex = input_txid;
                         if(input_slpmsg.tokenIdHex === slpmsg.tokenIdHex) {
-                            if(input_slpmsg.transactionType === SlpTransactionType.SEND)
+                            if(input_slpmsg.transactionType === SlpTransactionType.SEND) {
                                 tokenInQty = tokenInQty.plus(input_slpmsg.sendOutputs[txn.inputs[i].outputIndex])
+                                this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), valid: null, inputQty: input_slpmsg.sendOutputs[txn.inputs[i].outputIndex] })
+                            }
                             else if(input_slpmsg.transactionType === SlpTransactionType.GENESIS || input_slpmsg.transactionType === SlpTransactionType.MINT) {
                                 if(txn.inputs[i].outputIndex === 1)
                                     tokenInQty = tokenInQty.plus(input_slpmsg.genesisOrMintQuantity)
+                                    this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), valid: null, inputQty: input_slpmsg.genesisOrMintQuantity })
                             }
-                            this.cachedValidations[txid].parents.push(txn.inputs[i].prevTxId.toString('hex'))
                         }
                     } catch(_) {}
                 }
             }
             
-            // Check inputs token amounts are greater than token outputs
+            // Check token inputs are greater than token outputs (includes valid and invalid inputs)
             if(tokenOutQty.isGreaterThan(tokenInQty))
                 return this.cachedValidations[txid].validity = false;
         }
 
-        // Check that the parent inputs are valid
+        // Check that all parent SLP inputs are valid
         for(let i = 0; i < this.cachedValidations[txid].parents.length; i++) {
-            let valid = await this.isValidSlpTxid(this.cachedValidations[txid].parents[i])
-            if (!valid)
+            let valid = await this.isValidSlpTxid(this.cachedValidations[txid].parents[i].txid)
+            this.cachedValidations[txid].parents.find(p => p.txid === this.cachedValidations[txid].parents[i].txid).valid = valid;
+            if(this.cachedValidations[txid].details.transactionType === SlpTransactionType.MINT) {
+                if (!valid)
+                    return this.cachedValidations[txid].validity = false;
+            }
+        }
+
+        // Check valid inputs are greater than token outputs
+        if(this.cachedValidations[txid].details.transactionType === SlpTransactionType.SEND) {
+            let validInputQty = this.cachedValidations[txid].parents.reduce((t, v) => { return v.valid ? t.plus(v.inputQty) : t }, new BigNumber(0));
+            let tokenOutQty = slpmsg.sendOutputs.reduce((t,v)=>{ return t.plus(v) }, new BigNumber(0))
+            if(tokenOutQty.isGreaterThan(validInputQty))
                 return this.cachedValidations[txid].validity = false;
         }
 
@@ -184,7 +202,11 @@ export class LocalValidator implements SlpValidator {
         return this.cachedValidations[txid].validity;
     }
 
-    validateSlpTransactions(txids: string[]): Promise<string[]> {
-        throw new Error("Method not implemented.");
+    async validateSlpTransactions(txids: string[]): Promise<string[]> {
+        let res = [];
+        for (let i = 0; i < txids.length; i++) {
+            res.push((await this.isValidSlpTxid) ? txids[i] : '')
+        }
+        return res.filter((id: string) => id.length > 0);
     }
 }

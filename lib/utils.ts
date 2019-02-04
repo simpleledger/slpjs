@@ -28,7 +28,6 @@ export class Utils {
     }
 
     static mapToSlpAddressUtxoResultArray(bitboxResult: AddressUtxoResult) {
-        console.log("MAP:",bitboxResult)
         return bitboxResult.utxos.map(txo => {
             return <SlpAddressUtxoResult> {
                 satoshis: txo.satoshis,
