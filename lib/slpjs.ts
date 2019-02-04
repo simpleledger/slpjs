@@ -20,7 +20,7 @@ export enum SlpTransactionType {
 }
 
 export enum SlpTypeVersion {
-    "TokenType1" = 1
+    "TokenVersionType1" = 1
 }
 
 // negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)

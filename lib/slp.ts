@@ -384,7 +384,7 @@ export class Slp {
             throw Error("Missing token_type");
         // # check if the token version is supported
         slpMsg.type = Slp.parseChunkToInt(chunks[1], 1, 2, true);
-        if(slpMsg.type !== SlpTypeVersion.TokenType1)
+        if(slpMsg.type !== SlpTypeVersion.TokenVersionType1)
             throw Error('Unsupported token type:' + slpMsg.type);
         if(chunks.length === 2)
             throw Error('Missing SLP transaction type');
