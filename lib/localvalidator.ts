@@ -9,7 +9,7 @@ import axios from 'axios';
 export interface Validation { hex: string|null; validity: boolean|null; parents: Parent[], details: SlpTransactionDetails|null } 
 export type GetRawTransactionsAsync = (txid: string[]) => Promise<string[]|null>;
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 interface Parent {
     txid: string;
@@ -89,15 +89,13 @@ export class LocalValidator implements SlpValidator {
             this.cachedValidations[txid].hex = await this.getRawTransaction(txid);
         }
 
-        // Check to see if we've already touched processing for this txn
-        if(this.cachedValidations[txid]) {
-            if(!this.cachedValidations[txid].hex)
-                await this.waitForTransactionDownload(txid);
-            if(this.cachedValidations[txid].validity)
-                return this.cachedValidations[txid].validity;
-            if(this.cachedValidations[txid].details)
-                return await this.queueFinalValidation(txid);
-        }
+        // Check to see how we should proceed based on the validation-cache state
+        if(!this.cachedValidations[txid].hex)
+            await this.waitForTransactionDownload(txid);
+        if(this.cachedValidations[txid].validity)
+            return this.cachedValidations[txid].validity;
+        if(this.cachedValidations[txid].details)
+            return await this.queueFinalValidation(txid);
 
         // Check SLP message validity
         let txn: BitcoreTransaction = new bitcore.Transaction(this.cachedValidations[txid].hex)
@@ -166,7 +164,7 @@ export class LocalValidator implements SlpValidator {
                 return this.cachedValidations[txid].validity = false;
         }
 
-        // Check that all parent SLP inputs are valid
+        // Set validity validation-cache for parents, and handle MINT condition with no valid input
         for(let i = 0; i < this.cachedValidations[txid].parents.length; i++) {
             let valid = await this.isValidSlpTxid(this.cachedValidations[txid].parents[i].txid)
             this.cachedValidations[txid].parents.find(p => p.txid === this.cachedValidations[txid].parents[i].txid).valid = valid;
