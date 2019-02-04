@@ -77,7 +77,9 @@ export class LocalValidator implements SlpValidator {
     async getRawTransaction(txid: string) {
         if(this.cachedRawTransactions[txid])
             return this.cachedRawTransactions[txid];
-        let txhex: string[] = await this.getRawTransactions([txid])
+        let txhex: string[] = await this.BITBOX.RawTransactions.getRawTransaction([
+            txid
+        ]);
         if(txhex)
             return (txhex)[0];
         return null;
