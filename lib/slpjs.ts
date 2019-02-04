@@ -19,7 +19,7 @@ export enum SlpTransactionType {
     "GENESIS", "MINT", "SEND"
 }
 
-export enum SlpTypeVersion {
+export enum SlpVersionType {
     "TokenVersionType1" = 1
 }
 
@@ -31,7 +31,7 @@ export enum SlpUtxoJudgement {
 export interface SlpTransactionDetails {
     transactionType: SlpTransactionType;
     tokenIdHex: string;
-    type: SlpTypeVersion;
+    versionType: SlpVersionType;
     timestamp: string;
     symbol: string;
     name: string;
