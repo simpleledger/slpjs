@@ -4,7 +4,6 @@ import { SlpTransactionType, SlpTransactionDetails } from './slpjs';
 import * as bitcore from 'bitcore-lib-cash';
 import { BitcoreTransaction } from './global';
 import BigNumber from 'bignumber.js';
-import axios from 'axios';
 
 export interface Validation { hex: string|null; validity: boolean|null; parents: Parent[], details: SlpTransactionDetails|null, invalidReason: string|null } 
 export type GetRawTransactionsAsync = (txid: string[]) => Promise<string[]|null>;
@@ -41,32 +40,23 @@ export class LocalValidator implements SlpValidator {
             this.cachedRawTransactions[id] = hex;
     }
     
-    async waitForParentValidationProcessing(txid: string) {
+    async waitForCurrentValidationProcessing(txid: string) {
         // TODO: Add some timeout?
         let cached: Validation = this.cachedValidations[txid];
 
         while(true) {
-            let slpParentCount = cached.parents.length;
-            let count = 0;
-            cached.parents.forEach(p => {
-                let parent = this.cachedValidations[p.txid];
-                if(parent) {
-                    if(typeof parent.validity === 'boolean')
-                        count += 1;
-                }
-            });
-            if(count === slpParentCount && typeof cached.validity === 'boolean')
+            if(typeof cached.validity === 'boolean')
                 break
-            await sleep(200);
+            await sleep(10);
         }
     }
 
     async waitForTransactionPreProcessing(txid: string){
         // TODO: Add some timeout?
         while(true) {
-            if(this.cachedValidations[txid].hex && this.cachedValidations[txid].details)
+            if(this.cachedValidations[txid].hex && (this.cachedValidations[txid].details || typeof this.cachedValidations.validity === 'boolean'))
                 break
-            await sleep(200);
+            await sleep(10);
         }
         //await sleep(100); // short wait to make sure parent's properties gets set first.
         return
@@ -93,7 +83,7 @@ export class LocalValidator implements SlpValidator {
         if(typeof this.cachedValidations[txid].validity === 'boolean')
             return this.cachedValidations[txid].validity;
         if(this.cachedValidations[txid].details)
-            await this.waitForParentValidationProcessing(txid);
+            await this.waitForCurrentValidationProcessing(txid);
 
         // Check SLP message validity
         let txn: BitcoreTransaction = new bitcore.Transaction(this.cachedValidations[txid].hex)
