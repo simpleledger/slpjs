@@ -162,9 +162,10 @@ export class LocalValidator implements SlpValidator {
         }
 
         // Set validity validation-cache for parents, and handle MINT condition with no valid input
-        for(let i = 0; i < this.cachedValidations[txid].parents.length; i++) {
-            let valid = await this.isValidSlpTxid(this.cachedValidations[txid].parents[i].txid)
-            this.cachedValidations[txid].parents.find(p => p.txid === this.cachedValidations[txid].parents[i].txid).valid = valid;
+        let parentTxids = [...new Set(this.cachedValidations[txid].parents.map(p => p.txid))];
+        for(let i = 0; i < parentTxids.length; i++) {
+            let valid = await this.isValidSlpTxid(parentTxids[i])
+            this.cachedValidations[txid].parents.filter(p => p.txid === parentTxids[i]).map(p => p.valid = valid);
             if(this.cachedValidations[txid].details.transactionType === SlpTransactionType.MINT && !valid) {
                 this.cachedValidations[txid].invalidReason = "MINT transaction with invalid baton parent."
                 return this.cachedValidations[txid].validity = false;
