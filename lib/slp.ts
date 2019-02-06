@@ -1,7 +1,7 @@
 import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo } from './slpjs';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType } from './slpjs';
 import { SlpTokenType1 } from './slptokentype1';
 import { Utils } from './utils';
 
@@ -386,8 +386,8 @@ export class Slp {
             throw Error("Missing token_type");
         // # check if the token version is supported
         slpMsg.versionType = Slp.parseChunkToInt(chunks[1], 1, 2, true);
-        // if(slpMsg.type !== SlpTypeVersion.TokenVersionType1)
-        //     throw Error('Unsupported token type:' + slpMsg.type);
+        if(slpMsg.versionType !== SlpVersionType.TokenVersionType1)
+            throw Error('Unsupported token type: ' + slpMsg.versionType);
         if(chunks.length === 2)
             throw Error('Missing SLP transaction type');
         try {
