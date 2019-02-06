@@ -25,6 +25,10 @@ export class LocalValidator implements SlpValidator {
     slp: Slp;
 
     constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync) {
+        if(!BITBOX)
+            throw Error("Must provide BITBOX instance to class constructor.")
+        if(!getRawTransactions)
+            throw Error("Must provide method getRawTransactions to class constructor.")
         this.BITBOX = BITBOX;
         this.getRawTransactions = getRawTransactions;
         this.slp = new Slp(BITBOX);
@@ -198,7 +202,6 @@ export class LocalValidator implements SlpValidator {
                 }
             } else {
                 this.cachedValidations[txid].invalidReason = "SEND has 0 outputs, but has invalid token GENESIS."
-                console.log(this.cachedValidations[slpmsg.tokenIdHex].invalidReason)
                 return this.cachedValidations[txid].validity = false;
             }
         }

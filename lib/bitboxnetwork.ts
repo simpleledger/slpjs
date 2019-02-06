@@ -20,6 +20,8 @@ export class BitboxNetwork implements SlpProxyValidator {
     validatorUrl: string;
 
     constructor(BITBOX: BITBOX, validator?: SlpValidator) {
+        if(!BITBOX)
+            throw Error("Must provide BITBOX instance to class constructor.")
         this.BITBOX = BITBOX;
         this.slp = new Slp(BITBOX);
         if(validator)

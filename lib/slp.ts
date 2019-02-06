@@ -72,6 +72,8 @@ export class Slp {
     BITBOX: BITBOX;
     networkstring: string;
     constructor(BITBOX) {
+        if(!BITBOX)
+            throw Error("Must provide BITBOX instance to class constructor.")
         this.BITBOX = BITBOX;
     }
 
