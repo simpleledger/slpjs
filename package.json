@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -37,7 +37,6 @@
     "@types/node": "^10.12.18",
     "bitbox-sdk": "^3.0.9",
     "browserify": "^16.2.2",
-    "mkdirp": "^0.5.1",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
     "ts-node": "^7.0.1",
@@ -47,6 +46,7 @@
     "axios": "^0.18.0",
     "bchaddrjs-slp": "git://github.com/simpleledger/bchaddrjs.git#master",
     "bignumber.js": "^7.2.1",
-    "bitcore-lib-cash": "^0.19.0"
+    "bitcore-lib-cash": "^0.19.0",
+    "mkdirp": "^0.5.1"
   }
 }
