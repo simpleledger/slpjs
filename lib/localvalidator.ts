@@ -25,6 +25,10 @@ export class LocalValidator implements SlpValidator {
     slp: Slp;
 
     constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync) {
+        if(!BITBOX)
+            throw Error("Must provide BITBOX instance to class constructor.")
+        if(!getRawTransactions)
+            throw Error("Must provide method getRawTransactions to class constructor.")
         this.BITBOX = BITBOX;
         this.getRawTransactions = getRawTransactions;
         this.slp = new Slp(BITBOX);
@@ -158,9 +162,10 @@ export class LocalValidator implements SlpValidator {
         }
 
         // Set validity validation-cache for parents, and handle MINT condition with no valid input
-        for(let i = 0; i < this.cachedValidations[txid].parents.length; i++) {
-            let valid = await this.isValidSlpTxid(this.cachedValidations[txid].parents[i].txid)
-            this.cachedValidations[txid].parents.find(p => p.txid === this.cachedValidations[txid].parents[i].txid).valid = valid;
+        let parentTxids = [...new Set(this.cachedValidations[txid].parents.map(p => p.txid))];
+        for(let i = 0; i < parentTxids.length; i++) {
+            let valid = await this.isValidSlpTxid(parentTxids[i])
+            this.cachedValidations[txid].parents.filter(p => p.txid === parentTxids[i]).map(p => p.valid = valid);
             if(this.cachedValidations[txid].details.transactionType === SlpTransactionType.MINT && !valid) {
                 this.cachedValidations[txid].invalidReason = "MINT transaction with invalid baton parent."
                 return this.cachedValidations[txid].validity = false;
@@ -177,28 +182,11 @@ export class LocalValidator implements SlpValidator {
             }
         }
 
-        // Check versionType is not different from any valid parent
+        // Check versionType is not different from valid parents
         if(this.cachedValidations[txid].parents.filter(p => p.valid).length > 0) {
             let validVersionType = this.cachedValidations[txid].parents.find(p => p.valid).versionType;
             if(this.cachedValidations[txid].details.versionType !== validVersionType) {
                 this.cachedValidations[txid].invalidReason = "SLP version/type mismatch from valid parent."
-                return this.cachedValidations[txid].validity = false;
-            }
-        } 
-        // For case with 0 token SEND with no valid parents, must check GENESIS validity / versionType.
-        else if(this.cachedValidations[txid].details.transactionType === SlpTransactionType.SEND) {
-            let slpmsg = this.cachedValidations[txid].details
-            let valid = await this.isValidSlpTxid(slpmsg.tokenIdHex);
-            if(valid) {
-                let genesisTxn: BitcoreTransaction = new bitcore.Transaction(this.cachedValidations[slpmsg.tokenIdHex].hex)
-                let genesisMsg = this.slp.parseSlpOutputScript(genesisTxn.outputs[0]._scriptBuffer)
-                if(genesisMsg.versionType !== slpmsg.versionType) {
-                    this.cachedValidations[txid].invalidReason = "SLP version/type mismatch from valid GENESIS."
-                    return this.cachedValidations[txid].validity = false;
-                }
-            } else {
-                this.cachedValidations[txid].invalidReason = "SEND has 0 outputs, but has invalid token GENESIS."
-                console.log(this.cachedValidations[slpmsg.tokenIdHex].invalidReason)
                 return this.cachedValidations[txid].validity = false;
             }
         }

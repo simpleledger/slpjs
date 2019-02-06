@@ -1,6 +1,6 @@
 {
-  "name": "bch-slpjs",
-  "version": "0.11.4",
+  "name": "slpjs",
+  "version": "0.11.6",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "tsc && mocha",
-    "build": "tsc && browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
+    "build": "tsc && mkdirp dist && browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
   },
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
   "devDependencies": {
     "@types/mocha": "^5.1.1",
     "@types/node": "^10.12.18",
-    "bitbox-sdk": "^3.0.9",
+    "bitbox-sdk": "^3.0.11",
     "browserify": "^16.2.2",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",

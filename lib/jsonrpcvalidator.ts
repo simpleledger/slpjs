@@ -7,7 +7,11 @@ import { SlpAddressUtxoResult } from './slpjs';
 export class JsonRpcProxyValidator implements SlpProxyValidator {
     validatorUrl: string;
     slp: Slp;
-    constructor(BITBOX: BITBOX, validatorUrl) {
+    constructor(BITBOX: BITBOX, validatorUrl: string) {
+        if(!BITBOX)
+            throw Error("Must provide BITBOX instance to class constructor.")
+        if(!validatorUrl)
+            throw Error("Must provide validatorUrl to class constructor.")
         this.validatorUrl = validatorUrl;
         this.slp = new Slp(BITBOX);
     }
