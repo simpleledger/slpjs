@@ -42,7 +42,7 @@ export class BitdbNetwork {
         let tokenDetails: SlpTransactionDetails = {
             transactionType: SlpTransactionType.GENESIS,
             tokenIdHex: tokenId, 
-            type: parseInt(list[0].token_type, 16),
+            versionType: parseInt(list[0].token_type, 16),
             timestamp: list[0].timestamp,
             symbol: list[0].symbol,
             name: list[0].name,

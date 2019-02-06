@@ -10,6 +10,8 @@ describe('Slp', function() {
     describe('isValidSlpTxid() -- SLP Transaction Validation Unit Tests', function() {
         txUnitTestData.forEach(test => {
             it(test.description, async () => {
+
+                // Create method for serving up the unit test transactions 
                 let getRawUnitTestTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
                     let allTxns: SlpTestTxn[] = test.when.concat(test.should);
                     let txn = allTxns.find(i => {
@@ -21,13 +23,19 @@ describe('Slp', function() {
                     return null
                 }
     
-                const slpValidator = new LocalValidator(BITBOX, getRawUnitTestTransactions);
-                test.when.forEach(w=>slpValidator.addValidationFromStore(w.tx, w.valid));
+                // Create instance of Local Validator
+                var slpValidator = new LocalValidator(BITBOX, getRawUnitTestTransactions);
+
+                // Pre-Load Validator the unit-test inputs
+                test.when.forEach(w => {
+                    slpValidator.addValidationFromStore(w.tx, w.valid)
+                });
 
                 let txid = (<Buffer>BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).reverse()).toString('hex');
                 let shouldBeValid = test.should[0].valid;
                 let isValid = await slpValidator.isValidSlpTxid(txid);
-
+                if(isValid === false)
+                    console.log('invalid reason:', slpValidator.cachedValidations[txid].invalidReason);
                 assert.equal(isValid, shouldBeValid);
             });
         })

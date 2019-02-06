@@ -11,7 +11,7 @@ import Axios from 'axios';
 import { Utils } from './utils';
 import { BitcoreTransaction } from './global';
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export class BitboxNetwork implements SlpProxyValidator {
     BITBOX: BITBOX;

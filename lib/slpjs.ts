@@ -19,8 +19,8 @@ export enum SlpTransactionType {
     "GENESIS", "MINT", "SEND"
 }
 
-export enum SlpTypeVersion {
-    "TokenType1" = 1
+export enum SlpVersionType {
+    "TokenVersionType1" = 1
 }
 
 // negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)
@@ -31,7 +31,7 @@ export enum SlpUtxoJudgement {
 export interface SlpTransactionDetails {
     transactionType: SlpTransactionType;
     tokenIdHex: string;
-    type: SlpTypeVersion;
+    versionType: SlpVersionType;
     timestamp: string;
     symbol: string;
     name: string;
