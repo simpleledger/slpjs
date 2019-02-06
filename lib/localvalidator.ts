@@ -182,27 +182,11 @@ export class LocalValidator implements SlpValidator {
             }
         }
 
-        // Check versionType is not different from any valid parent
+        // Check versionType is not different from valid parents
         if(this.cachedValidations[txid].parents.filter(p => p.valid).length > 0) {
             let validVersionType = this.cachedValidations[txid].parents.find(p => p.valid).versionType;
             if(this.cachedValidations[txid].details.versionType !== validVersionType) {
                 this.cachedValidations[txid].invalidReason = "SLP version/type mismatch from valid parent."
-                return this.cachedValidations[txid].validity = false;
-            }
-        } 
-        // For case with 0 token SEND with no valid parents, must check GENESIS validity / versionType.
-        else if(this.cachedValidations[txid].details.transactionType === SlpTransactionType.SEND) {
-            let slpmsg = this.cachedValidations[txid].details
-            let valid = await this.isValidSlpTxid(slpmsg.tokenIdHex);
-            if(valid) {
-                let genesisTxn: BitcoreTransaction = new bitcore.Transaction(this.cachedValidations[slpmsg.tokenIdHex].hex)
-                let genesisMsg = this.slp.parseSlpOutputScript(genesisTxn.outputs[0]._scriptBuffer)
-                if(genesisMsg.versionType !== slpmsg.versionType) {
-                    this.cachedValidations[txid].invalidReason = "SLP version/type mismatch from valid GENESIS."
-                    return this.cachedValidations[txid].validity = false;
-                }
-            } else {
-                this.cachedValidations[txid].invalidReason = "SEND has 0 outputs, but has invalid token GENESIS."
                 return this.cachedValidations[txid].validity = false;
             }
         }
