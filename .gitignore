@@ -13,7 +13,8 @@ index.js
 /coverage
 
 # production
-/dist
+#/dist
+/dist/slpjs*
 
 # misc
 .DS_Store
