@@ -70,9 +70,13 @@ export class LocalValidator implements SlpValidator {
         if(this.cachedRawTransactions[txid])
             return this.cachedRawTransactions[txid];
         this.cachedRawTransactions[txid] = (await this.getRawTransactions([txid]))[0]
-        if(this.cachedRawTransactions[txid])
+        if(this.cachedRawTransactions[txid]) {
+            let re = /^([A-Fa-f0-9]{2}){60,}$/;
+            if(!re.test(this.cachedRawTransactions[txid]))
+                throw Error("Transaction data not provided (regex failed).")
             return this.cachedRawTransactions[txid];
-        return null;
+        }
+        throw Error("Transaction data not provided (null or undefined).")
     }
 
     async isValidSlpTxid(txid: string) {
