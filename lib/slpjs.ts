@@ -1,18 +1,3 @@
-
-import { Slp } from './slp';
-import { Utils } from './utils';
-import { BitdbNetwork } from './bitdbnetwork';
-import { JsonRpcProxyValidator } from './jsonrpcvalidator';
-import { LocalValidator } from './localvalidator';
-import { BitboxNetwork } from './bitboxnetwork';
-
-exports.Slp = Slp;
-exports.Utils = Utils;
-exports.BitboxNetwork = BitboxNetwork;
-exports.BitdbNetwork = BitdbNetwork;
-exports.JsonRpcProxyValidator = JsonRpcProxyValidator;
-exports.LocalValidator = LocalValidator;
-
 import BigNumber from "bignumber.js";
 
 export enum SlpTransactionType {
