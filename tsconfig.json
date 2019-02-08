@@ -7,8 +7,10 @@
         "sourceMap": true
     },
     "include": [
-        "index.ts",
         "./lib",
         "./test"
+    ], 
+    "files": [ 
+        "index.ts" 
     ]
 }

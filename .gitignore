@@ -10,6 +10,7 @@ yarn.lock
 lib/*.js
 index.js
 *.js.map
+*.d.ts
 # testing
 /coverage
 
