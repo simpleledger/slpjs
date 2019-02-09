@@ -32,7 +32,7 @@ NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is use
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
-const slpjs = require('slpjs').slpjs;
+const slpjs = require('slpjs');
 
 // FOR TESTNET UNCOMMENT
 let addr = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
@@ -80,7 +80,7 @@ GENESIS is the most simple type of SLP transaction since no special inputs are r
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
-const slpjs = require('slpjs').slpjs;
+const slpjs = require('slpjs');
 
 // FOR TESTNET UNCOMMENT
 const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
@@ -156,7 +156,7 @@ Adding additional tokens for a token that already exists is possible if you are 
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
-const slpjs = require('slpjs').slpjs;
+const slpjs = require('slpjs');
 
 // FOR TESTNET UNCOMMENT
 const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
@@ -242,7 +242,7 @@ This example shows the general workflow for sending an existing token.
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BigNumber = require('bignumber.js');
-const slpjs = require('slpjs').slpjs;
+const slpjs = require('slpjs');
 
 // FOR MAINNET UNCOMMENT
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
@@ -314,7 +314,7 @@ let sendTxid;
 ## SLP Address Conversion
 
 ```javascript
-let Utils = require('slpjs').slpjs.Utils;
+let Utils = require('slpjs').Utils;
 
 let slpAddr = Utils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
 console.log(slpAddr);
