@@ -42,7 +42,8 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 // let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 let balances;
@@ -71,7 +72,7 @@ let balances;
 
 
 
-## GENESIS - Creating a new token
+## GENESIS - New token creation (fungible)
 
 GENESIS is the most simple type of SLP transaction since no special inputs are required.
 
@@ -87,18 +88,21 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
 const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// For unlimited issuance provide a "batonReceiverAddress"
+const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 
 // FOR MAINNET UNCOMMENT
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 // const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 // const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF"; // <-- compressed WIF format
 // const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-// const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 // const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
+// // For unlimited issuance provide a "batonReceiverAddress"
+// const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 // 1) Get all balances at the funding address.
@@ -145,6 +149,68 @@ let genesisTxid;
 
 ```
 
+## GENESIS - NFT creation (non-fungible token)
+
+Non-fungible tokens can be created with the `simpleTokenGenesis` method with these parameters:
+* Set `tokenAmount` to 1, 
+* Set `decimals` to 0, and 
+* Set `batonReceiverAddress` to null.
+
+```js
+// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BigNumber = require('bignumber.js');
+const slpjs = require('slpjs');
+
+const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
+const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
+const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
+
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+
+// 1) Get all balances at the funding address.
+let balances;
+(async function() {
+  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+  console.log("'balances' variable is set.");
+  console.log('BCH balance:', balances.satoshis_available_bch);
+})();
+
+// WAIT FOR NETWORK RESPONSE...
+
+// 2) Select decimal precision for this new token
+let name = "I'm a unique token";
+let ticker = "NFT";
+let documentUri = "info@simpleledger.io";
+let documentHash = null
+
+// 3) Set private keys
+balances.nonSlpUtxos.forEach(txo => txo.wif = fundingWif)
+
+// 4) Use "simpleTokenGenesis()" helper method
+let genesisTxid;
+(async function(){
+    genesisTxid = await bitboxNetwork.simpleTokenGenesis(
+        name, 
+        ticker, 
+        new BigNumber(1),
+        documentUri,
+        documentHash,
+        0,
+        tokenReceiverAddress,
+        null,
+        bchChangeReceiverAddress,
+        balances.nonSlpUtxos
+        )
+    console.log("NFT GENESIS txn complete:",genesisTxid)
+})();
+
+```
 
 
 ## MINT - Create more tokens
@@ -178,7 +244,8 @@ let additionalTokenQty = 1000
 // const tokenIdHexToMint = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
 // let additionalTokenQty = 1000
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 // 1) Get all balances at the funding address.
@@ -262,7 +329,8 @@ const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
 let sendAmount = 10;
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 // 1) Fetch critical token information

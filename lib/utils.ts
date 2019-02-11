@@ -1,24 +1,28 @@
-import * as bchaddr from 'bchaddrjs-slp';
-import BigNumber from 'bignumber.js';
-import { SlpAddressUtxoResult, utxo } from './slpjs';
+import { SlpAddressUtxoResult, utxo } from '../index';
+
 import { AddressUtxoResult } from 'bitbox-sdk/lib/Address';
+import * as Bchaddr from 'bchaddrjs-slp';
+import BigNumber from 'bignumber.js';
 
 export class Utils {
+    static isCashAddress(address: string): any {
+        return Bchaddr.isCashAddress(address);
+    }
 
     static toCashAddress(address: string) {
-        return <string>bchaddr.toCashAddress(address);
+        return Bchaddr.toCashAddress(address);
     }
 
     static toSlpAddress(address: string) {
-        return <string>bchaddr.toSlpAddress(address);
+        return Bchaddr.toSlpAddress(address);
     }
 
     static isSlpAddress(address: string) {
-        return <string>bchaddr.isSlpAddress(address);
+        return Bchaddr.isSlpAddress(address);
     }
 
     static isMainnet(address: string) {
-        if(bchaddr.decodeAddress(address).network === 'mainnet')
+        if(Bchaddr.decodeAddress(address).network === 'mainnet')
             return true
         return false
     }
@@ -106,20 +110,4 @@ export class Utils {
 
         return buffer
     }
-
-    // txidFromHex(hex) {
-    //     let buffer = Buffer.from(hex, "hex")
-    //     let hash = this.BITBOX.Crypto.hash256(buffer).toString('hex')
-    //     return hash.match(/[a-fA-F0-9]{2}/g).reverse().join('')
-    // }
-
-    // Method to get Script 32-bit integer (little-endian signed magnitude representation)
-	// readScriptInt32(buffer) {
-	// 	let number;
-	// 	if(buffer.readUInt32LE(0) > 2147483647)
-	// 		number = -1 * (buffer.readUInt32LE(0) - 2147483648);
-	// 	else
-	// 		number = buffer.readUInt32LE(0);
-	// 	return number;
-    // }
 }

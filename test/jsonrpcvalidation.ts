@@ -1,13 +1,13 @@
-const assert = require('assert');
+import { JsonRpcProxyValidator } from '../lib/jsonrpcvalidator';
 
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default;
+import * as assert from 'assert';
+import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+
 const BITBOX = new BITBOXSDK({ restURL: "https://rest.bitcoin.com/v2/" });
-
-const JsonRpcProxyValidator = require('../lib/jsonrpcvalidator').JsonRpcProxyValidator;
+let mainnetProxy = new JsonRpcProxyValidator(BITBOX, 'https://validate.simpleledger.info');
+let testnetProxy = new JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
 
 describe('JsonRpcProxyValidator', function() {
-    let mainnetProxy = new JsonRpcProxyValidator(BITBOX, 'https://validate.simpleledger.info');
-    let testnetProxy = new JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
     describe('mainnet isValidSlpTxid()', function() {
         it('returns true for a valid SEND token transaction', async function() {
             let tokenTxnId = '2504b5b6a6ec42b040a71abce1acd71592f7e2a3e33ffa9c415f91a6b76deb45';

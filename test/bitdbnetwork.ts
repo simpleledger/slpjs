@@ -1,7 +1,7 @@
-const assert = require('assert');
-const BigNumber = require('bignumber.js');
+import { BitdbNetwork } from '../lib/bitdbnetwork';
 
-const BitdbNetwork = require('../lib/bitdbnetwork').BitdbNetwork;
+import * as assert from 'assert';
+import { BigNumber } from 'bignumber.js';
 
 describe('BitdbNetwork', function() {
     describe('getTokenInformation()', function() {
@@ -18,7 +18,7 @@ describe('BitdbNetwork', function() {
                 symbol: 'BCH',
                 name: 'Bitcoin Cash',
                 documentUri: '',
-                documentSha256: new Buffer.from(''),
+                documentSha256: Buffer.from(''),
                 decimals: 8,
                 containsBaton: true,
                 batonVout: 2, 

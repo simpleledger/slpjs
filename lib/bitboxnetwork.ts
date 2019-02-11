@@ -1,41 +1,35 @@
+import { SlpAddressUtxoResult, SlpTransactionDetails } from '../index';
+import { Slp, SlpProxyValidator, SlpValidator } from './slp';
+import { Utils } from './utils';
+
 import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
 import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/lib/Address';
 import { TxnDetails } from 'bitbox-sdk/lib/Transaction';
 import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
-import * as bitcore from 'bitcore-lib-cash';
-import { SlpAddressUtxoResult } from './slpjs';
-import { Slp, SlpProxyValidator, SlpValidator } from './slp';
-import Axios from 'axios';
-import { Utils } from './utils';
-import { BitcoreTransaction } from './global';
+import * as Bitcore from 'bitcore-lib-cash';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-export class BitboxNetwork implements SlpProxyValidator {
+export class BitboxNetwork implements SlpValidator {
     BITBOX: BITBOX;
     slp: Slp;
-    validator?: SlpValidator;
-    validatorUrl: string;
+    validator: SlpValidator;
 
-    constructor(BITBOX: BITBOX, validator?: SlpValidator) {
+    constructor(BITBOX: BITBOX, validator: SlpValidator | SlpProxyValidator) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
+        if(!validator)
+            throw Error("Must provide validator instance to class constructor.")
         this.BITBOX = BITBOX;
         this.slp = new Slp(BITBOX);
-        if(validator)
-            this.validator = validator
-        else {
-            this.validatorUrl = BITBOX.restURL.replace('v1','v2')
-            this.validatorUrl = this.validatorUrl.concat('/slp/validate');
-            this.validatorUrl = this.validatorUrl.replace('//slp', '/slp');
-        }
+        this.validator = validator;
     }
     
-    async getTokenInformation(txid: string) {
+    async getTokenInformation(txid: string): Promise<SlpTransactionDetails> {
         let txhex: string = (await this.BITBOX.RawTransactions.getRawTransaction([txid]))[0];
-        let txn: BitcoreTransaction = new bitcore.Transaction(txhex)
+        let txn: Bitcore.Transaction = new Bitcore.Transaction(txhex)
         return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
     }
 
@@ -105,7 +99,7 @@ export class BitboxNetwork implements SlpProxyValidator {
         return await this.sendTx(txHex);
     }
 
-    async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
+    async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
         
         let genesisOpReturn = this.slp.buildGenesisOpReturn({ 
             ticker: tokenTicker,
@@ -113,7 +107,7 @@ export class BitboxNetwork implements SlpProxyValidator {
             documentUri: documentUri,
             hash: documentHash, 
             decimals: decimals,
-            batonVout: 2,
+            batonVout: batonReceiverAddress ? 2 : null,
             initialQuantity: tokenAmount,
         });
 
@@ -185,7 +179,7 @@ export class BitboxNetwork implements SlpProxyValidator {
     }
     
     async getTransactionDetailsWithRetry(txids: string[], retries = 40) {
-        let result: TxnDetails[];
+        let result!: TxnDetails[];
         let count = 0;
         while(result === undefined){
             result = await this.BITBOX.Transaction.details(txids);
@@ -244,28 +238,16 @@ export class BitboxNetwork implements SlpProxyValidator {
         throw new Error("Method not implemented.");
     }
 
-    async validateSlpTransactions(txids: string[]) {
-        const result = await Axios({
-            method: "post",
-            url: this.validatorUrl,
-            data: {
-                txids: txids
-            }
-        })
-        if (result && result.data) {
-            return <string[]>result.data
-        } else {
-            return []
-        }
-    }
 
-    getRawTransactions(txid: string[]): Promise<string[]> {
-        throw Error("Method not implemented.")
+    async getRawTransactions(txids: string[]): Promise<string[]> {
+        return await this.validator.getRawTransactions(txids)
     }
 
     async processUtxosForSlp(utxos: SlpAddressUtxoResult[]) {
-        if(this.validator)
-            return await this.slp.processUtxosForSlpAbstract(utxos, this.validator)
-        return await this.slp.processUtxosForSlpAbstract(utxos, this)
+        return await this.slp.processUtxosForSlpAbstract(utxos, this.validator)
+    }
+
+    async validateSlpTransactions(txids: string[]): Promise<string[]> {
+        return await this.validator.validateSlpTransactions(txids);
     }
 }

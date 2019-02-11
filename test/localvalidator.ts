@@ -1,9 +1,11 @@
-import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
-const BITBOX = new BITBOXSDK();
-import * as assert from 'assert';
-import "mocha";
 import { LocalValidator, GetRawTransactionsAsync } from '../lib/localvalidator';
 import { SlpValidityUnitTest, SlpTestTxn } from './global';
+
+import * as assert from 'assert';
+import "mocha";
+import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+
+const BITBOX = new BITBOXSDK();
 const txUnitTestData: SlpValidityUnitTest[] = require('slp-unit-test-data/tx_input_tests.json');
 
 describe('Slp', function() {
@@ -20,7 +22,7 @@ describe('Slp', function() {
                     });
                     if(txn)
                         return [txn.tx];
-                    return null
+                    throw Error("Transaction data for the provided txid not found (txid: " + txids[0] + ")")
                 }
     
                 // Create instance of Local Validator

@@ -1,23 +1,23 @@
-const assert = require('assert');
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default;
+import { Slp } from '../lib/slp';
+import { BitboxNetwork }  from "../lib/bitboxnetwork";
+import { JsonRpcProxyValidator } from '../lib/jsonrpcvalidator';
+
+import * as assert from 'assert';
+import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+
 const BITBOX = new BITBOXSDK({ restURL: "https://trest.bitcoin.com/v2/" });
-
-const scriptUnitTestData = require('slp-unit-test-data/script_tests.json');
-
-const Slp = require('../lib/slp').Slp;
-const BitboxNetwork = require("../lib/bitboxnetwork").BitboxNetwork;
-const JsonRpcProxyValidator = require('../lib/jsonrpcvalidator').JsonRpcProxyValidator;
-
 const slpValidator = new JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
 const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
+const scriptUnitTestData = require('slp-unit-test-data/script_tests.json');
 
 let slp = new Slp(BITBOX);
 
 describe('Slp', function() {
+
     describe('parseSlpOutputScript() -- SLP OP_RETURN Unit Tests', function() {
-        scriptUnitTestData.forEach((test, i)=> {
+        scriptUnitTestData.forEach((test: any)=> {
             it(test.msg, () => {
-                let script = new Buffer.from(test.script, 'hex');
+                let script = Buffer.from(test.script, 'hex');
                 let eCode = test.code;
                 if(eCode) {
                     assert.throws(function() { slp.parseSlpOutputScript(script) });
@@ -28,6 +28,15 @@ describe('Slp', function() {
             });
         });
     });
+    // describe('buildGenesisTransaction()', function() {
+
+    // })
+    // describe('buildMintTransaction()', function() {
+        
+    // })
+    // describe('buildSendTransaction()', function() {
+        
+    // })
 
     // let genesisTxid;
     // let batonTxid;
