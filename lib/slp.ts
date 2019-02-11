@@ -135,7 +135,7 @@ export class Slp {
         // Check for slp formatted addresses
         if (!bchaddr.isSlpAddress(config.mintReceiverAddress))
             throw new Error("Not an SLP address.");
-        if (config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress))
+        if (config.batonReceiverAddress && !bchaddr.isSlpAddress(config.batonReceiverAddress))
             throw new Error("Not an SLP address.");
 
         config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
@@ -158,16 +158,21 @@ export class Slp {
         //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
 
         // Baton address (optional)
-        if (config.batonReceiverAddress != null) {
+        let batonvout = this.parseSlpOutputScript(config.slpGenesisOpReturn).batonVout
+        if (config.batonReceiverAddress) {
             config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
-            if(this.parseSlpOutputScript(config.slpGenesisOpReturn).batonVout !== 2)
+            if(batonvout !== 2)
                 throw Error("batonVout in transaction does not match OP_RETURN data.")
             transactionBuilder.addOutput(config.batonReceiverAddress, config.batonReceiverSatoshis.toNumber());
             //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
+        } else {
+            // Make sure that batonVout is set to null
+            if(batonvout)
+                throw Error("OP_RETURN has batonVout set to vout=" + batonvout + ", but a baton receiver address was not provided.")
         }
 
         // Change (optional)
-        if (config.bchChangeReceiverAddress != null && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }

@@ -26,9 +26,9 @@ export class SlpTokenType1 {
         transactionType.forEach((item) => script.push(item))
 
         // Ticker
-        if (ticker !== null && typeof ticker !== 'string'){
+        if (ticker && typeof ticker !== 'string'){
             throw Error("ticker must be a string")
-        } else if (ticker === null || ticker.length === 0) {
+        } else if (!ticker || ticker.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             let tickerBuf = Buffer.from(ticker, 'utf8')
@@ -37,9 +37,9 @@ export class SlpTokenType1 {
         }
 
         // Name
-        if (name !== null && typeof name !== 'string') {
+        if (name && typeof name !== 'string') {
             throw Error("name must be a string")
-        } else if (name == null || name.length === 0) {
+        } else if (!name || name.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             let nameBuf = Buffer.from(name, 'utf8')
@@ -48,9 +48,9 @@ export class SlpTokenType1 {
         }
 
         // Document URL
-        if (documentUri !== null &&  typeof documentUri !== 'string') {
+        if (documentUri &&  typeof documentUri !== 'string') {
             throw Error("documentUri must be a string")
-        } else if (documentUri == null || documentUri.length === 0) {
+        } else if (!documentUri || documentUri.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             let documentUriBuf = Buffer.from(documentUri, 'ascii')
@@ -62,7 +62,7 @@ export class SlpTokenType1 {
         var re = /^[0-9a-fA-F]+$/;
 
         // Document Hash
-        if (documentHashHex == null || documentHashHex.length === 0) {
+        if (!documentHashHex || documentHashHex.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else if (documentHashHex.length === 64 && re.test(documentHashHex)) {
             let documentHashBuf = Buffer.from(documentHashHex, 'hex')
@@ -73,7 +73,7 @@ export class SlpTokenType1 {
         }
 
         // Decimals
-        if (decimals === null || decimals < 0 || decimals > 9) {
+        if (decimals === null || decimals === undefined || decimals < 0 || decimals > 9) {
             throw Error("Decimals property must be in range 0 to 9")
         } else {
             script.push(Utils.getPushDataOpcode([decimals]))
@@ -81,7 +81,7 @@ export class SlpTokenType1 {
         }
 
         // Baton Vout
-        if (batonVout == null) {
+        if (batonVout === null || batonVout === undefined) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             if (batonVout < 2 || batonVout > 255 || !(typeof batonVout == 'number'))
@@ -220,7 +220,7 @@ export class SlpTokenType1 {
         tokenId.forEach((item) => script.push(item))
 
         // Baton Vout
-        if (batonVout == null) {
+        if (batonVout === null || batonVout === undefined) {
             [0x4c, 0x00].forEach((item) => script.push(item))
         } else {
             if (batonVout < 2 || batonVout > 255 || !(typeof batonVout == 'number'))
