@@ -105,7 +105,7 @@ export class BitboxNetwork implements SlpProxyValidator {
         return await this.sendTx(txHex);
     }
 
-    async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
+    async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
         
         let genesisOpReturn = this.slp.buildGenesisOpReturn({ 
             ticker: tokenTicker,
@@ -113,7 +113,7 @@ export class BitboxNetwork implements SlpProxyValidator {
             documentUri: documentUri,
             hash: documentHash, 
             decimals: decimals,
-            batonVout: 2,
+            batonVout: batonReceiverAddress ? 2 : null,
             initialQuantity: tokenAmount,
         });
 
