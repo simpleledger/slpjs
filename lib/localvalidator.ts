@@ -197,7 +197,7 @@ export class LocalValidator implements SlpValidator {
     async validateSlpTransactions(txids: string[]): Promise<string[]> {
         let res = [];
         for (let i = 0; i < txids.length; i++) {
-            res.push((await this.isValidSlpTxid) ? txids[i] : '')
+            res.push((await this.isValidSlpTxid(txids[i])) ? txids[i] : '')
         }
         return res.filter((id: string) => id.length > 0);
     }
