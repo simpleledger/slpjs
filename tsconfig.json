@@ -1,10 +1,12 @@
 {
     "compilerOptions": {
         "module": "commonjs",
-        "target": "es2015",
+        "strict": true,
+        "target": "es5",
+        "downlevelIteration": true,
         "moduleResolution": "node",
-        "lib":["es2017"],
-        "sourceMap": true
+        "lib":[ "es2017" ],
+        "sourceMap": true, 
     },
     "include": [
         "./lib",

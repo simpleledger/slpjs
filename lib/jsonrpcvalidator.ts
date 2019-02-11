@@ -1,8 +1,7 @@
+import { Slp, SlpProxyValidator } from './slp';
+
 import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
 import axios from 'axios';
-
-import { Slp, SlpProxyValidator } from './slp';
-import { SlpAddressUtxoResult } from './slpjs';
 
 export class JsonRpcProxyValidator implements SlpProxyValidator {
     validatorUrl: string;

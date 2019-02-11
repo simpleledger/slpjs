@@ -1,6 +1,7 @@
+import { SlpTransactionDetails, SlpTransactionType } from '../index';
+
 import axios, { AxiosRequestConfig } from 'axios';
 import BigNumber from 'bignumber.js';
-import { SlpTransactionDetails, SlpTransactionType } from './slpjs';
 
 export class BitdbNetwork {
     bitdbUrl: string;

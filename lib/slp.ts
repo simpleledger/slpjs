@@ -1,9 +1,10 @@
-import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
-import * as bchaddr from 'bchaddrjs-slp';
-import BigNumber from 'bignumber.js';
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType } from './slpjs';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType } from '../index';
 import { SlpTokenType1 } from './slptokentype1';
 import { Utils } from './utils';
+
+import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+import * as bchaddr from 'bchaddrjs-slp';
+import BigNumber from 'bignumber.js';
 
 export interface PushDataOperation {
     opcode: number, 
@@ -35,7 +36,7 @@ export interface configBuildRawGenesisTx {
     slpGenesisOpReturn: Buffer; 
     mintReceiverAddress: string;
     mintReceiverSatoshis?: BigNumber;
-    batonReceiverAddress: string;
+    batonReceiverAddress: string|null;
     batonReceiverSatoshis?: BigNumber;
     bchChangeReceiverAddress: string;
     input_utxos: utxo[];
@@ -69,9 +70,8 @@ export interface SlpProxyValidator extends SlpValidator {
 }
 
 export class Slp {
-    BITBOX: BITBOX;
-    networkstring: string;
-    constructor(BITBOX) {
+    BITBOX: BITBOXSDK;
+    constructor(BITBOX: BITBOXSDK) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
         this.BITBOX = BITBOX;
@@ -81,7 +81,8 @@ export class Slp {
 
     buildGenesisOpReturn(config: configBuildGenesisOpReturn, type = 0x01) {
         let hash;
-        try { hash = config.hash.toString('hex')
+        try { 
+            hash = config.hash!.toString('hex')
         } catch (_) { hash = null }
         
         return SlpTokenType1.buildGenesisOpReturn(
@@ -181,14 +182,14 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
             i++;
         }
 
         let tx = transactionBuilder.build().toHex();
 
         // Check For Low Fee
-        let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v,o)=>v+=o.value, 0);
+        let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number, o: any)=>v += o.value, 0);
         let inValue: BigNumber = config.input_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
             throw Error("Transaction fee is not high enough.")
@@ -227,6 +228,8 @@ export class Slp {
 
         // Make sure the number of output receivers matches the outputs in the OP_RETURN message.
         let chgAddr = config.bchChangeReceiverAddress ? 1 : 0;
+        if(!sendMsg.sendOutputs)
+            throw Error("OP_RETURN contains no SLP send outputs.");
         if(config.tokenReceiverAddressArray.length + chgAddr !== sendMsg.sendOutputs.length)
             throw Error("Number of token receivers in config does not match the OP_RETURN outputs")
 
@@ -264,14 +267,14 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_token_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
             i++;
         }
 
         let tx = transactionBuilder.build().toHex();
 
         // Check For Low Fee
-        let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v,o)=>v+=o.value, 0);
+        let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_token_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
             throw Error("Transaction fee is not high enough.")
@@ -295,11 +298,12 @@ export class Slp {
         if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
             throw new Error("Mint receiver address not in SLP format.");
         }
-        if (config.batonReceiverAddress != null && !bchaddr.isSlpAddress(config.batonReceiverAddress)) {
+        if (config.batonReceiverAddress && !bchaddr.isSlpAddress(config.batonReceiverAddress)) {
             throw new Error("Baton receiver address not in SLP format.");
         }
         config.mintReceiverAddress = bchaddr.toCashAddress(config.mintReceiverAddress);
-        config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
+        if(config.batonReceiverAddress)
+            config.batonReceiverAddress = bchaddr.toCashAddress(config.batonReceiverAddress);
 
         // Make sure inputs don't include spending any tokens or batons for other tokenIds
         config.input_baton_utxos.forEach(txo => {
@@ -357,16 +361,16 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_baton_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, null, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
             i++;
         }
 
         let tx = transactionBuilder.build().toHex();
 
         // Check For Low Fee
-        let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v,o)=>v+=o.value, 0);
-        let inValue: BigNumber = config.input_baton_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
-        if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
+        let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)  => v += o.value, 0);
+        let inValue: BigNumber = config.input_baton_utxos.reduce((v, i)=> v = v.plus(i.satoshis), new BigNumber(0))
+        if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length / 2))
             throw Error("Transaction fee is not high enough.")
 
         // TODO: Check for fee too large or send leftover to target address
@@ -374,60 +378,72 @@ export class Slp {
         return tx;
     }
 
-    parseSlpOutputScript(outputScript: Buffer) {
+    parseSlpOutputScript(outputScript: Buffer): SlpTransactionDetails {
         let slpMsg = <SlpTransactionDetails>{};
         let chunks: (Buffer|null)[];
         try {
             chunks = this.parseOpReturnToChunks(outputScript);
-        } catch(e) { 
-            //console.log(e);
+        } catch(e) {
             throw Error('Bad OP_RETURN');
         }
         if(chunks.length === 0)
             throw Error('Empty OP_RETURN');
-        if(!chunks[0].equals(Buffer.from(this.lokadIdHex, 'hex')))
-            throw Error('No SLP');
+        if(!chunks[0])
+            throw Error("Not SLP")
+        if(!chunks[0]!.equals(Buffer.from(this.lokadIdHex, 'hex')))
+            throw Error('Not SLP');
         if(chunks.length === 1)
-            throw Error("Missing token_type");
+            throw Error("Missing token versionType");
         // # check if the token version is supported
-        slpMsg.versionType = Slp.parseChunkToInt(chunks[1], 1, 2, true);
+        if(!chunks[1])
+            throw Error("Bad versionType buffer")
+        slpMsg.versionType = <SlpVersionType>Slp.parseChunkToInt(chunks[1]!, 1, 2, true);
         if(slpMsg.versionType !== SlpVersionType.TokenVersionType1)
             throw Error('Unsupported token type: ' + slpMsg.versionType);
         if(chunks.length === 2)
             throw Error('Missing SLP transaction type');
         try {
-            slpMsg.transactionType = SlpTransactionType[chunks[2].toString('ascii')]
+            let msgType: string = chunks[2]!.toString('ascii')
+            slpMsg.transactionType = SlpTransactionType[msgType as keyof typeof SlpTransactionType]
         } catch(_){
             throw Error('Bad transaction type');
         }
         if(slpMsg.transactionType === SlpTransactionType.GENESIS) {
             if(chunks.length !== 10)
                 throw Error('GENESIS with incorrect number of parameters');
-            slpMsg.symbol = chunks[3] ? chunks[3].toString('utf8') : '';
-            slpMsg.name = chunks[4] ? chunks[4].toString('utf8') : '';
-            slpMsg.documentUri = chunks[5] ? chunks[5].toString('utf8') : '';
+            slpMsg.symbol = chunks[3] ? chunks[3]!.toString('utf8') : '';
+            slpMsg.name = chunks[4] ? chunks[4]!.toString('utf8') : '';
+            slpMsg.documentUri = chunks[5] ? chunks[5]!.toString('utf8') : '';
             slpMsg.documentSha256 = chunks[6] ? chunks[6] : null;
             if(slpMsg.documentSha256) {
                 if(slpMsg.documentSha256.length !== 0 && slpMsg.documentSha256.length !== 32)
                     throw Error('Token document hash is incorrect length');
             }
-            slpMsg.decimals = Slp.parseChunkToInt(chunks[7], 1, 1, true);
+            if(!chunks[7])
+                throw Error("Bad decimals buffer")
+            slpMsg.decimals = <number>Slp.parseChunkToInt(chunks[7]!, 1, 1, true);
             if(slpMsg.decimals > 9)
                 throw Error('Too many decimals')
-            slpMsg.batonVout = chunks[8] ? Slp.parseChunkToInt(chunks[8], 1, 1) : null;
-            if(slpMsg.batonVout !== null){
-                if (slpMsg.batonVout < 2) 
+            slpMsg.batonVout = chunks[8] ? Slp.parseChunkToInt(chunks[8]!, 1, 1) : null;
+            if(slpMsg.batonVout !== null) {
+                if (slpMsg.batonVout < 2)
                     throw Error('Mint baton cannot be on vout=0 or 1');
                 slpMsg.containsBaton = true;
             }
-            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[9].readUInt32BE(0).toString())).multipliedBy(2**32).plus(chunks[9].readUInt32BE(4).toString());
+            if(!chunks[9])
+                throw Error("Bad Genesis quantity buffer")
+            if(chunks[9]!.length !== 8)
+                throw Error("Genesis quantity must be provided as an 8-byte buffer")
+            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[9]!.readUInt32BE(0).toString())).multipliedBy(2**32).plus(chunks[9]!.readUInt32BE(4).toString());
         }
         else if(slpMsg.transactionType === SlpTransactionType.SEND) {
             if(chunks.length < 4)
                 throw Error('SEND with too few parameters');
-            if(chunks[3].length !== 32)
+            if(!chunks[3])
+                throw Error("Bad tokenId buffer")
+            if(chunks[3]!.length !== 32)
                 throw Error('token_id is wrong length');
-            slpMsg.tokenIdHex = chunks[3].toString('hex');
+            slpMsg.tokenIdHex = chunks[3]!.toString('hex');
             // # Note that we put an explicit 0 for  ['token_output'][0] since it
             // # corresponds to vout=0, which is the OP_RETURN tx output.
             // # ['token_output'][1] is the first token output given by the SLP
@@ -436,9 +452,11 @@ export class Slp {
             slpMsg.sendOutputs = [];
             slpMsg.sendOutputs.push(new BigNumber(0));
             chunks.slice(4).forEach(chunk => {
+                if(!chunk)
+                    throw Error("Bad send quantity buffer.")
                 if(chunk.length !== 8)
                     throw Error('SEND quantities must be 8-bytes each.');
-                slpMsg.sendOutputs.push((new BigNumber(chunk.readUInt32BE(0).toString())).multipliedBy(2**32).plus(new BigNumber(chunk.readUInt32BE(4).toString())));
+                slpMsg.sendOutputs!.push((new BigNumber(chunk.readUInt32BE(0).toString())).multipliedBy(2**32).plus(new BigNumber(chunk.readUInt32BE(4).toString())));
             });
             // # maximum 19 allowed token outputs, plus 1 for the explicit [0] we inserted.
             if(slpMsg.sendOutputs.length < 2)
@@ -449,16 +467,22 @@ export class Slp {
         else if(slpMsg.transactionType === SlpTransactionType.MINT) {
             if(chunks.length != 6)
                 throw Error('MINT with incorrect number of parameters');
-            if(chunks[3].length != 32)
+            if(!chunks[3])
+                throw Error("Bad token_id buffer");
+            if(chunks[3]!.length != 32)
                 throw Error('token_id is wrong length');
-            slpMsg.tokenIdHex = chunks[3].toString('hex');
-            slpMsg.batonVout = chunks[4] ? Slp.parseChunkToInt(chunks[4],1,1) : null;
-            if(slpMsg.batonVout !== null){
+            slpMsg.tokenIdHex = chunks[3]!.toString('hex');
+            slpMsg.batonVout = chunks[4] ? Slp.parseChunkToInt(chunks[4]!,1,1) : null;
+            if(slpMsg.batonVout !== null && slpMsg.batonVout !== undefined) {
                 if(slpMsg.batonVout < 2)
                     throw Error('Mint baton cannot be on vout=0 or 1');
                 slpMsg.containsBaton = true;
             }
-            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[5].readUInt32BE(0).toString())).multipliedBy(2**32).plus((new BigNumber(chunks[5].readUInt32BE(4).toString())));
+            if(!chunks[5])
+                throw Error("Bad Mint quantity buffer")
+            if(chunks[5]!.length !== 8)
+                throw Error("Mint quantity must be provided as an 8-byte buffer")
+            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[5]!.readUInt32BE(0).toString())).multipliedBy(2**32).plus((new BigNumber(chunks[5]!.readUInt32BE(4).toString())));
         }
         else
             throw Error('Bad transaction type');
@@ -492,9 +516,8 @@ export class Slp {
             throw Error('Script error');
         }
 
-        if(ops[0].opcode != this.BITBOX.Script.opcodes.OP_RETURN)
+        if(ops[0].opcode !== this.BITBOX.Script.opcodes.OP_RETURN)
             throw Error('No OP_RETURN');
-    
         let chunks: (Buffer|null)[] = [];
         ops.slice(1).forEach(opitem => {
             if(opitem.opcode > this.BITBOX.Script.opcodes.OP_16)
@@ -558,15 +581,15 @@ export class Slp {
         return ops;
     }
 
-    calculateGenesisCost(genesisOpReturnLength: number, inputUtxoSize: number, batonAddress?: string, bchChangeAddress?: string, feeRate = 1) {
+    calculateGenesisCost(genesisOpReturnLength: number, inputUtxoSize: number, batonAddress: string|null, bchChangeAddress?: string, feeRate = 1) {
         return this.calculateMintOrGenesisCost(genesisOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate);
     }
 
-    calculateMintCost(mintOpReturnLength: number, inputUtxoSize: number, batonAddress?: string, bchChangeAddress?: string, feeRate = 1) {
+    calculateMintCost(mintOpReturnLength: number, inputUtxoSize: number, batonAddress: string|null, bchChangeAddress?: string, feeRate = 1) {
         return this.calculateMintOrGenesisCost(mintOpReturnLength, inputUtxoSize, batonAddress, bchChangeAddress, feeRate);
     }
 
-    calculateMintOrGenesisCost(mintOpReturnLength: number, inputUtxoSize: number, batonAddress?: string, bchChangeAddress?: string, feeRate: number = 1) {
+    calculateMintOrGenesisCost(mintOpReturnLength: number, inputUtxoSize: number, batonAddress: string|null, bchChangeAddress?: string, feeRate: number = 1) {
         let outputs = 1
         let nonfeeoutputs = 546
         if (batonAddress !== null && batonAddress !== undefined) {
@@ -592,7 +615,7 @@ export class Slp {
         let outputs = outputAddressArraySize
         let nonfeeoutputs = outputAddressArraySize * 546
 
-        if (bchChangeAddress != null) {
+        if (bchChangeAddress !== null && bchChangeAddress !== undefined) {
             outputs += 1
         }
 
@@ -721,9 +744,9 @@ export class Slp {
                 if (txo.slpTransactionDetails.containsBaton && txo.slpTransactionDetails.batonVout === txo.vout) {
                     txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_BATON;
                 }
-                else if (txo.vout === 1 && txo.slpTransactionDetails.genesisOrMintQuantity.isGreaterThan(0)) {
+                else if (txo.vout === 1 && txo.slpTransactionDetails.genesisOrMintQuantity!.isGreaterThan(0)) {
                     txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
-                    txo.slpUtxoJudgementAmount = txo.slpTransactionDetails.genesisOrMintQuantity;
+                    txo.slpUtxoJudgementAmount = <BigNumber>txo.slpTransactionDetails.genesisOrMintQuantity;
                 }
                 else
                     txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
