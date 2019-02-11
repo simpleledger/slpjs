@@ -42,7 +42,8 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 // let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 let balances;
@@ -98,7 +99,8 @@ const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 // const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 // const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 // 1) Get all balances at the funding address.
@@ -178,7 +180,8 @@ let additionalTokenQty = 1000
 // const tokenIdHexToMint = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
 // let additionalTokenQty = 1000
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 // 1) Get all balances at the funding address.
@@ -262,7 +265,8 @@ const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
 let sendAmount = 10;
 
-const slpValidator = new slpjs.LocalValidator(BITBOX, BITBOX.RawTransactions.getRawTransaction);
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
 // 1) Fetch critical token information
