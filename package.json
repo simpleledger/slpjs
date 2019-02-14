@@ -33,7 +33,6 @@
   },
   "homepage": "https://github.com/simpleledger/slpjs#readme",
   "devDependencies": {
-    "@types/lodash": "^4.14.120",
     "@types/mocha": "^5.1.1",
     "@types/node": "^10.12.18",
     "bitbox-sdk": "^3.0.11",
@@ -45,6 +44,8 @@
     "uglify-es": "^3.3.9"
   },
   "dependencies": {
+    "lodash": "^4.17.11",
+    "@types/lodash": "^4.14.120",
     "axios": "^0.18.0",
     "bchaddrjs-slp": "git://github.com/simpleledger/bchaddrjs.git#master",
     "bignumber.js": "^7.2.1",

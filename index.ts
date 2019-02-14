@@ -1,3 +1,5 @@
+/// <reference path="./lib/vendors.d.ts"/>
+
 export * from './lib/slp';
 export * from './lib/utils';
 export * from './lib/bitdbnetwork';
