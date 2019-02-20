@@ -35,7 +35,7 @@
   "devDependencies": {
     "@types/mocha": "^5.1.1",
     "@types/node": "^10.12.18",
-    "bitbox-sdk": "^3.0.11",
+    "bitbox-sdk": "^3.1.0",
     "browserify": "^16.2.2",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
