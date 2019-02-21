@@ -378,6 +378,72 @@ let sendTxid;
 ```
 
 
+## BURN Tokens for a certain Token Id
+
+This example shows the general workflow for sending an existing token.
+
+```javascript
+
+// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BigNumber = require('bignumber.js');
+const slpjs = require('slpjs');
+
+const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
+const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
+let tokenId = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
+let burnAmount = 102;
+
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+
+// 1) Fetch critical token information
+let tokenDecimals;
+(async function() {
+    const tokenInfo = await bitboxNetwork.getTokenInformation(tokenId);
+    tokenDecimals = tokenInfo.decimals; 
+    console.log('Token precision:', tokenDecimals.toString());
+})();
+
+// 2) Check that token balance is greater than our desired sendAmount
+let balances; 
+(async function() {
+  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+  console.log("'balances' variable is set.");
+  console.log('Token balance:', balances.slpTokenBalances[tokenId].toNumber() / 10**tokenDecimals)
+})();
+
+// Wait for network responses...
+
+// 3) Calculate send amount in "Token Satoshis".  In this example we want to just send 1 token unit to someone...
+let amount = (new BigNumber(burnAmount)).times(10**tokenDecimals);  // Don't forget to account for token precision
+
+// 4) Get all of our token's UTXOs
+let inputUtxos = balances.slpTokenUtxos[tokenId];
+
+// 5) Simply sweep our BCH utxos to fuel the transaction
+inputUtxos = inputUtxos.concat(balances.nonSlpUtxos);
+
+// 6) Set the proper private key for each Utxo
+inputUtxos.forEach(txo => txo.wif = fundingWif)
+
+// 7) Send token
+let sendTxid;
+(async function(){
+    sendTxid = await bitboxNetwork.simpleTokenBurn(
+        tokenId, 
+        amount, 
+        inputUtxos, 
+        bchChangeReceiverAddress
+        )
+    console.log("BURN txn complete:",sendTxid);
+})();
+```
+
 
 ## SLP Address Conversion
 

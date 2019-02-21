@@ -150,6 +150,50 @@ export class BitboxNetwork implements SlpValidator {
         return await this.sendTx(txHex);
     }
 
+    // Burn a precise quantity of SLP tokens with remaining tokens (change) sent to a single output address (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
+    async simpleTokenBurn(tokenId: string, burnAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], changeReceiverAddress: string) {  
+    
+        // Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
+        let totalTokenInputAmount: BigNumber = 
+            inputUtxos
+            .filter(txo => {
+                return Slp.preSendSlpJudgementCheck(txo, tokenId);
+            })
+            .reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => { 
+                return tot.plus(txo.slpUtxoJudgementAmount)
+            }, new BigNumber(0))
+
+        // Compute the token Change amount.
+        let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(burnAmount);
+        
+        let txHex;
+        if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
+            // Create the Send OP_RETURN message
+            let sendOpReturn = this.slp.buildSendOpReturn({
+                tokenIdHex: tokenId,
+                outputQtyArray: [ tokenChangeAmount ],
+            });
+            // Create the raw Send transaction hex
+            txHex = this.slp.buildRawBurnTx(burnAmount, {
+                slpBurnOpReturn: sendOpReturn,
+                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+                bchChangeReceiverAddress: changeReceiverAddress
+            });
+        } else if (tokenChangeAmount.isLessThanOrEqualTo(new BigNumber(0))) {
+            // Create the raw Send transaction hex
+            txHex = this.slp.buildRawBurnTx(burnAmount, {
+                tokenIdHex: tokenId,
+                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+                bchChangeReceiverAddress: changeReceiverAddress
+            });
+        } else {
+            throw Error('Token inputs less than the token outputs')
+        }
+
+        // Broadcast the transaction over the network using this.BITBOX
+        return await this.sendTx(txHex);
+    }
+
     async getUtxoWithRetry(address: string, retries = 40) {
 		let result: AddressUtxoResult | undefined;
 		let count = 0;
