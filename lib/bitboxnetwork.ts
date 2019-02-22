@@ -33,6 +33,18 @@ export class BitboxNetwork implements SlpValidator {
         return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
     }
 
+    async getTransactionDetails(txid: string) {
+        let txn: any = (await this.BITBOX.Transaction.details([ txid ]))[0];
+        try {
+            txn.tokenInfo = await this.getTokenInformation(txid);
+            txn.tokenIsValid = await this.validator.isValidSlpTxid(txid);
+        } catch(_) {
+            txn.tokenInfo = null;
+            txn.tokenIsValid = false;
+        }
+        return txn;
+    }
+
     async getUtxos(address: string) {
         // must be a cash or legacy addr
         let res: AddressUtxoResult;
