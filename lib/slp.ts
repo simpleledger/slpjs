@@ -288,21 +288,33 @@ export class Slp {
 
         // sign inputs
         let i = 0;
+        let providedScriptSigs = new Map<Number, Buffer>();
         for (const txo of config.input_token_utxos) {
+            console.log("TXO:", txo);
             if(txo.wif) {
                 let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
                 transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-                i++;
             } else {
-                try {
-                    transactionBuilder.transaction.inputs[i].script = txo.scriptSig;
-                } catch(err) {
-                    throw Error("Missing witness data. Error: " + err.message);
-                }
+                console.log(txo);
+                if(txo.scriptSig) 
+                    providedScriptSigs.set(i, txo.scriptSig);
+                else
+                    throw Error("Missing wif and script sig for input " + i.toString());
             }
+            i++;
         }
 
-        let tx = transactionBuilder.build().toHex();
+        // Build the transaction.
+        var tx: any;
+        if(providedScriptSigs.size > 0) {
+            tx = transactionBuilder.transaction.buildIncomplete();
+            providedScriptSigs.forEach((scriptSig, idx) => {
+                tx.setInputScript(idx, scriptSig);
+            })
+            tx = tx.toHex();
+        } else { 
+            tx = transactionBuilder.build().toHex();
+        }
 
         // Check For Low Fee
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)=>v+=o.value, 0);

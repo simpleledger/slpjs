@@ -74,7 +74,7 @@ export class SlpTradeManager {
         tb.addOutput(Utils.toCashAddress(paymentAddress), priceSatosis);
         tb.sign(0, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_ALL, 0);
         tb.sign(1, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_ALL, 0);
-        tb.sign(2, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_SINGLE | tb.hashTypes.SIGHASH_ANYONECANPAY, priceSatosis);
+        tb.sign(2, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_SINGLE | tb.hashTypes.SIGHASH_ANYONECANPAY | tb.hashTypes.SIGHASH_BITCOINCASH_BIP143, priceSatosis);
         console.log(tb);
         let tx = tb.transaction.build();
         
@@ -138,7 +138,6 @@ export class SlpTradeManager {
         }
 
         let inputs = [ ...Utils.mapToUtxoArray(buyerFillerUtxos), tokenUtxo, ...Utils.mapToUtxoArray(buyerPaymentUtxos) ];
-
         let change = [ { amount: tokenOffer.token.priceSatoshis, address: tokenOffer.paymentAddress } ]
                         .concat({ address: tokenClaimAddress, amount: buyerPaymentUtxos.map(txo => txo.satoshis).reduce((v, i) => v+=i, 0)-tokenOffer.token.priceSatoshis })
 

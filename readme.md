@@ -30,6 +30,7 @@ NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is use
 The following code shows how SLP tokens can be easily put up for sale in a trustless fashion using Bitcoin Cash.
 
 ```js
+
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const slpjs = require('slpjs');
 const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
@@ -85,11 +86,13 @@ let pBalances;
   console.log("balances: ", pBalances);
 })();
 
+// Input fillers (i.e., input index 0 and 1)
 const fillerTokenId = "e504b06f6c71c3d310abce93d0f1b96b6112ca7f5e035f4721bd75e07a9cd6b2";
 const fillers = pBalances.slpTokenUtxos[fillerTokenId].slice(0,2);
 fillers.map(f => f.wif = purchaserWif);
 
-// Get Payment UTXO(s)
+// Set WIF for BCH payment
+pBalances.nonSlpUtxos.map(o => o.wif = purchaserWif);
 
 const txn = tm.createSlpForBchPurchase(tradeOffer, pBalances.nonSlpUtxos, purchaserAddress, fillers) 
 
