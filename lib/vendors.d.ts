@@ -21,6 +21,7 @@ declare module "bitcore-lib-cash" {
         prevTxId: Buffer;
         outputIndex: number;
         sequenceNumber: number;
+        signature: any;
     }
 
     export interface Script {

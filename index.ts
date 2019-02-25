@@ -6,11 +6,14 @@ export * from './lib/bitdbnetwork';
 export * from './lib/jsonrpcvalidator';
 export * from './lib/localvalidator';
 export * from './lib/bitboxnetwork';
+export * from './lib/trademanager';
 
 import BigNumber from 'bignumber.js';
 
 export enum SlpTransactionType {
-    "GENESIS" = 0, "MINT", "SEND"
+    "GENESIS" = 0, 
+    "MINT", 
+    "SEND"
 }
 
 export enum SlpVersionType {
@@ -19,7 +22,12 @@ export enum SlpVersionType {
 
 // negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)
 export enum SlpUtxoJudgement {
-    "UNKNOWN" = -3, "INVALID_BATON_DAG", "INVALID_TOKEN_DAG", "NOT_SLP", "SLP_TOKEN", "SLP_BATON"
+    "UNKNOWN" = -3, 
+    "INVALID_BATON_DAG", 
+    "INVALID_TOKEN_DAG", 
+    "NOT_SLP", 
+    "SLP_TOKEN", 
+    "SLP_BATON"
 }
 
 export interface SlpTransactionDetails {
@@ -73,7 +81,8 @@ export interface utxo {
     txid: string;
     vout: number;
     satoshis: BigNumber;
-    wif: string;
+    wif?: string;
+    scriptSig?: Buffer;
     slpTransactionDetails: SlpTransactionDetails;
     slpUtxoJudgement: SlpUtxoJudgement;
     slpUtxoJudgementAmount: BigNumber;

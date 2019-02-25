@@ -47,6 +47,8 @@ export interface configBuildRawSendTx {
     input_token_utxos: utxo[];
     tokenReceiverAddressArray: string[];
     bchChangeReceiverAddress: string;
+    allowTokenBurning?: string[];
+    explicitBchChange?: { amount: number, address: string }[];
 }
 
 export interface configBuildRawMintTx {
@@ -188,9 +190,13 @@ export class Slp {
         // sign inputs
         let i = 0;
         for (const txo of config.input_utxos) {
-            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-            i++;
+            if(txo.wif) {
+                let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+                i++;
+            } else {
+                throw Error("Missing input private key (compressed WIF).");
+            }
         }
 
         let tx = transactionBuilder.build().toHex();
@@ -206,7 +212,10 @@ export class Slp {
         return tx;
     }
 
-    buildRawSendTx(config: configBuildRawSendTx, type = 0x01) {
+    buildRawSendTx(config: configBuildRawSendTx, type = 0x01): string {
+
+        if(!config.allowTokenBurning)
+            config.allowTokenBurning = [];
 
         const sendMsg = this.parseSlpOutputScript(config.slpSendOpReturn);
         
@@ -221,7 +230,7 @@ export class Slp {
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP)
                 return
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
-                if(txo.slpTransactionDetails.tokenIdHex !== sendMsg.tokenIdHex)
+                if(txo.slpTransactionDetails.tokenIdHex !== sendMsg.tokenIdHex && !config.allowTokenBurning!.includes(txo.slpTransactionDetails.tokenIdHex))
                     throw Error("Input UTXOs included a token for another tokenId.")
                 tokenInputQty = tokenInputQty.plus(txo.slpUtxoJudgementAmount);
                 return
@@ -241,9 +250,11 @@ export class Slp {
             throw Error("Number of token receivers in config does not match the OP_RETURN outputs")
 
         // Make sure token inputs equals token outputs in OP_RETURN
-        let outputTokenQty = sendMsg.sendOutputs.reduce((v,o)=>v=v.plus(o), new BigNumber(0));
-        if(!tokenInputQty.isEqualTo(outputTokenQty))
-            throw Error("Token input quantity does not match token outputs.")
+        if(config.allowTokenBurning.length === 0 && !config.explicitBchChange) {
+            let outputTokenQty = sendMsg.sendOutputs.reduce((v,o)=>v=v.plus(o), new BigNumber(0));
+            if(!tokenInputQty.isEqualTo(outputTokenQty))
+                throw Error("Token input quantity does not match token outputs.")
+        }
 
         let transactionBuilder = new this.BITBOX.TransactionBuilder(Utils.txnBuilderString(config.tokenReceiverAddressArray[0]));
         let inputSatoshis = new BigNumber(0);
@@ -265,7 +276,12 @@ export class Slp {
         })
 
         // Change
-        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if(config.explicitBchChange) {
+            config.explicitBchChange.forEach(change => {
+                transactionBuilder.addOutput(Utils.toCashAddress(change.address), Math.round(change.amount));
+            })
+        }
+        else if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -273,9 +289,17 @@ export class Slp {
         // sign inputs
         let i = 0;
         for (const txo of config.input_token_utxos) {
-            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-            i++;
+            if(txo.wif) {
+                let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+                i++;
+            } else {
+                try {
+                    transactionBuilder.transaction.inputs[i].script = txo.scriptSig;
+                } catch(err) {
+                    throw Error("Missing witness data. Error: " + err.message);
+                }
+            }
         }
 
         let tx = transactionBuilder.build().toHex();
@@ -367,9 +391,13 @@ export class Slp {
         // sign inputs
         let i = 0;
         for (const txo of config.input_baton_utxos) {
-            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-            i++;
+            if(txo.wif) {
+                let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+                i++;
+            } else {
+                throw Error("Missing input private key (compressed WIF).");
+            }
         }
 
         let tx = transactionBuilder.build().toHex();
@@ -467,9 +495,13 @@ export class Slp {
         // sign inputs
         let i = 0;
         for (const txo of config.input_token_utxos) {
-            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-            i++;
+            if(txo.wif) {
+                let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+                i++;
+            } else {
+                throw Error("Missing input private key (compressed WIF).");
+            }
         }
 
         let tx = transactionBuilder.build().toHex();

@@ -25,6 +25,78 @@ The following examples show how this library should be used.
 NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is used to avoid precision issues with numbers having more than 15 significant digits.
 
 
+## A Token Sale - Part 1: Solicit your tokens
+
+The following code shows how SLP tokens can be easily put up for sale in a trustless fashion using Bitcoin Cash.
+
+```js
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const slpjs = require('slpjs');
+const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+
+const sellerAddress = "simpleledger:qpahqcjsaecettz529z9qg03j7zv8dcd0qkhxgcjdm";
+const wif = "KzDMdzT9d9sRkFWKuSP5n6aHECusXazJWRPzmr6ftvNKrGnc5y39";
+
+// seller balances.
+let sBalances; 
+(async function() {
+  sBalances = await bitboxNetwork.getAllSlpBalancesAndUtxos(sellerAddress);
+  console.log("balances: ", sBalances);
+})();
+
+// WAIT FOR NETWORK RESPONSE.
+
+// Use Electron Cash SLP Create a token to sell:
+const tokenId = "2cc66b3010733fe2ff2938c956ceb9d20cef92feb7cbcc0004ff2f6100a3701c";
+const utxo = sBalances.slpTokenUtxos[tokenId][0];
+utxo.wif = wif;
+
+const tokenSaleQty = 100;
+const bchPriceSatoshis = 100000;
+const paymentAddress = "simpleledger:qpahqcjsaecettz529z9qg03j7zv8dcd0qkhxgcjdm";
+
+const tm = new slpjs.SlpTradeManager(BITBOX);
+let tradeOffer = tm.createSlpForBchOffer(utxo, bchPriceSatoshis, paymentAddress);
+
+// Post this partially signed transaction anywhere for someone else to complete!
+console.log(tradeOffer);
+
+```
+
+
+## A Token Sale - Part 2: Buy the offered token
+
+Continuing from the code above, we will now purchase the token from the seller. 
+
+Completing the trade requires that we provide the proper input UTXOs to allow the SLPJS library complete the partially signed transaction that was created by the seller.  To do this, we will use what we refer to as a "Filler Token" to easily manage our 546 satoshi UTXOs which we will use to "fill" the final trade's first 2 inputs which are empty.  This is not required, but it certainly makes the trading process more simple.  Alternatively, you can presplit your coins to act as filler.  Lastly the 
+
+```js
+
+const purchaserAddress = "simpleledger:qrhg8w9syhv0rv8l3qatqly3egdyelh06s74cp6hg6";
+const purchaserWif = "KyQFMCRXPpJYs2qMr489SYCCM4S98BXSnYcc4Zkq2Jkm9MtKftQS";
+
+let pBalances;
+(async function() {
+  pBalances = await bitboxNetwork.getAllSlpBalancesAndUtxos(purchaserAddress);
+  console.log("balances: ", pBalances);
+})();
+
+const fillerTokenId = "e504b06f6c71c3d310abce93d0f1b96b6112ca7f5e035f4721bd75e07a9cd6b2";
+const fillers = pBalances.slpTokenUtxos[fillerTokenId].slice(0,2);
+fillers.map(f => f.wif = purchaserWif);
+
+// Get Payment UTXO(s)
+
+const txn = tm.createSlpForBchPurchase(tradeOffer, pBalances.nonSlpUtxos, purchaserAddress, fillers) 
+
+// tokenClaimAddress: string, buyerFillerUtxos: SlpAddressUtxoResult[]
+
+```
+
 
 ## Get Balances
 
@@ -62,10 +134,10 @@ let balances;
 //      '1cda254d0a995c713b7955298ed246822bee487458cd9747a91d9e81d9d28125': BigNumber { s: 1, e: 3, c: [ 1000 ] },
 //      '047918c612e94cce03876f1ad2bd6c9da43b586026811d9b0d02c3c3e910f972': BigNumber { s: 1, e: 2, c: [ 100 ] } 
 //   },
-//   slpTokenUtxos: [ ... ],
-//   slpBatonUtxos: [ ... ],
-//   invalidTokenUtxos: [ ... ],
-//   invalidBatonUtxos: [ ... ],
+//   slpTokenUtxos: { ... },
+//   slpBatonUtxos: { ... },
+//   invalidTokenUtxos: { ... },
+//   invalidBatonUtxos: { ... },
 //   nonSlpUtxos: [ ... ]
 // }
 ```
@@ -149,6 +221,8 @@ let genesisTxid;
 
 ```
 
+
+
 ## GENESIS - NFT creation (non-fungible token)
 
 Non-fungible tokens can be created with the `simpleTokenGenesis` method with these parameters:
@@ -213,11 +287,12 @@ let genesisTxid;
 ```
 
 
+
 ## MINT - Create more tokens
 
 Adding additional tokens for a token that already exists is possible if you are in control of the minting "baton".  This minting baton is a special UTXO that gives authority to add to the token's circulating supply.  
 
-```javascript
+```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
@@ -378,11 +453,12 @@ let sendTxid;
 ```
 
 
+
 ## BURN Tokens for a certain Token Id
 
 This example shows the general workflow for sending an existing token.
 
-```javascript
+```js
 
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
@@ -445,9 +521,10 @@ let sendTxid;
 ```
 
 
+
 ## SLP Address Conversion
 
-```javascript
+```js
 let Utils = require('slpjs').Utils;
 
 let slpAddr = Utils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
