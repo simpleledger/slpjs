@@ -1,4 +1,4 @@
-import { JsonRpcProxyValidator } from '../lib/jsonrpcvalidator';
+import { JsonRpcProxyValidator } from '../../lib/jsonrpcvalidator';
 
 import * as assert from 'assert';
 import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
