@@ -3,6 +3,7 @@ import { SlpAddressUtxoResult, Utils, SlpTransactionDetails, utxo, SlpUtxoJudgem
 import { Slp, configBuildSendOpReturn, configBuildRawSendTx } from './slp';
 import BigNumber from 'bignumber.js';
 import * as Bitcore from 'bitcore-lib-cash';
+import { TxOut } from 'bitbox-sdk/lib/Blockchain';
 
 const dummyTxid = '11'.repeat(32);
 const dummyScriptPubKey = Buffer.from('00', 'hex');
@@ -125,6 +126,9 @@ export class SlpTradeManager {
         //  Buyer UTXO                           |  Buyer BCH change output
         //  ... buyer input UTXOs                |  
 
+        if(tokenOffer.isSpent)
+            throw Error("This token offer has already been spent.")
+
         let signedTokenInput: utxo = {
             txid: tokenOffer.token.txid,
             vout: tokenOffer.token.vout,
@@ -176,5 +180,61 @@ export class SlpTradeManager {
         let tx = this.slp.buildRawSendTx(config);
 
         return tx;
+    }
+
+    async parseTokenOfferFromDummy(dummyHex: string): Promise<SlpTokenOffer> {
+        let txn = new Bitcore.Transaction(dummyHex);
+        let slp = new Slp(this.BITBOX);
+        let slpMsg: SlpTransactionDetails;
+        try {
+            slpMsg = slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
+        } catch(_) {
+            throw Error("Not a valid SLP transaction.");
+        }
+        
+        let txid = txn.inputs[2].prevTxId.toString('hex');
+        let vout = txn.inputs[2].outputIndex;
+
+        let txo: TxOut|null = await this.BITBOX.Blockchain.getTxOut(txid, vout, true);
+
+        let offer: SlpTokenOffer;
+
+        if(txo)
+            offer = {
+                label: "",
+                isSpent: false,
+                op_return: txn.outputs[0]._scriptBuffer.toString('hex'),
+                dummyHex: dummyHex,
+                scriptSig: txn.inputs[2]._scriptBuffer,
+                token: { 
+                    lockedSatoshis: Math.round(txo.value*10**8),
+                    qty: slpMsg.sendOutputs![1], 
+                    priceSatoshis: txn.outputs[2].satoshis, 
+                    txid: txid, 
+                    vout: vout, 
+                    details: slpMsg 
+                },
+                paymentAddress: this.BITBOX.Address.fromOutputScript(txn.outputs[2]._scriptBuffer)
+            }
+        else {
+            offer = {
+                label: "",
+                isSpent: true,
+                op_return: txn.outputs[0]._scriptBuffer.toString('hex'),
+                dummyHex: dummyHex,
+                scriptSig: txn.inputs[2]._scriptBuffer,
+                token: { 
+                    lockedSatoshis: 0,
+                    qty: new BigNumber(0), 
+                    priceSatoshis: txn.outputs[2].satoshis, 
+                    txid: txid, 
+                    vout: vout, 
+                    details: slpMsg 
+                },
+                paymentAddress: this.BITBOX.Address.fromOutputScript(txn.outputs[2]._scriptBuffer)
+            }
+        }
+
+        return offer;
     }
 }
