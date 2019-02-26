@@ -46,7 +46,7 @@ const wif = "KzDMdzT9d9sRkFWKuSP5n6aHECusXazJWRPzmr6ftvNKrGnc5y39";
 let sBalances; 
 (async function() {
   sBalances = await bitboxNetwork.getAllSlpBalancesAndUtxos(sellerAddress);
-  console.log("balances: ", sBalances);
+  console.log("sBalances: ", sBalances);
 })();
 
 // WAIT FOR NETWORK RESPONSE.
@@ -57,7 +57,7 @@ const utxo = sBalances.slpTokenUtxos[tokenId][0];
 utxo.wif = wif;
 
 const tokenSaleQty = 100;
-const bchPriceSatoshis = 100000;
+const bchPriceSatoshis = 9000;
 const paymentAddress = "simpleledger:qpahqcjsaecettz529z9qg03j7zv8dcd0qkhxgcjdm";
 
 const tm = new slpjs.SlpTradeManager(BITBOX);
@@ -83,7 +83,7 @@ const purchaserWif = "KyQFMCRXPpJYs2qMr489SYCCM4S98BXSnYcc4Zkq2Jkm9MtKftQS";
 let pBalances;
 (async function() {
   pBalances = await bitboxNetwork.getAllSlpBalancesAndUtxos(purchaserAddress);
-  console.log("balances: ", pBalances);
+  console.log("pBalances: ", pBalances);
 })();
 
 // Input fillers (i.e., input index 0 and 1)
@@ -94,10 +94,12 @@ fillers.map(f => f.wif = purchaserWif);
 // Set WIF for BCH payment
 pBalances.nonSlpUtxos.map(o => o.wif = purchaserWif);
 
-const txn = tm.createSlpForBchPurchase(tradeOffer, pBalances.nonSlpUtxos, purchaserAddress, fillers) 
+let inputs = pBalances.nonSlpUtxos.concat(fillers);
 
-// tokenClaimAddress: string, buyerFillerUtxos: SlpAddressUtxoResult[]
+const txn = tm.createSlpForBchPurchase(tradeOffer, inputs, purchaserAddress) 
 
+// broadcast this...
+console.log(txn);
 ```
 
 

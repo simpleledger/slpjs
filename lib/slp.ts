@@ -250,7 +250,7 @@ export class Slp {
             throw Error("Number of token receivers in config does not match the OP_RETURN outputs")
 
         // Make sure token inputs equals token outputs in OP_RETURN
-        if(config.allowTokenBurning.length === 0 && !config.explicitBchChange) {
+        if(!config.explicitBchChange) {
             let outputTokenQty = sendMsg.sendOutputs.reduce((v,o)=>v=v.plus(o), new BigNumber(0));
             if(!tokenInputQty.isEqualTo(outputTokenQty))
                 throw Error("Token input quantity does not match token outputs.")

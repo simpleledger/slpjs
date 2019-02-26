@@ -56,13 +56,13 @@ export class SlpTradeManager {
         this.trades.set(txid + vout, trade);
     }
 
-    createSlpForBchOffer(utxo: SlpAddressUtxoResult, priceSatosis: number, paymentAddress: string, label?: string): SlpTokenOffer {
-        // Seller creates a partially aigned transaction using SINGLE|ANYONECANPAY
-        // -----------------------------------------------------
+    createSlpForBchOffer(utxo: SlpAddressUtxoResult, priceSatoshis: number, paymentAddress: string, label?: string): SlpTokenOffer {
+        // Seller creates a partially signed transaction using SINGLE|ANYONECANPAY
+        // -----------------------------------------------------------------------
         // inputs                    |  outputs
-        // --------------------------|--------------------------
+        // --------------------------|--------------------------------------------
         //  dummy                    |  empty (TO BE REPLACED WITH SLP MSG)
-        //  dummy                    |  empty
+        //  dummy                    |  empty (TO BE REPLACED WITH 546)
         //  Seller Signed SLP input  |  Seller Signed BCH output
 
         let tb = new this.BITBOX.TransactionBuilder(Utils.txnBuilderString(paymentAddress));
@@ -71,22 +71,20 @@ export class SlpTradeManager {
         tb.addInput(utxo.txid, utxo.vout);
         tb.addOutput(dummyScriptPubKey, 0);
         tb.addOutput(dummyScriptPubKey, 0);
-        tb.addOutput(Utils.toCashAddress(paymentAddress), priceSatosis);
-        tb.sign(0, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_ALL, 0);
-        tb.sign(1, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_ALL, 0);
-        tb.sign(2, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_SINGLE | tb.hashTypes.SIGHASH_ANYONECANPAY | tb.hashTypes.SIGHASH_BITCOINCASH_BIP143, priceSatosis);
-        console.log(tb);
+        tb.addOutput(Utils.toCashAddress(paymentAddress), Math.round(priceSatoshis));
+        tb.sign(0, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_ALL, 546);
+        tb.sign(1, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_ALL, 546);
+        tb.sign(2, this.BITBOX.ECPair.fromWIF(utxo.wif), undefined, tb.hashTypes.SIGHASH_SINGLE | tb.hashTypes.SIGHASH_ANYONECANPAY | tb.hashTypes.SIGHASH_BITCOINCASH_BIP143, utxo.satoshis);
+
         let tx = tb.transaction.build();
         
-        //let txn = new Bitcore.Transaction(tx.toHex());
-
         let config: configBuildSendOpReturn = {
             tokenIdHex: utxo.slpTransactionDetails.tokenIdHex, 
             outputQtyArray: [ utxo.slpUtxoJudgementAmount ]
         }
 
         let script = this.slp.buildSendOpReturn(config);
-        console.log(tx.ins[2]);
+
         let offer: SlpTokenOffer = {
             label: label ? label : null, 
             isSpent: false,
@@ -96,7 +94,7 @@ export class SlpTradeManager {
             token: { 
                 lockedSatoshis: utxo.satoshis,
                 qty: utxo.slpUtxoJudgementAmount,
-                priceSatoshis: priceSatosis, 
+                priceSatoshis: priceSatoshis, 
                 txid: utxo.txid, 
                 vout: utxo.vout,
                 details: utxo.slpTransactionDetails
@@ -116,7 +114,7 @@ export class SlpTradeManager {
         return offer;
     }
 
-    createSlpForBchPurchase(tokenOffer: SlpTokenOffer, buyerPaymentUtxos: SlpAddressUtxoResult[], tokenClaimAddress: string, buyerFillerUtxos: SlpAddressUtxoResult[]) {
+    createSlpForBchPurchase(tokenOffer: SlpTokenOffer, buyerPaymentUtxos: SlpAddressUtxoResult[], buyerAddress: string) {
         // Buyer completes the parially signed transaction
         // ----------------------------------------------------------- 
         // inputs                                |  outputs
@@ -127,7 +125,7 @@ export class SlpTradeManager {
         //  Buyer UTXO                           |  Buyer BCH change output
         //  ... buyer input UTXOs                |  
 
-        let tokenUtxo: utxo = {
+        let signedTokenInput: utxo = {
             txid: tokenOffer.token.txid,
             vout: tokenOffer.token.vout,
             satoshis: new BigNumber(tokenOffer.token.lockedSatoshis),
@@ -137,35 +135,42 @@ export class SlpTradeManager {
             slpUtxoJudgementAmount: tokenOffer.token.qty
         }
 
-        let inputs = [ ...Utils.mapToUtxoArray(buyerFillerUtxos), tokenUtxo, ...Utils.mapToUtxoArray(buyerPaymentUtxos) ];
+        let inputs;
+        if(buyerPaymentUtxos.length > 2)
+            inputs = [ ...Utils.mapToUtxoArray(buyerPaymentUtxos.slice(0,2)), signedTokenInput, ...Utils.mapToUtxoArray(buyerPaymentUtxos.slice(2)) ];
+        else if(buyerPaymentUtxos.length === 2)
+            inputs = [ ...Utils.mapToUtxoArray(buyerPaymentUtxos), signedTokenInput ];
+        else
+            throw Error("Must have at least 2 input UTXOs supplied by the buyer.");
+
+        if(buyerPaymentUtxos.map(txo => txo.satoshis).reduce((v, i) => v+=i, 0) - tokenOffer.token.priceSatoshis < 0)
+            throw Error("Insufficient input satoshis.")
+
         let change = [ { amount: tokenOffer.token.priceSatoshis, address: tokenOffer.paymentAddress } ]
-                        .concat({ address: tokenClaimAddress, amount: buyerPaymentUtxos.map(txo => txo.satoshis).reduce((v, i) => v+=i, 0)-tokenOffer.token.priceSatoshis })
 
-        if(buyerFillerUtxos.length !== 2)
-            throw Error("There needs to be exactly 2 filler UTXOs to complete this trade transaction.");
+        let feeEstimate = this.BITBOX.BitcoinCash.getByteCount({ P2PKH: buyerPaymentUtxos.length + 1 }, { P2PKH: 3 }) + (tokenOffer.op_return.length / 2) + 10
 
-        let config: configBuildRawSendTx;
+        if(buyerPaymentUtxos.map(txo => txo.satoshis).reduce((v, i) => v+=i, 0) - tokenOffer.token.priceSatoshis - feeEstimate > 546) {
+            change = change.concat({ 
+                address: buyerAddress, 
+                amount: buyerPaymentUtxos.map(txo => txo.satoshis).reduce((v, i) => v+=i, 0) - tokenOffer.token.priceSatoshis - feeEstimate
+            })
+        }
 
-        if(buyerFillerUtxos.every(txo => txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN )) {
-            let burnIds = [ ... new Set<string>(buyerFillerUtxos.map(txo => { return txo.slpTransactionDetails.tokenIdHex })) ];
-            if(burnIds.includes(tokenOffer.token.details.tokenIdHex))
-                throw Error("You do not want burn the same type of token that you are purchasing.");
-            config = {
-                slpSendOpReturn: Buffer.from(tokenOffer.op_return, 'hex'),
-                input_token_utxos: inputs,
-                tokenReceiverAddressArray: [ tokenClaimAddress ],
-                bchChangeReceiverAddress: tokenOffer.paymentAddress,
-                explicitBchChange: change,
-                allowTokenBurning: [ ... new Set<string>(buyerFillerUtxos.map(txo => { return txo.slpTransactionDetails.tokenIdHex })) ]
-            }
-        } else {
-            config = {
-                slpSendOpReturn: Buffer.from(tokenOffer.op_return, 'hex'),
-                input_token_utxos: inputs,
-                tokenReceiverAddressArray: [ tokenClaimAddress ],
-                bchChangeReceiverAddress: tokenOffer.paymentAddress,
-                explicitBchChange: change
-            }
+        let config: configBuildRawSendTx = {
+            slpSendOpReturn: Buffer.from(tokenOffer.op_return, 'hex'),
+            input_token_utxos: inputs,
+            tokenReceiverAddressArray: [ buyerAddress ],
+            bchChangeReceiverAddress: tokenOffer.paymentAddress,
+            explicitBchChange: change
+        }
+        
+        if(buyerPaymentUtxos.find(txo => txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN )) {
+            let allowBurnFor = buyerPaymentUtxos.map(txo => { 
+                if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) return txo.slpTransactionDetails.tokenIdHex 
+                else return "";
+            }).filter(s => s !== "");
+            config.allowTokenBurning = [ ... new Set<string>(allowBurnFor) ];
         }
 
         let tx = this.slp.buildRawSendTx(config);
