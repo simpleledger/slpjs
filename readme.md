@@ -52,13 +52,12 @@ let sBalances;
 // WAIT FOR NETWORK RESPONSE.
 
 // Use Electron Cash SLP Create a token to sell:
-const tokenId = "2cc66b3010733fe2ff2938c956ceb9d20cef92feb7cbcc0004ff2f6100a3701c";
-const utxo = sBalances.slpTokenUtxos[tokenId][0];
+let tokenId = "e504b06f6c71c3d310abce93d0f1b96b6112ca7f5e035f4721bd75e07a9cd6b2";
+let utxo = sBalances.slpTokenUtxos[tokenId][0];
 utxo.wif = wif;
 
-const tokenSaleQty = 100;
-const bchPriceSatoshis = 9000;
-const paymentAddress = "simpleledger:qpahqcjsaecettz529z9qg03j7zv8dcd0qkhxgcjdm";
+let bchPriceSatoshis = 9000;
+let paymentAddress = "simpleledger:qpahqcjsaecettz529z9qg03j7zv8dcd0qkhxgcjdm";
 
 const tm = new slpjs.SlpTradeManager(BITBOX);
 let tradeOffer = tm.createSlpForBchOffer(utxo, bchPriceSatoshis, paymentAddress);
@@ -86,9 +85,11 @@ let pBalances;
   console.log("pBalances: ", pBalances);
 })();
 
+// WAIT FOR NETWORK RESPONSE.
+
 // Input fillers (i.e., input index 0 and 1)
-const fillerTokenId = "e504b06f6c71c3d310abce93d0f1b96b6112ca7f5e035f4721bd75e07a9cd6b2";
-const fillers = pBalances.slpTokenUtxos[fillerTokenId].slice(0,2);
+let fillerTokenId = "e504b06f6c71c3d310abce93d0f1b96b6112ca7f5e035f4721bd75e07a9cd6b2";
+let fillers = pBalances.slpTokenUtxos[fillerTokenId].slice(0,2);
 fillers.map(f => f.wif = purchaserWif);
 
 // Set WIF for BCH payment
@@ -96,9 +97,9 @@ pBalances.nonSlpUtxos.map(o => o.wif = purchaserWif);
 
 let inputs = pBalances.nonSlpUtxos.concat(fillers);
 
-const txn = tm.createSlpForBchPurchase(tradeOffer, inputs, purchaserAddress) 
+let txn = tm.createSlpForBchPurchase(tradeOffer, inputs, purchaserAddress) 
 
-// broadcast this...
+// Broadcast this hex to BCH network...
 console.log(txn);
 ```
 

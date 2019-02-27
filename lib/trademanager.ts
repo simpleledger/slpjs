@@ -152,7 +152,7 @@ export class SlpTradeManager {
 
         let change = [ { amount: tokenOffer.token.priceSatoshis, address: tokenOffer.paymentAddress } ]
 
-        let feeEstimate = this.BITBOX.BitcoinCash.getByteCount({ P2PKH: buyerPaymentUtxos.length + 1 }, { P2PKH: 3 }) + (tokenOffer.op_return.length / 2) + 10
+        let feeEstimate = this.BITBOX.BitcoinCash.getByteCount({ P2PKH: buyerPaymentUtxos.length + 1 }, { P2PKH: 3 }) + (tokenOffer.op_return.length / 2) + 20
 
         if(buyerPaymentUtxos.map(txo => txo.satoshis).reduce((v, i) => v+=i, 0) - tokenOffer.token.priceSatoshis - feeEstimate > 546) {
             change = change.concat({ 
