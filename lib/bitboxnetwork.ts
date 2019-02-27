@@ -360,4 +360,48 @@ export class BitboxNetwork implements SlpValidator {
   async validateSlpTransactions(txids: string[]): Promise<string[]> {
     return await this.validator.validateSlpTransactions(txids);
   }
+
+  // TODO change is here
+  async p2msTokenGenesis(
+    tokenName: string,
+    tokenTicker: string,
+    tokenAmount: BigNumber,
+    documentUri: string,
+    documentHash: Buffer | null,
+    decimals: number,
+    tokenReceiverAddresses: string[],
+    tokenReceiverWifs: string[],
+    batonReceiverAddresses: string[] | null,
+    batonReceiverWifs: string[],
+    bchChangeReceiverAddresses: string[],
+    bchChangeReceiverWifs: string[],
+    inputUtxos: SlpAddressUtxoResult[],
+    requiredSignatures: number
+  ) {
+    // Create Genesis OP_RETURN
+    let genesisOpReturn = this.slp.buildGenesisOpReturn({
+      ticker: tokenTicker,
+      name: tokenName,
+      documentUri: documentUri,
+      hash: documentHash,
+      decimals: decimals,
+      batonVout: batonReceiverAddresses && batonReceiverAddresses[0] ? 2 : null,
+      initialQuantity: tokenAmount
+    });
+
+    // Create/sign the raw transaction hex for Genesis
+    let genesisTxP2MSHex = this.slp.buildRawGenesisP2MSTx({
+      slpGenesisOpReturn: genesisOpReturn,
+      mintReceiverAddresses: tokenReceiverAddresses,
+      mintReceiverWifs: tokenReceiverWifs,
+      batonReceiverAddresses: batonReceiverAddresses,
+      batonReceiverWifs: batonReceiverWifs,
+      bchChangeReceiverAddresses: bchChangeReceiverAddresses,
+      bchChangeReceiverWifs: bchChangeReceiverWifs,
+      input_utxos: Utils.mapToUtxoArray(inputUtxos),
+      requiredSignatures: requiredSignatures
+    });
+
+    return await this.sendTx(genesisTxP2MSHex);
+  }
 }
