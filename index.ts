@@ -10,7 +10,9 @@ export * from './lib/bitboxnetwork';
 import BigNumber from 'bignumber.js';
 
 export enum SlpTransactionType {
-    "GENESIS" = 0, "MINT", "SEND"
+    "GENESIS" = "GENESIS", 
+    "MINT" = "MINT", 
+    "SEND" = "SEND"
 }
 
 export enum SlpVersionType {
@@ -19,7 +21,12 @@ export enum SlpVersionType {
 
 // negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)
 export enum SlpUtxoJudgement {
-    "UNKNOWN" = -3, "INVALID_BATON_DAG", "INVALID_TOKEN_DAG", "NOT_SLP", "SLP_TOKEN", "SLP_BATON"
+    "UNKNOWN" = "UNKNOWN", 
+    "INVALID_BATON_DAG" = "INVALID_BATON_DAG", 
+    "INVALID_TOKEN_DAG" = "INVALID_TOKEN_DAG", 
+    "NOT_SLP" = "NOT_SLP", 
+    "SLP_TOKEN" = "SLP_TOKEN", 
+    "SLP_BATON" = "SLP_BATON"
 }
 
 export interface SlpTransactionDetails {

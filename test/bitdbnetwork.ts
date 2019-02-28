@@ -13,7 +13,7 @@ describe('BitdbNetwork', function() {
             let expectedTokenInfo = { 
                 timestamp: '2019-01-19 14:33',
                 tokenIdHex: '667b28d5885717e6d164c832504ae6b0c4db3c92072119ddfc5ff0db2c433456',
-                transactionType: 0,
+                transactionType: "GENESIS",
                 versionType: 1, 
                 symbol: 'BCH',
                 name: 'Bitcoin Cash',
