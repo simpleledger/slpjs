@@ -79,7 +79,7 @@ export class LocalValidator implements SlpValidator {
         throw Error("Transaction data not provided (null or undefined).")
     }
 
-    async isValidSlpTxid(txid: string): Promise<boolean> {
+    async isValidSlpTxid(txid: string, tokenIdFilter?: string): Promise<boolean> {
         if(txid && !this.cachedValidations[txid]) {
             this.cachedValidations[txid] = { validity: null, parents: [], details: null, invalidReason: null }
             await this.retrieveRawTransaction(txid);
@@ -98,8 +98,16 @@ export class LocalValidator implements SlpValidator {
         let slpmsg: SlpTransactionDetails;
         try {
             slpmsg = this.cachedValidations[txid].details = this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer)
+            if(slpmsg.transactionType === SlpTransactionType.GENESIS)
+                slpmsg.tokenIdHex = txid;
         } catch(e) {
             this.cachedValidations[txid].invalidReason = "SLP OP_RETURN parsing error (" + e.message + ")."
+            return this.cachedValidations[txid].validity = false;
+        }
+
+        // Check for tokenId filter
+        if(tokenIdFilter && slpmsg.tokenIdHex !== tokenIdFilter) {
+            this.cachedValidations[txid].invalidReason = "Only tokenId " + tokenIdFilter + " was considered by validator.";
             return this.cachedValidations[txid].validity = false;
         }
 
