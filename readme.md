@@ -14,7 +14,7 @@ GENESIS, MINT, and SEND transaction functions are currently supported.
 `npm install slpjs`
 
 #### For browser
-```<script src='https://unpkg.com/slpjs'></script>```
+```<script src="https://unpkg.com/slpjs@0.15.2/dist/slpjs.min.js" integrity="sha384-oekge/vpnesDKM+Q41ldPCM65g9ioefKBwBXjSlCrz5uq8lE09LlwXoOsy6Cw9Ue" crossorigin="anonymous"></script>```
 
 
 
