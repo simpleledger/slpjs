@@ -150,8 +150,10 @@ export class LocalValidator implements SlpValidator {
                         input_slpmsg.tokenIdHex = input_txid;
                     if(input_slpmsg.tokenIdHex === slpmsg.tokenIdHex) {
                         if(input_slpmsg.transactionType === SlpTransactionType.SEND) {
-                            tokenInQty = tokenInQty.plus(input_slpmsg.sendOutputs![txn.inputs[i].outputIndex])
-                            this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), versionType: input_slpmsg.versionType, valid: null, inputQty: input_slpmsg.sendOutputs![txn.inputs[i].outputIndex] })
+                            if(txn.inputs[i].outputIndex <= input_slpmsg.sendOutputs!.length-1) {
+                                tokenInQty = tokenInQty.plus(input_slpmsg.sendOutputs![txn.inputs[i].outputIndex])
+                                this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), versionType: input_slpmsg.versionType, valid: null, inputQty: input_slpmsg.sendOutputs![txn.inputs[i].outputIndex] })
+                            }
                         }
                         else if(input_slpmsg.transactionType === SlpTransactionType.GENESIS || input_slpmsg.transactionType === SlpTransactionType.MINT) {
                             if(txn.inputs[i].outputIndex === 1)
@@ -161,7 +163,7 @@ export class LocalValidator implements SlpValidator {
                     }
                 } catch(_) {}
             }
-            
+
             // Check token inputs are greater than token outputs (includes valid and invalid inputs)
             if(tokenOutQty.isGreaterThan(tokenInQty)) {
                 this.cachedValidations[txid].invalidReason = "Token outputs are greater than possible token inputs."
