@@ -539,7 +539,7 @@ export class Slp {
                 throw Error("Bad Genesis quantity buffer")
             if(chunks[9]!.length !== 8)
                 throw Error("Genesis quantity must be provided as an 8-byte buffer")
-            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[9]!.readUInt32BE(0).toString())).multipliedBy(2**32).plus(chunks[9]!.readUInt32BE(4).toString());
+            slpMsg.genesisOrMintQuantity = Utils.buffer2BigNumber(chunks[9]!);
         }
         else if(slpMsg.transactionType === SlpTransactionType.SEND) {
             if(chunks.length < 4)
@@ -561,7 +561,7 @@ export class Slp {
                     throw Error("Bad send quantity buffer.")
                 if(chunk.length !== 8)
                     throw Error('SEND quantities must be 8-bytes each.');
-                slpMsg.sendOutputs!.push((new BigNumber(chunk.readUInt32BE(0).toString())).multipliedBy(2**32).plus(new BigNumber(chunk.readUInt32BE(4).toString())));
+                slpMsg.sendOutputs!.push(Utils.buffer2BigNumber(chunk));
             });
             // # maximum 19 allowed token outputs, plus 1 for the explicit [0] we inserted.
             if(slpMsg.sendOutputs.length < 2)
@@ -587,7 +587,7 @@ export class Slp {
                 throw Error("Bad Mint quantity buffer")
             if(chunks[5]!.length !== 8)
                 throw Error("Mint quantity must be provided as an 8-byte buffer")
-            slpMsg.genesisOrMintQuantity = (new BigNumber(chunks[5]!.readUInt32BE(0).toString())).multipliedBy(2**32).plus((new BigNumber(chunks[5]!.readUInt32BE(4).toString())));
+            slpMsg.genesisOrMintQuantity = Utils.buffer2BigNumber(chunks[5]!);
         }
         else
             throw Error('Bad transaction type');

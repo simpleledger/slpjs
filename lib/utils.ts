@@ -87,6 +87,12 @@ export class Utils {
         return Buffer.from(hex, 'hex');
     }
 
+    static buffer2BigNumber(amount: Buffer) {
+        if(amount.length < 5 || amount.length > 8)
+            throw Error("Buffer must be between 4-8 bytes in length");
+        return (new BigNumber(amount.readUInt32BE(0).toString())).multipliedBy(2**32).plus(amount.readUInt32BE(4).toString());
+    }
+
     // This is for encoding Script in scriptPubKey OP_RETURN scripts, where BIP62.3 does not apply
     static encodeScript(script: (number|number[])[]) {
         const bufferSize = <number>script.reduce((acc: number, cur) => {
