@@ -369,15 +369,24 @@ export class BitboxNetwork implements SlpValidator {
     documentUri: string,
     documentHash: Buffer | null,
     decimals: number,
-    tokenReceiverAddresses: string[],
     tokenReceiverWifs: string[],
-    batonReceiverAddresses: string[] | null,
     batonReceiverWifs: string[],
-    bchChangeReceiverAddresses: string[],
     bchChangeReceiverWifs: string[],
     inputUtxos: SlpAddressUtxoResult[],
     requiredSignatures: number
   ) {
+    let batonReceiverAddresses: string[];
+    if (
+      batonReceiverWifs[0] !== undefined &&
+      batonReceiverWifs[0] !== "" &&
+      batonReceiverWifs[0] !== null
+    ) {
+      batonReceiverAddresses = batonReceiverWifs.map((wif: string) => {
+        return this.BITBOX.ECPair.fromWIF(wif);
+      });
+    } else {
+      batonReceiverAddresses = null;
+    }
     // Create Genesis OP_RETURN
     let genesisOpReturn = this.slp.buildGenesisOpReturn({
       ticker: tokenTicker,
@@ -392,16 +401,49 @@ export class BitboxNetwork implements SlpValidator {
     // Create/sign the raw transaction hex for Genesis
     let genesisTxP2MSHex = this.slp.buildRawGenesisP2MSTx({
       slpGenesisOpReturn: genesisOpReturn,
-      mintReceiverAddresses: tokenReceiverAddresses,
       mintReceiverWifs: tokenReceiverWifs,
-      batonReceiverAddresses: batonReceiverAddresses,
       batonReceiverWifs: batonReceiverWifs,
-      bchChangeReceiverAddresses: bchChangeReceiverAddresses,
       bchChangeReceiverWifs: bchChangeReceiverWifs,
       input_utxos: Utils.mapToUtxoArray(inputUtxos),
       requiredSignatures: requiredSignatures
     });
 
     return await this.sendTx(genesisTxP2MSHex);
+  }
+
+  async p2msTokenMint(
+    tokenId: string,
+    mintAmount: BigNumber,
+    inputUtxos: SlpAddressUtxoResult[],
+    tokenReceiverAddresses: string[],
+    tokenReceiverWifs: string[],
+    batonReceiverAddresses: string[],
+    batonReceiverWifs: string[],
+    bchChangeReceiverWifs: string[],
+    changeReceiverAddresses: string[]
+  ) {
+    // // convert address to cashAddr from SLP format.
+    // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
+
+    // 1) Create the Send OP_RETURN message
+    let mintOpReturn = this.slp.buildMintOpReturn({
+      tokenIdHex: tokenId,
+      mintQuantity: mintAmount,
+      batonVout: 2
+    });
+
+    // 2) Create the raw Mint transaction hex
+    let txHex = this.slp.buildRawMintP2MSTx({
+      input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
+      slpMintOpReturn: mintOpReturn,
+      mintReceiverAddresses: tokenReceiverAddresses,
+      batonReceiverAddresses: batonReceiverAddresses,
+      bchChangeReceiverAddresses: changeReceiverAddresses
+    });
+
+    console.log(txHex);
+
+    // 5) Broadcast the transaction over the network using this.BITBOX
+    // return await this.sendTx(txHex);
   }
 }
