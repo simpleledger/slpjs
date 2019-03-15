@@ -88,12 +88,14 @@ export interface configBuildRawGenesisP2MSTx {
 
 export interface configBuildRawMintP2MSTx {
   slpMintOpReturn: Buffer;
-  mintReceiverAddresses: string[];
+  fundingWif: string;
+  mintReceiverWifs: string[];
   mintReceiverSatoshis?: BigNumber;
-  batonReceiverAddresses: string[] | null;
+  batonReceiverWifs: string[] | null;
   batonReceiverSatoshis?: BigNumber;
-  bchChangeReceiverAddresses: string[];
+  bchChangeReceiverWifs: string[];
   input_baton_utxos: utxo[];
+  requiredSignatures: number;
 }
 
 export interface SlpValidator {
@@ -1465,64 +1467,121 @@ export class Slp {
     if (config.batonReceiverSatoshis === undefined)
       config.batonReceiverSatoshis = new BigNumber(546);
 
+    let mintReceiverAddresses: string[] = config.mintReceiverWifs.map(wif => {
+      let ecpair = this.BITBOX.ECPair.fromWIF(wif);
+      let cashAddr = this.BITBOX.ECPair.toCashAddress(ecpair);
+      return bchaddr.toSlpAddress(cashAddr);
+    });
+
     // Check for slp formatted addresses
-    if (!bchaddr.isSlpAddress(config.mintReceiverAddress)) {
-      throw new Error("Mint receiver address not in SLP format.");
-    }
+    mintReceiverAddresses.forEach((address: string) => {
+      if (!bchaddr.isSlpAddress(address))
+        throw new Error("Not an SLP address.");
+    });
+
+    mintReceiverAddresses = mintReceiverAddresses.map((address: string) => {
+      return bchaddr.toCashAddress(address);
+    });
+
+    let batonReceiverAddresses: string[];
     if (
-      config.batonReceiverAddress &&
-      !bchaddr.isSlpAddress(config.batonReceiverAddress)
+      config.batonReceiverWifs[0] !== undefined &&
+      config.batonReceiverWifs[0] !== "" &&
+      config.batonReceiverWifs[0] !== null
     ) {
-      throw new Error("Baton receiver address not in SLP format.");
+      batonReceiverAddresses = config.batonReceiverWifs.map((wif: string) => {
+        let ecpair = this.BITBOX.ECPair.fromWIF(wif);
+        let cashAddr = this.BITBOX.ECPair.toCashAddress(ecpair);
+        return bchaddr.toSlpAddress(cashAddr);
+      });
+    } else {
+      batonReceiverAddresses = null;
     }
-    config.mintReceiverAddress = bchaddr.toCashAddress(
-      config.mintReceiverAddress
+
+    if (batonReceiverAddresses.length > 0) {
+      batonReceiverAddresses.forEach((address: string) => {
+        if (!bchaddr.isSlpAddress(address))
+          throw new Error("Not an SLP address.");
+      });
+    }
+    if (batonReceiverAddresses.length > 0) {
+      batonReceiverAddresses = batonReceiverAddresses.map((address: string) => {
+        return bchaddr.toCashAddress(address);
+      });
+    }
+
+    let bchChangeReceiverAddresses: string[] = config.bchChangeReceiverWifs.map(
+      wif => {
+        let ecpair = this.BITBOX.ECPair.fromWIF(wif);
+        let cashAddr = this.BITBOX.ECPair.toCashAddress(ecpair);
+        return bchaddr.toSlpAddress(cashAddr);
+      }
     );
-    if (config.batonReceiverAddress)
-      config.batonReceiverAddress = bchaddr.toCashAddress(
-        config.batonReceiverAddress
-      );
 
     // Make sure inputs don't include spending any tokens or batons for other tokenIds
-    config.input_baton_utxos.forEach(txo => {
-      if (txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP) return;
-      if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN)
-        throw Error("Input UTXOs should not include any tokens.");
-      if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
-        if (txo.slpTransactionDetails.tokenIdHex !== mintMsg.tokenIdHex)
-          throw Error("Cannot spend a minting baton.");
-        return;
-      }
-      if (
-        txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG ||
-        txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG
-      )
-        throw Error("Cannot currently spend UTXOs with invalid DAGs.");
-      throw Error("Cannot spend utxo with no SLP judgement.");
-    });
+    // config.input_baton_utxos.forEach(txo => {
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP) return;
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN)
+    //     throw Error("Input UTXOs should not include any tokens.");
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
+    //     if (txo.slpTransactionDetails.tokenIdHex !== mintMsg.tokenIdHex)
+    //       throw Error("Cannot spend a minting baton.");
+    //     return;
+    //   }
+    //   if (
+    //     txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG ||
+    //     txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG
+    //   )
+    //     throw Error("Cannot currently spend UTXOs with invalid DAGs.");
+    //   throw Error("Cannot spend utxo with no SLP judgement.");
+    // });
 
     // Make sure inputs include the baton for this tokenId
-    if (
-      !config.input_baton_utxos.find(
-        o => o.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON
-      )
-    )
-      Error("There is no baton included with the input UTXOs.");
+    // if (
+    //   !config.input_baton_utxos.find(
+    //     o => o.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON
+    //   )
+    // )
+    //   Error("There is no baton included with the input UTXOs.");
 
     let transactionBuilder = new this.BITBOX.TransactionBuilder(
-      Utils.txnBuilderString(config.mintReceiverAddress)
+      Utils.txnBuilderString(mintReceiverAddresses[0])
     );
     let satoshis = new BigNumber(0);
-    config.input_baton_utxos.forEach(baton_utxo => {
-      transactionBuilder.addInput(baton_utxo.txid, baton_utxo.vout);
-      satoshis = satoshis.plus(baton_utxo.satoshis);
+    // config.input_baton_utxos.forEach(baton_utxo => {
+    //   console.log("BATON UTXO", baton_utxo);
+    // });
+
+    let mintPubkeys: any[] = [];
+    config.mintReceiverWifs.forEach((wif: string) => {
+      const ecpair = this.BITBOX.ECPair.fromWIF(wif);
+      mintPubkeys.push(this.BITBOX.ECPair.toPublicKey(ecpair));
     });
+
+    const mintBuf = this.BITBOX.Script.multisig.output.encode(
+      config.requiredSignatures,
+      mintPubkeys
+    );
+
+    transactionBuilder.addInput(
+      config.input_baton_utxos[0].txid,
+      config.input_baton_utxos[0].vout,
+      transactionBuilder.DEFAULT_SEQUENCE,
+      mintBuf
+    );
+    satoshis = satoshis.plus(config.input_baton_utxos[0].satoshis);
+
+    transactionBuilder.addInput(
+      config.input_baton_utxos[1].txid,
+      config.input_baton_utxos[1].vout
+    );
+    satoshis = satoshis.plus(config.input_baton_utxos[1].satoshis);
 
     let mintCost = this.calculateGenesisCost(
       config.slpMintOpReturn.length,
       config.input_baton_utxos.length,
-      config.batonReceiverAddress,
-      config.bchChangeReceiverAddress
+      batonReceiverAddresses[0],
+      bchChangeReceiverAddresses[0]
     );
     let bchChangeAfterFeeSatoshis = satoshis.minus(mintCost);
 
@@ -1531,52 +1590,60 @@ export class Slp {
 
     // Mint token mint
     transactionBuilder.addOutput(
-      config.mintReceiverAddress,
+      mintReceiverAddresses[0],
       config.mintReceiverSatoshis.toNumber()
     );
     //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
 
     // Baton address (optional)
-    if (config.batonReceiverAddress !== null) {
-      config.batonReceiverAddress = bchaddr.toCashAddress(
-        config.batonReceiverAddress
-      );
-      if (this.parseSlpOutputScript(config.slpMintOpReturn).batonVout !== 2)
-        throw Error("batonVout in transaction does not match OP_RETURN data.");
-      transactionBuilder.addOutput(
-        config.batonReceiverAddress,
-        config.batonReceiverSatoshis.toNumber()
-      );
-      //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
-    }
+    transactionBuilder.addOutput(
+      batonReceiverAddresses[0],
+      config.batonReceiverSatoshis.toNumber()
+    );
+    // if (batonReceiverAddresses && batonReceiverAddresses.length > 0) {
+    //   config.batonReceiverAddress = bchaddr.toCashAddress(
+    //     config.batonReceiverAddress
+    //   );
+    //   if (this.parseSlpOutputScript(config.slpMintOpReturn).batonVout !== 2)
+    //     throw Error("batonVout in transaction does not match OP_RETURN data.");
+    //   transactionBuilder.addOutput(
+    //     config.batonReceiverAddress,
+    //     config.batonReceiverSatoshis.toNumber()
+    //   );
+    //   //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
+    // }
 
     // Change (optional)
-    if (
-      config.bchChangeReceiverAddress !== null &&
-      bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))
-    ) {
-      config.bchChangeReceiverAddress = bchaddr.toCashAddress(
-        config.bchChangeReceiverAddress
-      );
-      transactionBuilder.addOutput(
-        config.bchChangeReceiverAddress,
-        bchChangeAfterFeeSatoshis.toNumber()
-      );
-    }
+    // if (
+    //   config.bchChangeReceiverAddress !== null &&
+    //   bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))
+    // ) {
+    //   config.bchChangeReceiverAddress = bchaddr.toCashAddress(
+    //     config.bchChangeReceiverAddress
+    //   );
+    //   transactionBuilder.addOutput(
+    //     config.bchChangeReceiverAddress,
+    //     bchChangeAfterFeeSatoshis.toNumber()
+    //   );
+    // }
 
     // sign inputs
-    let i = 0;
-    for (const txo of config.input_baton_utxos) {
-      let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-      transactionBuilder.sign(
-        i,
-        paymentKeyPair,
-        undefined,
-        transactionBuilder.hashTypes.SIGHASH_ALL,
-        txo.satoshis.toNumber()
-      );
-      i++;
-    }
+    let ecpair = this.BITBOX.ECPair.fromWIF(config.mintReceiverWifs[0]);
+    transactionBuilder.sign(
+      0,
+      ecpair,
+      undefined,
+      transactionBuilder.hashTypes.SIGHASH_ALL,
+      config.input_baton_utxos[0].satoshis.toNumber()
+    );
+    let ecpair2 = this.BITBOX.ECPair.fromWIF(config.fundingWif);
+    transactionBuilder.sign(
+      1,
+      ecpair2,
+      undefined,
+      transactionBuilder.hashTypes.SIGHASH_ALL,
+      config.input_baton_utxos[1].satoshis.toNumber()
+    );
 
     let tx = transactionBuilder.build().toHex();
 

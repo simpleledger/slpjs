@@ -415,12 +415,11 @@ export class BitboxNetwork implements SlpValidator {
     tokenId: string,
     mintAmount: BigNumber,
     inputUtxos: SlpAddressUtxoResult[],
-    tokenReceiverAddresses: string[],
+    fundingWif: string,
     tokenReceiverWifs: string[],
-    batonReceiverAddresses: string[],
     batonReceiverWifs: string[],
     bchChangeReceiverWifs: string[],
-    changeReceiverAddresses: string[]
+    requiredSignatures: number
   ) {
     // // convert address to cashAddr from SLP format.
     // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
@@ -436,14 +435,14 @@ export class BitboxNetwork implements SlpValidator {
     let txHex = this.slp.buildRawMintP2MSTx({
       input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
       slpMintOpReturn: mintOpReturn,
-      mintReceiverAddresses: tokenReceiverAddresses,
-      batonReceiverAddresses: batonReceiverAddresses,
-      bchChangeReceiverAddresses: changeReceiverAddresses
+      fundingWif: fundingWif,
+      mintReceiverWifs: tokenReceiverWifs,
+      batonReceiverWifs: batonReceiverWifs,
+      bchChangeReceiverWifs: bchChangeReceiverWifs,
+      requiredSignatures: requiredSignatures
     });
 
-    console.log(txHex);
-
     // 5) Broadcast the transaction over the network using this.BITBOX
-    // return await this.sendTx(txHex);
+    return await this.sendTx(txHex);
   }
 }
