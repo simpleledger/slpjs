@@ -597,7 +597,6 @@ export class BitboxNetwork implements SlpValidator {
       bchChangeReceiverWif: bchChangeReceiverWif,
       input_utxos: Utils.mapToUtxoArray(inputUtxos)
     });
-    console.log("genesisTxP2PKHex", genesisTxP2PKHex);
 
     return await this.sendTx(genesisTxP2PKHex);
   }
@@ -760,5 +759,41 @@ export class BitboxNetwork implements SlpValidator {
 
     // Broadcast the transaction over the network using this.BITBOX
     return await this.sendTx(txHex);
+  }
+
+  async p2shTokenGenesis(
+    tokenName: string,
+    tokenTicker: string,
+    tokenAmount: BigNumber,
+    documentUri: string,
+    documentHash: Buffer | null,
+    decimals: number,
+    tokenReceiverWif: string,
+    batonReceiverWif: string | null,
+    bchChangeReceiverWif: string,
+    inputUtxos: SlpAddressUtxoResult[]
+  ) {
+    // Create Genesis OP_RETURN
+    let genesisOpReturn = this.slp.buildGenesisOpReturn({
+      ticker: tokenTicker,
+      name: tokenName,
+      documentUri: documentUri,
+      hash: documentHash,
+      decimals: decimals,
+      batonVout: batonReceiverWif ? 2 : null,
+      initialQuantity: tokenAmount
+    });
+
+    // Create/sign the raw transaction hex for Genesis
+    let genesisTxP2SHHex = this.slp.buildRawGenesisP2SHTx({
+      slpGenesisOpReturn: genesisOpReturn,
+      mintReceiverWif: tokenReceiverWif,
+      batonReceiverWif: batonReceiverWif,
+      bchChangeReceiverWif: bchChangeReceiverWif,
+      input_utxos: Utils.mapToUtxoArray(inputUtxos)
+    });
+    console.log("genesisTxP2SHHex", genesisTxP2SHHex);
+
+    return await this.sendTx(genesisTxP2SHHex);
   }
 }
