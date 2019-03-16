@@ -601,4 +601,37 @@ export class BitboxNetwork implements SlpValidator {
 
     return await this.sendTx(genesisTxP2PKHex);
   }
+
+  async p2pkTokenMint(
+    tokenId: string,
+    mintAmount: BigNumber,
+    inputUtxos: SlpAddressUtxoResult[],
+    fundingWif: string,
+    tokenReceiverWif: string,
+    batonReceiverWif: string,
+    bchChangeReceiverWif: string
+  ) {
+    // // convert address to cashAddr from SLP format.
+    // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
+
+    // 1) Create the Send OP_RETURN message
+    let mintOpReturn = this.slp.buildMintOpReturn({
+      tokenIdHex: tokenId,
+      mintQuantity: mintAmount,
+      batonVout: 2
+    });
+
+    // 2) Create the raw Mint transaction hex
+    let txHex = this.slp.buildRawMintP2PKTx({
+      input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
+      slpMintOpReturn: mintOpReturn,
+      fundingWif: fundingWif,
+      mintReceiverWif: tokenReceiverWif,
+      batonReceiverWif: batonReceiverWif,
+      bchChangeReceiverWif: bchChangeReceiverWif
+    });
+
+    // 5) Broadcast the transaction over the network using this.BITBOX
+    return await this.sendTx(txHex);
+  }
 }

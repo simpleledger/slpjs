@@ -126,6 +126,17 @@ export interface configBuildRawGenesisP2PKTx {
   input_utxos: utxo[];
 }
 
+export interface configBuildRawMintP2PKTx {
+  slpMintOpReturn: Buffer;
+  fundingWif: string;
+  mintReceiverWif: string;
+  mintReceiverSatoshis?: BigNumber;
+  batonReceiverWif: string | null;
+  batonReceiverSatoshis?: BigNumber;
+  bchChangeReceiverWif: string;
+  input_baton_utxos: utxo[];
+}
+
 export interface SlpValidator {
   isValidSlpTxid(txid: string): Promise<boolean>;
   getRawTransactions: (txid: string[]) => Promise<string[]>;
@@ -2208,6 +2219,193 @@ export class Slp {
 
     // TODO: Check for fee too large or send leftover to target address
 
+    return tx;
+  }
+
+  buildRawMintP2PKTx(config: configBuildRawMintP2PKTx, type = 0x01) {
+    let mintMsg = this.parseSlpOutputScript(config.slpMintOpReturn);
+
+    if (config.mintReceiverSatoshis === undefined)
+      config.mintReceiverSatoshis = new BigNumber(546);
+
+    if (config.batonReceiverSatoshis === undefined)
+      config.batonReceiverSatoshis = new BigNumber(546);
+
+    let mintECPair: any = this.BITBOX.ECPair.fromWIF(config.mintReceiverWif);
+    let mintCashAddr: string = this.BITBOX.ECPair.toCashAddress(mintECPair);
+    let mintReceiverAddress: string = bchaddr.toSlpAddress(mintCashAddr);
+
+    // Check for slp formatted address
+    if (!bchaddr.isSlpAddress(mintReceiverAddress))
+      throw new Error("Not an SLP address.");
+
+    mintReceiverAddress = bchaddr.toCashAddress(mintReceiverAddress);
+
+    let batonReceiverAddress: string | null;
+    if (
+      config.batonReceiverWif &&
+      (config.batonReceiverWif !== undefined &&
+        config.batonReceiverWif !== "" &&
+        config.batonReceiverWif !== null)
+    ) {
+      let batonECPair = this.BITBOX.ECPair.fromWIF(config.batonReceiverWif);
+      let batonCashAddr = this.BITBOX.ECPair.toCashAddress(batonECPair);
+      batonReceiverAddress = bchaddr.toSlpAddress(batonCashAddr);
+    } else {
+      batonReceiverAddress = null;
+    }
+
+    if (batonReceiverAddress && batonReceiverAddress !== "") {
+      if (!bchaddr.isSlpAddress(batonReceiverAddress))
+        throw new Error("Not an SLP address.");
+      batonReceiverAddress = bchaddr.toCashAddress(batonReceiverAddress);
+    }
+
+    let bchChangeReceiverECPair = this.BITBOX.ECPair.fromWIF(
+      config.bchChangeReceiverWif
+    );
+    let bchChangeReceiverCashAddr = this.BITBOX.ECPair.toCashAddress(
+      bchChangeReceiverECPair
+    );
+    let bchChangeReceiverAddress: string = bchaddr.toSlpAddress(
+      bchChangeReceiverCashAddr
+    );
+
+    // Make sure inputs don't include spending any tokens or batons for other tokenIds
+    // config.input_baton_utxos.forEach(txo => {
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP) return;
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN)
+    //     throw Error("Input UTXOs should not include any tokens.");
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
+    //     if (txo.slpTransactionDetails.tokenIdHex !== mintMsg.tokenIdHex)
+    //       throw Error("Cannot spend a minting baton.");
+    //     return;
+    //   }
+    //   if (
+    //     txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG ||
+    //     txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG
+    //   )
+    //     throw Error("Cannot currently spend UTXOs with invalid DAGs.");
+    //   throw Error("Cannot spend utxo with no SLP judgement.");
+    // });
+
+    // Make sure inputs include the baton for this tokenId
+    // if (
+    //   !config.input_baton_utxos.find(
+    //     o => o.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON
+    //   )
+    // )
+    //   Error("There is no baton included with the input UTXOs.");
+
+    let transactionBuilder = new this.BITBOX.TransactionBuilder(
+      Utils.txnBuilderString(mintReceiverAddress)
+    );
+    let satoshis = new BigNumber(0);
+    // config.input_baton_utxos.forEach(baton_utxo => {
+    //   console.log("BATON UTXO", baton_utxo);
+    // });
+
+    const pubKey = this.BITBOX.ECPair.toPublicKey(mintECPair);
+    const buf = this.BITBOX.Script.pubKey.output.encode(pubKey);
+    transactionBuilder.addInput(
+      config.input_baton_utxos[0].txid,
+      config.input_baton_utxos[0].vout,
+      transactionBuilder.DEFAULT_SEQUENCE,
+      buf
+    );
+    satoshis = satoshis.plus(config.input_baton_utxos[0].satoshis);
+
+    transactionBuilder.addInput(
+      config.input_baton_utxos[1].txid,
+      config.input_baton_utxos[1].vout
+    );
+    satoshis = satoshis.plus(config.input_baton_utxos[1].satoshis);
+
+    let mintCost = this.calculateGenesisCost(
+      config.slpMintOpReturn.length,
+      config.input_baton_utxos.length,
+      batonReceiverAddress ? batonReceiverAddress : null,
+      bchChangeReceiverAddress
+    );
+    let bchChangeAfterFeeSatoshis = satoshis.minus(mintCost);
+
+    // Mint OpReturn
+    transactionBuilder.addOutput(config.slpMintOpReturn, 0);
+
+    // Mint token mint
+    transactionBuilder.addOutput(buf, config.mintReceiverSatoshis.toNumber());
+    //bchChangeAfterFeeSatoshis -= config.mintReceiverSatoshis;
+
+    // Baton address (optional)
+    if (batonReceiverAddress && batonReceiverAddress !== "") {
+      transactionBuilder.addOutput(
+        buf,
+        config.batonReceiverSatoshis.toNumber()
+      );
+    }
+
+    // if (batonReceiverAddresses && batonReceiverAddresses.length > 0) {
+    //   config.batonReceiverAddress = bchaddr.toCashAddress(
+    //     config.batonReceiverAddress
+    //   );
+    //   if (this.parseSlpOutputScript(config.slpMintOpReturn).batonVout !== 2)
+    //     throw Error("batonVout in transaction does not match OP_RETURN data.");
+    //   transactionBuilder.addOutput(
+    //     config.batonReceiverAddress,
+    //     config.batonReceiverSatoshis.toNumber()
+    //   );
+    //   //bchChangeAfterFeeSatoshis -= config.batonReceiverSatoshis;
+    // }
+
+    // Change (optional)
+    // if (
+    //   config.bchChangeReceiverAddress !== null &&
+    //   bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))
+    // ) {
+    //   config.bchChangeReceiverAddress = bchaddr.toCashAddress(
+    //     config.bchChangeReceiverAddress
+    //   );
+    //   transactionBuilder.addOutput(
+    //     config.bchChangeReceiverAddress,
+    //     bchChangeAfterFeeSatoshis.toNumber()
+    //   );
+    // }
+
+    // sign inputs
+    let ecpair = this.BITBOX.ECPair.fromWIF(config.mintReceiverWif);
+    transactionBuilder.sign(
+      0,
+      ecpair,
+      undefined,
+      transactionBuilder.hashTypes.SIGHASH_ALL,
+      config.input_baton_utxos[0].satoshis.toNumber()
+    );
+    let ecpair2 = this.BITBOX.ECPair.fromWIF(config.fundingWif);
+    transactionBuilder.sign(
+      1,
+      ecpair2,
+      undefined,
+      transactionBuilder.hashTypes.SIGHASH_ALL,
+      config.input_baton_utxos[1].satoshis.toNumber()
+    );
+
+    let tx = transactionBuilder.build().toHex();
+
+    // Check For Low Fee
+    let outValue: number = transactionBuilder.transaction.tx.outs.reduce(
+      (v: number, o: any) => (v += o.value),
+      0
+    );
+    let inValue: BigNumber = config.input_baton_utxos.reduce(
+      (v, i) => (v = v.plus(i.satoshis)),
+      new BigNumber(0)
+    );
+    if (inValue.minus(outValue).isLessThanOrEqualTo(tx.length / 2))
+      throw Error("Transaction fee is not high enough.");
+
+    // TODO: Check for fee too large or send leftover to target address
+
+    console.log(tx);
     return tx;
   }
 }
