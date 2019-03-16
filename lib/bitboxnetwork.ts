@@ -1,4 +1,4 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails } from "../index";
+import { SlpAddressUtxoResult, SlpTransactionDetails, utxo } from "../index";
 import { Slp, SlpProxyValidator, SlpValidator } from "./slp";
 import { Utils } from "./utils";
 
@@ -375,18 +375,6 @@ export class BitboxNetwork implements SlpValidator {
     inputUtxos: SlpAddressUtxoResult[],
     requiredSignatures: number
   ) {
-    let batonReceiverAddresses: string[];
-    if (
-      batonReceiverWifs[0] !== undefined &&
-      batonReceiverWifs[0] !== "" &&
-      batonReceiverWifs[0] !== null
-    ) {
-      batonReceiverAddresses = batonReceiverWifs.map((wif: string) => {
-        return this.BITBOX.ECPair.fromWIF(wif);
-      });
-    } else {
-      batonReceiverAddresses = null;
-    }
     // Create Genesis OP_RETURN
     let genesisOpReturn = this.slp.buildGenesisOpReturn({
       ticker: tokenTicker,
@@ -394,7 +382,7 @@ export class BitboxNetwork implements SlpValidator {
       documentUri: documentUri,
       hash: documentHash,
       decimals: decimals,
-      batonVout: batonReceiverAddresses && batonReceiverAddresses[0] ? 2 : null,
+      batonVout: batonReceiverWifs && batonReceiverWifs[0] ? 2 : null,
       initialQuantity: tokenAmount
     });
 
@@ -450,7 +438,7 @@ export class BitboxNetwork implements SlpValidator {
     fundingWif: string,
     tokenId: string,
     sendAmount: BigNumber,
-    inputUtxos: SlpAddressUtxoResult[],
+    inputUtxos: utxo[],
     tokenReceiverWifs: string[],
     bchChangeReceiverWifs: string[],
     requiredSignatures: number
@@ -510,5 +498,69 @@ export class BitboxNetwork implements SlpValidator {
 
     // 5) Broadcast the transaction over the network using this.BITBOX
     return await this.sendTx(txHex);
+  }
+
+  async p2msTokenBurn(
+    fundingWif: string,
+    tokenId: string,
+    burnAmount: BigNumber,
+    inputUtxos: SlpAddressUtxoResult[],
+    bchChangeReceiverWifs: string[],
+    requiredSignatures: number
+  ) {
+    // Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
+    let totalTokenInputAmount: BigNumber = new BigNumber(100);
+    // let totalTokenInputAmount: BigNumber = inputUtxos
+    //   .filter(txo => {
+    //     return Slp.preSendSlpJudgementCheck(txo, tokenId);
+    //   })
+    //   .reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => {
+    //     return tot.plus(txo.slpUtxoJudgementAmount);
+    //   }, new BigNumber(0));
+
+    // Compute the token Change amount.
+    let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(burnAmount);
+
+    let bchChangeReceiverAddresses: string[] = bchChangeReceiverWifs.map(
+      wif => {
+        let ecpair = this.BITBOX.ECPair.fromWIF(wif);
+        let cashAddr = this.BITBOX.ECPair.toCashAddress(ecpair);
+        return bchaddr.toSlpAddress(cashAddr);
+      }
+    );
+
+    bchChangeReceiverAddresses.forEach(outputAddress => {
+      if (!bchaddr.isSlpAddress(outputAddress))
+        throw new Error("Change receiver address not in SLP format.");
+    });
+
+    let txHex;
+    if (tokenChangeAmount.isGreaterThan(new BigNumber(0))) {
+      // Create the Send OP_RETURN message
+      let sendOpReturn = this.slp.buildSendOpReturn({
+        tokenIdHex: tokenId,
+        outputQtyArray: [tokenChangeAmount]
+      });
+      // Create the raw Send transaction hex
+      txHex = this.slp.buildRawBurnP2MSTx(burnAmount, {
+        slpBurnOpReturn: sendOpReturn,
+        input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+        bchChangeReceiverAddress: bchChangeReceiverAddresses[0]
+      });
+    } else if (tokenChangeAmount.isLessThanOrEqualTo(new BigNumber(0))) {
+      // Create the raw Send transaction hex
+      txHex = this.slp.buildRawBurnP2MSTx(burnAmount, {
+        tokenIdHex: tokenId,
+        input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+        bchChangeReceiverAddress: bchChangeReceiverAddresses[0]
+      });
+    } else {
+      throw Error("Token inputs less than the token outputs");
+    }
+
+    // Broadcast the transaction over the network using this.BITBOX
+    console.log(txHex);
+    return "happy path";
+    // return await this.sendTx(txHex);
   }
 }
