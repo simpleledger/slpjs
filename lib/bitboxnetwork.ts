@@ -545,22 +545,60 @@ export class BitboxNetwork implements SlpValidator {
       txHex = this.slp.buildRawBurnP2MSTx(burnAmount, {
         slpBurnOpReturn: sendOpReturn,
         input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-        bchChangeReceiverAddress: bchChangeReceiverAddresses[0]
+        bchChangeReceiverAddress: bchChangeReceiverAddresses[0],
+        bchChangeReceiverWifs: bchChangeReceiverWifs,
+        requiredSignatures: requiredSignatures
       });
     } else if (tokenChangeAmount.isLessThanOrEqualTo(new BigNumber(0))) {
       // Create the raw Send transaction hex
       txHex = this.slp.buildRawBurnP2MSTx(burnAmount, {
         tokenIdHex: tokenId,
         input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-        bchChangeReceiverAddress: bchChangeReceiverAddresses[0]
+        bchChangeReceiverAddress: bchChangeReceiverAddresses[0],
+        bchChangeReceiverWifs: bchChangeReceiverWifs,
+        requiredSignatures: requiredSignatures
       });
     } else {
       throw Error("Token inputs less than the token outputs");
     }
 
     // Broadcast the transaction over the network using this.BITBOX
-    console.log(txHex);
-    return "happy path";
-    // return await this.sendTx(txHex);
+    return await this.sendTx(txHex);
+  }
+
+  async p2pkTokenGenesis(
+    tokenName: string,
+    tokenTicker: string,
+    tokenAmount: BigNumber,
+    documentUri: string,
+    documentHash: Buffer | null,
+    decimals: number,
+    tokenReceiverWif: string,
+    batonReceiverWif: string | null,
+    bchChangeReceiverWif: string,
+    inputUtxos: SlpAddressUtxoResult[]
+  ) {
+    // Create Genesis OP_RETURN
+    let genesisOpReturn = this.slp.buildGenesisOpReturn({
+      ticker: tokenTicker,
+      name: tokenName,
+      documentUri: documentUri,
+      hash: documentHash,
+      decimals: decimals,
+      batonVout: batonReceiverWif ? 2 : null,
+      initialQuantity: tokenAmount
+    });
+
+    // Create/sign the raw transaction hex for Genesis
+    let genesisTxP2PKHex = this.slp.buildRawGenesisP2PKTx({
+      slpGenesisOpReturn: genesisOpReturn,
+      mintReceiverWif: tokenReceiverWif,
+      batonReceiverWif: batonReceiverWif,
+      bchChangeReceiverWif: bchChangeReceiverWif,
+      input_utxos: Utils.mapToUtxoArray(inputUtxos)
+    });
+    console.log("genesisTxP2PKHex", genesisTxP2PKHex);
+
+    return await this.sendTx(genesisTxP2PKHex);
   }
 }
