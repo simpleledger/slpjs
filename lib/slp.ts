@@ -164,6 +164,14 @@ export interface configBuildRawMintP2SHTx {
   input_baton_utxos: utxo[];
 }
 
+export interface configBuildRawSendP2SHTx {
+  fundingWif: string;
+  slpSendOpReturn: Buffer;
+  input_token_utxos: utxo[];
+  tokenReceiverWif: string;
+  bchChangeReceiverWif: string;
+}
+
 export interface SlpValidator {
   isValidSlpTxid(txid: string): Promise<boolean>;
   getRawTransactions: (txid: string[]) => Promise<string[]>;
@@ -3151,6 +3159,160 @@ export class Slp {
       0
     );
     let inValue: BigNumber = config.input_baton_utxos.reduce(
+      (v, i) => (v = v.plus(i.satoshis)),
+      new BigNumber(0)
+    );
+    if (inValue.minus(outValue).isLessThanOrEqualTo(tx.length / 2))
+      throw Error("Transaction fee is not high enough.");
+
+    // TODO: Check for fee too large or send leftover to target address
+
+    return tx;
+  }
+
+  buildRawSendP2SHTx(config: configBuildRawSendP2SHTx, type = 0x01) {
+    const sendMsg = this.parseSlpOutputScript(config.slpSendOpReturn);
+
+    let tokenReceiverECPair = this.BITBOX.ECPair.fromWIF(
+      config.tokenReceiverWif
+    );
+    let tokenReceiverCashAddr = this.BITBOX.ECPair.toCashAddress(
+      tokenReceiverECPair
+    );
+    let tokenReceiverAddress: string = bchaddr.toSlpAddress(
+      tokenReceiverCashAddr
+    );
+    if (!bchaddr.isSlpAddress(tokenReceiverAddress))
+      throw new Error("Token receiver address not in SLP format.");
+
+    let bchChangeReceiverECPair = this.BITBOX.ECPair.fromWIF(
+      config.bchChangeReceiverWif
+    );
+    let bchChangeReceiverAddress = this.BITBOX.ECPair.toCashAddress(
+      bchChangeReceiverECPair
+    );
+    bchChangeReceiverAddress = bchaddr.toSlpAddress(bchChangeReceiverAddress);
+    if (!bchaddr.isSlpAddress(bchChangeReceiverAddress))
+      throw new Error("Change receiver address not in SLP format.");
+
+    // Make sure not spending any other tokens or baton UTXOs
+    let tokenInputQty = new BigNumber(15);
+    // config.input_token_utxos.forEach(txo => {
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP) return;
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
+    //     if (txo.slpTransactionDetails.tokenIdHex !== sendMsg.tokenIdHex)
+    //       throw Error("Input UTXOs included a token for another tokenId.");
+    //     tokenInputQty = tokenInputQty.plus(txo.slpUtxoJudgementAmount);
+    //     return;
+    //   }
+    //   if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
+    //     throw Error("Cannot spend a minting baton.");
+    //   if (
+    //     txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG ||
+    //     txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG
+    //   )
+    //     throw Error("Cannot currently spend UTXOs with invalid DAGs.");
+    //   throw Error("Cannot spend utxo with no SLP judgement.");
+    // });
+
+    // Make sure the number of output receivers matches the outputs in the OP_RETURN message.
+    // let chgAddr = config.bchChangeReceiverAddress ? 1 : 0;
+    let chgAddr = 1;
+    if (!sendMsg.sendOutputs)
+      throw Error("OP_RETURN contains no SLP send outputs.");
+    if (2 + chgAddr !== sendMsg.sendOutputs.length)
+      throw Error(
+        "Number of token receivers in config does not match the OP_RETURN outputs"
+      );
+
+    // Make sure token inputs equals token outputs in OP_RETURN
+    // let outputTokenQty = sendMsg.sendOutputs.reduce(
+    //   (v, o) => (v = v.plus(o)),
+    //   new BigNumber(0)
+    // );
+    let outputTokenQty = new BigNumber(15);
+    if (!tokenInputQty.isEqualTo(outputTokenQty))
+      throw Error("Token input quantity does not match token outputs.");
+
+    let transactionBuilder = new this.BITBOX.TransactionBuilder("testnet");
+    let inputSatoshis = new BigNumber(0);
+
+    const script = this.BITBOX.Script.encode([
+      Buffer.from("DONA", "ascii"),
+      this.BITBOX.Script.opcodes.OP_CAT,
+      Buffer.from("CARDONA", "ascii"),
+      this.BITBOX.Script.opcodes.OP_EQUAL
+    ]);
+
+    // hash160 script buffer
+    const p2sh_hash160 = this.BITBOX.Crypto.hash160(script);
+
+    // encode hash160 as P2SH output
+    const scriptPubKey = this.BITBOX.Script.scriptHash.output.encode(
+      p2sh_hash160
+    );
+
+    // get p2sh address from output script
+    let address = this.BITBOX.Address.fromOutputScript(scriptPubKey, "testnet");
+    console.log("CONFIG", config.input_token_utxos);
+
+    transactionBuilder.addInput(
+      config.input_token_utxos[0].txid,
+      config.input_token_utxos[0].vout
+    );
+
+    inputSatoshis = inputSatoshis.plus(config.input_token_utxos[0].satoshis);
+
+    transactionBuilder.addInput(
+      config.input_token_utxos[1].txid,
+      config.input_token_utxos[1].vout
+    );
+    inputSatoshis = inputSatoshis.plus(config.input_token_utxos[1].satoshis);
+
+    let sendCost = this.calculateSendCost(
+      config.slpSendOpReturn.length,
+      config.input_token_utxos.length,
+      tokenReceiverAddress,
+      bchChangeReceiverAddress
+    );
+    let bchChangeAfterFeeSatoshis = inputSatoshis.minus(sendCost);
+
+    // Genesis OpReturn
+    transactionBuilder.addOutput(config.slpSendOpReturn, 0);
+
+    transactionBuilder.addOutput(address, 546);
+
+    // // Change
+    transactionBuilder.addOutput(address, 546);
+    let script2 = [Buffer.from("CAR", "ascii")];
+
+    // concat scripts together
+    let children = script2.concat(script);
+
+    // encode scripts
+    let encodedScript2 = this.BITBOX.Script.encode(children);
+    let encodedScript3 = this.BITBOX.Script.encode(children);
+
+    // set input script
+    transactionBuilder.addInputScripts([
+      {
+        vout: 0,
+        script: encodedScript2
+      },
+      {
+        vout: 1,
+        script: encodedScript3
+      }
+    ]);
+
+    let tx = transactionBuilder.build().toHex();
+
+    // Check For Low Fee
+    let outValue: number = transactionBuilder.transaction.tx.outs.reduce(
+      (v: number, o: any) => (v += o.value),
+      0
+    );
+    let inValue: BigNumber = config.input_token_utxos.reduce(
       (v, i) => (v = v.plus(i.satoshis)),
       new BigNumber(0)
     );
