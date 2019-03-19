@@ -61,8 +61,19 @@ export class BitboxNetwork implements SlpValidator {
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
-    async simpleTokenSend(tokenId: string, sendAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, changeReceiverAddress: string) {  
+    async simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string) {  
         
+        // normalize token receivers and amounts to array types
+        if(typeof tokenReceiverAddresses === "string")
+            tokenReceiverAddresses = [ tokenReceiverAddresses ];
+        try {
+            let amount = sendAmounts as BigNumber[];
+            amount.forEach(a => a.isGreaterThan(new BigNumber(0)));
+        } catch(_) { sendAmounts = [ sendAmounts ] as BigNumber[]; }
+        if((sendAmounts as BigNumber[]).length !== (tokenReceiverAddresses as string[]).length) {
+            throw Error("Must have send amount item for each token receiver specified.");
+        }
+
         // 1) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
         let totalTokenInputAmount: BigNumber = 
             inputUtxos
@@ -74,38 +85,38 @@ export class BitboxNetwork implements SlpValidator {
             }, new BigNumber(0))
 
         // 2) Compute the token Change amount.
-        let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(sendAmount);
+        console.log("SEND TOTAL", (sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
+        let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus((sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
         
         let txHex;
         if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
-                outputQtyArray: [ sendAmount, tokenChangeAmount ],
+                outputQtyArray: [ ...sendAmounts, tokenChangeAmount ],
             });
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
                 input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-                tokenReceiverAddressArray: [ tokenReceiverAddress, changeReceiverAddress ],
+                tokenReceiverAddressArray: [ ...tokenReceiverAddresses, changeReceiverAddress ],
                 bchChangeReceiverAddress: changeReceiverAddress
             });
         } else if (tokenChangeAmount.isEqualTo(new BigNumber(0))) {
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
-                outputQtyArray: [ sendAmount ],
+                outputQtyArray: [ ...sendAmounts ],
             });
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
                 input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-                tokenReceiverAddressArray: [ tokenReceiverAddress ],
+                tokenReceiverAddressArray: [ ...tokenReceiverAddresses ],
                 bchChangeReceiverAddress: changeReceiverAddress
             });
-        } else {
-            throw Error('Token inputs less than the token outputs')
-        }
+        } else
+            throw Error('Token inputs less than the token outputs');
 
         // 5) Broadcast the transaction over the network using this.BITBOX
         return await this.sendTx(txHex);
@@ -198,9 +209,8 @@ export class BitboxNetwork implements SlpValidator {
                 input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
                 bchChangeReceiverAddress: changeReceiverAddress
             });
-        } else {
-            throw Error('Token inputs less than the token outputs')
-        }
+        } else
+            throw Error('Token inputs less than the token outputs');
 
         // Broadcast the transaction over the network using this.BITBOX
         return await this.sendTx(txHex);

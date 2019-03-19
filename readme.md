@@ -94,10 +94,10 @@ const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 
 // FOR MAINNET UNCOMMENT
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF"; // <-- compressed WIF format
-// const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
+// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
+// const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
 // // For unlimited issuance provide a "batonReceiverAddress"
 // const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 
@@ -307,29 +307,29 @@ This example shows the general workflow for sending an existing token.
 ```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default;
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
 // FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
-// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
-// const tokenReceiverAddress     = "simpleledger:qqr3a3c9wsdqljmwvy58rvp0yd25qmk3gqyrendudw"; // <-- must be slpAddr format
-// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
-// let tokenId = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
-// let sendAmount = 10;
+const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
+const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be slpAddr format
+const bchChangeReceiverAddress = "simpleledger:qrxx766pq856sm7l0nny5wtygnqlga52dvvhy9smlh"; // <-- cashAddr or slpAddr format
+let tokenId = "347975ff25c8ca30b309f229cd6f1968d6c37bf81ef8f4d0b3b28cb59f48acf3";
+let sendAmounts = [ 1 ];
 
 // FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
-const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
-const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
-const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- cashAddr or slpAddr format
-let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
-let sendAmount = 10;
+// const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
+// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
+// const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
+// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
+// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- cashAddr or slpAddr format
+// let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
+// let sendAmount = 10;
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) };
 const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 
@@ -341,39 +341,41 @@ let tokenDecimals;
     console.log("Token precision: " + tokenDecimals.toString());
 })();
 
+// Wait for network responses...
+
 // 2) Check that token balance is greater than our desired sendAmount
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
   console.log("'balances' variable is set.");
-  console.log("Token balance:", balances.slpTokenBalances[tokenId].toNumber() / 10**tokenDecimals)
+  console.log("Token balance:", balances.slpTokenBalances[tokenId].toNumber() / 10**tokenDecimals);
 })();
 
 // Wait for network responses...
 
 // 3) Calculate send amount in "Token Satoshis".  In this example we want to just send 1 token unit to someone...
-sendAmount = (new BigNumber(sendAmount)).times(10**tokenDecimals);  // Don't forget to account for token precision
+sendAmounts = sendAmounts.map(a => (new BigNumber(a)).times(10**tokenDecimals));  // Don't forget to account for token precision
 
 // 4) Get all of our token's UTXOs
-let inputUtxos = balances.slpTokenUtxos[tokenId]
+let inputUtxos = balances.slpTokenUtxos[tokenId];
 
 // 5) Simply sweep our BCH utxos to fuel the transaction
 inputUtxos = inputUtxos.concat(balances.nonSlpUtxos);
 
 // 6) Set the proper private key for each Utxo
-inputUtxos.forEach(txo => txo.wif = fundingWif)
+inputUtxos.forEach(txo => txo.wif = fundingWif);
 
 // 7) Send token
 let sendTxid;
 (async function(){
     sendTxid = await bitboxNetwork.simpleTokenSend(
         tokenId, 
-        sendAmount, 
+        sendAmounts, 
         inputUtxos, 
         tokenReceiverAddress, 
         bchChangeReceiverAddress
         )
-    console.log("SEND txn complete:",sendTxid);
+    console.log("SEND txn complete:", sendTxid);
 })();
 ```
 
