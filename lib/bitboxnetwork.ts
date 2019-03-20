@@ -891,4 +891,67 @@ export class BitboxNetwork implements SlpValidator {
     // 5) Broadcast the transaction over the network using this.BITBOX
     return await this.sendTx(txHex);
   }
+
+  async p2shTokenBurn(
+    fundingWif: string,
+    tokenId: string,
+    burnAmount: BigNumber,
+    inputUtxos: SlpAddressUtxoResult[],
+    bchChangeReceiverWif: string
+  ) {
+    // Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
+    let totalTokenInputAmount: BigNumber = new BigNumber(100);
+    // let totalTokenInputAmount: BigNumber = inputUtxos
+    //   .filter(txo => {
+    //     return Slp.preSendSlpJudgementCheck(txo, tokenId);
+    //   })
+    //   .reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => {
+    //     return tot.plus(txo.slpUtxoJudgementAmount);
+    //   }, new BigNumber(0));
+
+    // Compute the token Change amount.
+    let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(burnAmount);
+
+    let bchChangeReceiverECPair = this.BITBOX.ECPair.fromWIF(
+      bchChangeReceiverWif
+    );
+    let bchChangeReceiveCashAddr = this.BITBOX.ECPair.toCashAddress(
+      bchChangeReceiverECPair
+    );
+    let bchChangeReceiverAddress: string = bchaddr.toSlpAddress(
+      bchChangeReceiveCashAddr
+    );
+
+    if (!bchaddr.isSlpAddress(bchChangeReceiverAddress))
+      throw new Error("Change receiver address not in SLP format.");
+
+    let txHex;
+    if (tokenChangeAmount.isGreaterThan(new BigNumber(0))) {
+      // Create the Send OP_RETURN message
+      let sendOpReturn = this.slp.buildSendOpReturn({
+        tokenIdHex: tokenId,
+        outputQtyArray: [tokenChangeAmount]
+      });
+      // Create the raw Send transaction hex
+      txHex = this.slp.buildRawBurnP2SHTx(burnAmount, {
+        slpBurnOpReturn: sendOpReturn,
+        input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+        bchChangeReceiverAddress: bchChangeReceiverAddress,
+        bchChangeReceiverWif: bchChangeReceiverWif
+      });
+    } else if (tokenChangeAmount.isLessThanOrEqualTo(new BigNumber(0))) {
+      // Create the raw Send transaction hex
+      txHex = this.slp.buildRawBurnP2SHTx(burnAmount, {
+        tokenIdHex: tokenId,
+        input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+        bchChangeReceiverAddress: bchChangeReceiverAddress,
+        bchChangeReceiverWif: bchChangeReceiverWif
+      });
+    } else {
+      throw Error("Token inputs less than the token outputs");
+    }
+
+    // Broadcast the transaction over the network using this.BITBOX
+    return await this.sendTx(txHex);
+  }
 }
