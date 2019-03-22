@@ -80,16 +80,16 @@ export class LocalValidator implements SlpValidator {
     }
 
     async isValidSlpTxid(txid: string, tokenIdFilter?: string): Promise<boolean> {
-        if(txid && !this.cachedValidations[txid]) {
+        if(!this.cachedValidations[txid]) {
             this.cachedValidations[txid] = { validity: null, parents: [], details: null, invalidReason: null }
             await this.retrieveRawTransaction(txid);
         }
+        else if(typeof this.cachedValidations[txid].validity === 'boolean')
+            return this.cachedValidations[txid].validity!;
 
         // Check to see how we should proceed based on the validation-cache state
         if(!this.cachedRawTransactions[txid])
             await this.waitForTransactionPreProcessing(txid);
-        if(typeof this.cachedValidations[txid].validity === 'boolean')
-            return this.cachedValidations[txid].validity!;
         if(this.cachedValidations[txid].details)
             await this.waitForCurrentValidationProcessing(txid);
 

@@ -236,11 +236,11 @@ let additionalTokenQty = 1000
 
 // FOR MAINNET UNCOMMENT
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF"; // <-- compressed WIF format
-// const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
+// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
+// const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
 // const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
-// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
+// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
 // const tokenIdHexToMint = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
 // let additionalTokenQty = 1000
 
@@ -313,19 +313,19 @@ const slpjs = require('slpjs');
 
 // FOR MAINNET UNCOMMENT
 const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be slpAddr format
-const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be slpAddr format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
 const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be slpAddr format
-const bchChangeReceiverAddress = "simpleledger:qrxx766pq856sm7l0nny5wtygnqlga52dvvhy9smlh"; // <-- cashAddr or slpAddr format
+const bchChangeReceiverAddress = "simpleledger:qrxx766pq856sm7l0nny5wtygnqlga52dvvhy9smlh";     // <-- cashAddr or slpAddr format
 let tokenId = "347975ff25c8ca30b309f229cd6f1968d6c37bf81ef8f4d0b3b28cb59f48acf3";
 let sendAmounts = [ 1 ];
 
 // FOR TESTNET UNCOMMENT
 // const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
+// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be slpAddr format
 // const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
-// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- must be slpAddr format
-// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l"; // <-- cashAddr or slpAddr format
+// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be slpAddr format
+// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- cashAddr or slpAddr format
 // let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
 // let sendAmount = 10;
 

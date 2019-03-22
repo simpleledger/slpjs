@@ -1,4 +1,4 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails } from '../index';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult } from '../index';
 import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import { Utils } from './utils';
 
@@ -54,10 +54,19 @@ export class BitboxNetwork implements SlpValidator {
         return res;
     }
 
-    async getAllSlpBalancesAndUtxos(address: string) {
-        address = bchaddr.toCashAddress(address);
-        let result = await this.getUtxoWithTxDetails(address);
-        return await this.processUtxosForSlp(result);
+    async getAllSlpBalancesAndUtxos(address: string|string[]) {
+        if(typeof address === "string") {
+            address = bchaddr.toCashAddress(address);
+            let result = await this.getUtxoWithTxDetails(address);
+            return await this.processUtxosForSlp(result);
+        }
+        address = address.map(a => bchaddr.toCashAddress(a));
+        let results: { address: string, result: SlpBalancesResult }[] = []
+        for(let i = 0; i < address.length; i++) {
+            let utxos = await this.getUtxoWithTxDetails(address[i]);
+            results.push({ address: Utils.toSlpAddress(address[i]), result: await this.processUtxosForSlp(utxos) });
+        }
+        return results;
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
@@ -93,7 +102,7 @@ export class BitboxNetwork implements SlpValidator {
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
-                outputQtyArray: [ ...sendAmounts, tokenChangeAmount ],
+                outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ],
             });
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
@@ -106,7 +115,7 @@ export class BitboxNetwork implements SlpValidator {
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
-                outputQtyArray: [ ...sendAmounts ],
+                outputQtyArray: [ ...(sendAmounts as BigNumber[]) ],
             });
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
