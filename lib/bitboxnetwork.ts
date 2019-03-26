@@ -131,6 +131,35 @@ export class BitboxNetwork implements SlpValidator {
         return await this.sendTx(txHex);
     }
 
+    async simpleBchSend(sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], bchReceiverAddresses: string|string[], changeReceiverAddress: string) {
+
+        // normalize token receivers and amounts to array types
+        if(typeof bchReceiverAddresses === "string")
+            bchReceiverAddresses = [ bchReceiverAddresses ];
+
+        if(typeof sendAmounts === "string")
+            sendAmounts = [ sendAmounts ];
+
+        try {
+            let amount = sendAmounts as BigNumber[];
+            amount.forEach(a => a.isGreaterThan(new BigNumber(0)));
+        } catch(_) { sendAmounts = [ sendAmounts ] as BigNumber[]; }
+        if((sendAmounts as BigNumber[]).length !== (bchReceiverAddresses as string[]).length) {
+            throw Error("Must have send amount item for each token receiver specified.");
+        }
+
+        // 4) Create the raw Send transaction hex
+        let txHex = this.slp.buildRawBchOnlyTx({
+            input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
+            bchReceiverAddressArray: bchReceiverAddresses,
+            bchReceiverSatoshiAmounts: sendAmounts as BigNumber[],
+            bchChangeReceiverAddress: changeReceiverAddress
+        });
+
+        // 5) Broadcast the transaction over the network using this.BITBOX
+        return await this.sendTx(txHex);
+    }
+
     async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
         
         let genesisOpReturn = this.slp.buildGenesisOpReturn({ 
