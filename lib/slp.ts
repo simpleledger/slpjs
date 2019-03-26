@@ -517,8 +517,8 @@ export class Slp {
             inputSatoshis = inputSatoshis.plus(token_utxo.satoshis);
         });
 
-        let sendCost = this.calculateSendCost(0, config.input_token_utxos.length, config.bchReceiverAddressArray.length, config.bchChangeReceiverAddress);
-        let bchChangeAfterFeeSatoshis = inputSatoshis.minus(sendCost);
+        let sendCost = this.calculateSendCost(0, config.input_token_utxos.length, config.bchReceiverAddressArray.length, config.bchChangeReceiverAddress, 1, false);
+        let bchChangeAfterFeeSatoshis = inputSatoshis.minus(sendCost).minus(config.bchReceiverSatoshiAmounts.reduce((t, v) => t = t.plus(v), new BigNumber(0)));
 
         // BCH outputs
         config.bchReceiverAddressArray.forEach((outputAddress, i) => {
@@ -786,9 +786,11 @@ export class Slp {
         return fee
     }
 
-    calculateSendCost(sendOpReturnLength: number, inputUtxoSize: number, outputAddressArraySize: number, bchChangeAddress?: string, feeRate = 1) {
-        let outputs = outputAddressArraySize
-        let nonfeeoutputs = outputAddressArraySize * 546
+    calculateSendCost(sendOpReturnLength: number, inputUtxoSize: number, outputAddressArraySize: number, bchChangeAddress?: string, feeRate = 1, forTokens=true) {
+        let outputs = outputAddressArraySize;
+        let nonfeeoutputs = 0;
+        if(forTokens)
+            nonfeeoutputs = outputAddressArraySize * 546;
 
         if (bchChangeAddress !== null && bchChangeAddress !== undefined) {
             outputs += 1
