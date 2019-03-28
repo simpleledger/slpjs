@@ -24,7 +24,7 @@ The following examples show how this library should be used.
 
 NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is used to avoid precision issues with numbers having more than 15 significant digits.
 
-
+NOTE: For fast validation performance all of the following examples show how to use SLPJS using default SLP validation via rest.bitcoin.com.  See [Local Validation](#local-validation) section for instructions on how to validate SLP locally.
 
 ## Get Balances
 
@@ -42,9 +42,7 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
 // let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 // const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 let balances;
 (async function() {
@@ -101,9 +99,7 @@ const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcy
 // // For unlimited issuance provide a "batonReceiverAddress"
 // const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // 1) Get all balances at the funding address.
 let balances; 
@@ -169,9 +165,7 @@ const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSc
 const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // 1) Get all balances at the funding address.
 let balances;
@@ -244,9 +238,7 @@ let additionalTokenQty = 1000
 // const tokenIdHexToMint = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
 // let additionalTokenQty = 1000
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // 1) Get all balances at the funding address.
 let balances; 
@@ -312,26 +304,24 @@ const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
 // FOR MAINNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be slpAddr format
-const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
-const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be slpAddr format
-const bchChangeReceiverAddress = "simpleledger:qrxx766pq856sm7l0nny5wtygnqlga52dvvhy9smlh";     // <-- cashAddr or slpAddr format
-let tokenId = "347975ff25c8ca30b309f229cd6f1968d6c37bf81ef8f4d0b3b28cb59f48acf3";
-let sendAmounts = [ 1 ];
+// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be slpAddr format
+// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
+// const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be slpAddr format
+// const bchChangeReceiverAddress = "simpleledger:qrxx766pq856sm7l0nny5wtygnqlga52dvvhy9smlh";     // <-- cashAddr or slpAddr format
+// let tokenId = "347975ff25c8ca30b309f229cd6f1968d6c37bf81ef8f4d0b3b28cb59f48acf3";
+// let sendAmounts = [ 1 ];
 
 // FOR TESTNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be slpAddr format
-// const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
-// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be slpAddr format
-// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- cashAddr or slpAddr format
-// let tokenId = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
-// let sendAmount = 10;
+const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
+const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be slpAddr format
+const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
+const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be slpAddr format
+const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- cashAddr or slpAddr format
+let tokenId = "78d57a82a0dd9930cc17843d9d06677f267777dd6b25055bad0ae43f1b884091";
+let sendAmounts = [ 10 ];
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) };
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // 1) Fetch critical token information
 let tokenDecimals;
@@ -399,9 +389,7 @@ const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpsta
 let tokenId = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
 let burnAmount = 102;
 
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // 1) Fetch critical token information
 let tokenDecimals;
@@ -461,7 +449,17 @@ console.log(cashAddr);
 // bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf
 ```
 
+# Local Validation
 
+The examples above use default remote validation powered by rest.bitcoin.com `/slp/validateTxid` endpoint, and is enabled with the following code:
+`const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);`
+
+You can override this behavior to validate SLP transaction locally by replacing that code with the following lines:
+```js
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+```
 
 # Caveats
 

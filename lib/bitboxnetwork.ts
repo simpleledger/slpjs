@@ -9,22 +9,22 @@ import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
 import * as Bitcore from 'bitcore-lib-cash';
+import Axios from 'axios';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export class BitboxNetwork implements SlpValidator {
     BITBOX: BITBOX;
     slp: Slp;
-    validator: SlpValidator;
+    validator?: SlpValidator;
 
-    constructor(BITBOX: BITBOX, validator: SlpValidator | SlpProxyValidator) {
+    constructor(BITBOX: BITBOX, validator?: SlpValidator | SlpProxyValidator) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
-        if(!validator)
-            throw Error("Must provide validator instance to class constructor.")
+        if(validator)
+            this.validator = validator;
         this.BITBOX = BITBOX;
         this.slp = new Slp(BITBOX);
-        this.validator = validator;
     }
     
     async getTokenInformation(txid: string): Promise<SlpTransactionDetails> {
@@ -37,7 +37,7 @@ export class BitboxNetwork implements SlpValidator {
         let txn: any = (await this.BITBOX.Transaction.details([ txid ]))[0];
         try {
             txn.tokenInfo = await this.getTokenInformation(txid);
-            txn.tokenIsValid = await this.validator.isValidSlpTxid(txid);
+            txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid) : await this.isValidSlpTxid(txid);
         } catch(_) {
             txn.tokenInfo = null;
             txn.tokenIsValid = false;
@@ -111,6 +111,7 @@ export class BitboxNetwork implements SlpValidator {
                 tokenReceiverAddressArray: [ ...tokenReceiverAddresses, changeReceiverAddress ],
                 bchChangeReceiverAddress: changeReceiverAddress
             });
+            console.log("TXN HEX", txHex);
         } else if (tokenChangeAmount.isEqualTo(new BigNumber(0))) {
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
@@ -287,12 +288,13 @@ export class BitboxNetwork implements SlpValidator {
         let count = 0;
         while(result === undefined){
             result = await this.BITBOX.Transaction.details(txids);
+            if(result)
+                return result;
             count++;
             if(count > retries)
                 throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
-            await sleep(500);
+            await sleep(250);
         }
-        return result; 
     }
 
 	async getAddressDetailsWithRetry(address: string, retries = 40) {
@@ -302,14 +304,14 @@ export class BitboxNetwork implements SlpValidator {
 		let result: AddressDetailsResult[] | undefined;
 		let count = 0;
 		while(result === undefined){
-			result = await this.BITBOX.Address.details([address]);
+            result = await this.BITBOX.Address.details([address]);
+            if(result)
+                return result;
 			count++;
 			if(count > retries)
 				throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
-
 			await sleep(250);
 		}
-		return result;
 	}
 
     async sendTx(hex: string) {
@@ -323,7 +325,6 @@ export class BitboxNetwork implements SlpValidator {
         // must be a cash or legacy addr
         if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
-        
         while (true) {
             try {
                 utxo = await this.getUtxos(paymentAddress);
@@ -338,20 +339,56 @@ export class BitboxNetwork implements SlpValidator {
         onPaymentCB()
     }
 
-    isValidSlpTxid(txid: string): Promise<boolean> {
-        throw new Error("Method not implemented.");
-    }
-
 
     async getRawTransactions(txids: string[]): Promise<string[]> {
-        return await this.validator.getRawTransactions(txids)
+        if(this.validator)
+            return await this.validator.getRawTransactions(txids);
+        return await this.BITBOX.RawTransactions.getRawTransaction(txids);
     }
 
     async processUtxosForSlp(utxos: SlpAddressUtxoResult[]) {
-        return await this.slp.processUtxosForSlpAbstract(utxos, this.validator)
+        if(this.validator)
+            return await this.slp.processUtxosForSlpAbstract(utxos, this.validator);
+        return await this.slp.processUtxosForSlpAbstract(utxos, this);
+    }
+
+    async isValidSlpTxid(txid: string): Promise<boolean> {
+        if(this.validator)
+            return await this.validator.isValidSlpTxid(txid);
+        let validatorUrl = this.setRemoteValidatorUrl();
+        let txids = [ txid ];
+        const result = await Axios({
+            method: "post",
+            url: validatorUrl,
+            data: {
+                txids: txids
+            }
+        })
+        if (result && result.data)
+            return (<{ txid: string, valid: boolean }[]>result.data).map(i => { return i.txid; }).includes(txid) ? true : false;
+        return false
     }
 
     async validateSlpTransactions(txids: string[]): Promise<string[]> {
-        return await this.validator.validateSlpTransactions(txids);
+        if(this.validator)
+            return await this.validator.validateSlpTransactions(txids);
+        let validatorUrl = this.setRemoteValidatorUrl();
+        const result = await Axios({
+            method: "post",
+            url: validatorUrl,
+            data: {
+                txids: txids
+            }
+        })
+        if (result && result.data)
+            return (<{ txid: string, valid: boolean }[]>result.data).filter(i => i.valid).map(i => { return i.txid });
+        return []
+    }
+
+    private setRemoteValidatorUrl() {
+        let validatorUrl = this.BITBOX.restURL.replace('v1', 'v2');
+        validatorUrl = validatorUrl.concat('/slp/validateTxid');
+        validatorUrl = validatorUrl.replace('//slp', '/slp');
+        return validatorUrl;
     }
 }
