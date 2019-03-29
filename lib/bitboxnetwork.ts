@@ -94,7 +94,6 @@ export class BitboxNetwork implements SlpValidator {
             }, new BigNumber(0))
 
         // 2) Compute the token Change amount.
-        console.log("SEND TOTAL", (sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
         let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus((sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
         
         let txHex;
@@ -111,7 +110,6 @@ export class BitboxNetwork implements SlpValidator {
                 tokenReceiverAddressArray: [ ...tokenReceiverAddresses, changeReceiverAddress ],
                 bchChangeReceiverAddress: changeReceiverAddress
             });
-            console.log("TXN HEX", txHex);
         } else if (tokenChangeAmount.isEqualTo(new BigNumber(0))) {
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = this.slp.buildSendOpReturn({
