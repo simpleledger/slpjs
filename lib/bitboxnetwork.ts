@@ -312,9 +312,12 @@ export class BitboxNetwork implements SlpValidator {
 		}
 	}
 
-    async sendTx(hex: string) {
-        let res = await this.BITBOX.RawTransactions.sendRawTransaction(hex);
+    async sendTx(hex: string): Promise<string> {
+        let res = await this.BITBOX.RawTransactions.sendRawTransaction([ hex ]as any);
         //console.log(res);
+        if(typeof res === 'object') {
+            return (<string[]>res)[0];
+        }
         return res;
     }
 
