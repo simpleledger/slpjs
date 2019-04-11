@@ -829,7 +829,7 @@ export class Slp {
         for(let txo of utxos) {
             this.applyInitialSlpJudgement(txo);
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.UNKNOWN || txo.slpUtxoJudgement === undefined)
-                throw Error('Utxo SLP judgement has not been set, unknown error.')
+                throw Error('Utxo SLP judgement has not been set, unknown error.');
         }
     
         // 2) Cast final SLP judgement using the supplied async validator

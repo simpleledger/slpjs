@@ -374,13 +374,20 @@ export class BitboxNetwork implements SlpValidator {
         if(this.validator)
             return await this.validator.validateSlpTransactions(txids);
         let validatorUrl = this.setRemoteValidatorUrl();
-        const result = await Axios({
+        
+        const promises = _.chunk(txids, 20).map(ids => Axios({
             method: "post",
             url: validatorUrl,
             data: {
-                txids: txids
+                txids: ids
             }
-        })
+        }))
+        const results = await Axios.all(promises);
+        let result = { data: [] };
+        results.forEach(res => {
+            if (res.data)
+                result.data = result.data.concat(res.data);
+        });
         if (result && result.data)
             return (<{ txid: string, valid: boolean }[]>result.data).filter(i => i.valid).map(i => { return i.txid });
         return []
