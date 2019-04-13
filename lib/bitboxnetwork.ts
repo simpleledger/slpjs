@@ -183,6 +183,28 @@ export class BitboxNetwork implements SlpValidator {
         return await this.sendTx(genesisTxHex);
     }
 
+    async simpleNFT1Genesis(tokenName: string, tokenTicker: string, parentTokenIdHex: string, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]) {
+        let index = inputUtxos.findIndex(i => i.slpTransactionDetails.tokenIdHex === parentTokenIdHex);
+        
+        let genesisOpReturn = this.slp.buildNFT1GenesisOpReturn({ 
+            ticker: tokenTicker,
+            name: tokenName,
+            parentTokenIdHex: parentTokenIdHex,
+            parentInputIndex: index
+        });
+
+        // 4) Create/sign the raw transaction hex for Genesis
+        let genesisTxHex = this.slp.buildRawNFT1GenesisTx({
+            slpNFT1GenesisOpReturn: genesisOpReturn, 
+            mintReceiverAddress: tokenReceiverAddress,
+            bchChangeReceiverAddress: bchChangeReceiverAddress, 
+            input_utxos: Utils.mapToUtxoArray(inputUtxos),
+            parentTokenIdHex: parentTokenIdHex
+        });
+
+        return await this.sendTx(genesisTxHex);
+    }
+
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string) {  
         // // convert address to cashAddr from SLP format.

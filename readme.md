@@ -145,12 +145,9 @@ let genesisTxid;
 
 ```
 
-## GENESIS - NFT creation (non-fungible token)
+## GENESIS - NFT1 creation (non-fungible token per [spec](https://github.com/simpleledger/slp-specifications/blob/master/NFT.md))
 
-Non-fungible tokens can be created with the `simpleTokenGenesis` method with these parameters:
-* Set `tokenAmount` to 1, 
-* Set `decimals` to 0, and 
-* Set `batonReceiverAddress` to null.
+Non-fungible tokens can be created with the `simpleNFT1Genesis` method with these parameters:
 
 ```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
@@ -165,6 +162,8 @@ const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSc
 const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
 
+const parentTokenIdHex = "<32-byte token id of parent token>";
+
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
 // 1) Get all balances at the funding address.
@@ -177,31 +176,28 @@ let balances;
 
 // WAIT FOR NETWORK RESPONSE...
 
-// 2) Select decimal precision for this new token
+// 2) Select decimal precision for this new NFT1 token
 let name = "I'm a unique token";
-let ticker = "NFT";
-let documentUri = "info@simpleledger.io";
-let documentHash = null
+let ticker = "NFT1";
 
-// 3) Set private keys
+// 3) Set private keys for BCH & Tokens
 balances.nonSlpUtxos.forEach(txo => txo.wif = fundingWif)
+balances.slpTokenUtxos[parentTokenId][0].wif = fundingWif;
+let inputs = balances.nonSlpUtxos.concat(balances.slpTokenUtxos[parentTokenId][0])
 
 // 4) Use "simpleTokenGenesis()" helper method
 let genesisTxid;
 (async function(){
-    genesisTxid = await bitboxNetwork.simpleTokenGenesis(
+  //tokenName: string, tokenTicker: string, parentTokenIdHex: string, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]
+    genesisTxid = await bitboxNetwork.simpleNFT1Genesis(
         name, 
         ticker, 
-        new BigNumber(1),
-        documentUri,
-        documentHash,
-        0,
+        parentTokenIdHex,
         tokenReceiverAddress,
-        null,
         bchChangeReceiverAddress,
-        balances.nonSlpUtxos
+        inputs
         )
-    console.log("NFT GENESIS txn complete:",genesisTxid)
+    console.log("NFT1 GENESIS txn complete:",genesisTxid)
 })();
 
 ```

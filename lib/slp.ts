@@ -39,8 +39,8 @@ export interface configBuildSendOpReturn {
     outputQtyArray: BigNumber[]
 }
 
-export interface configBuildRawNFTGenesisTx {
-    slpNFTGenesisOpReturn: Buffer; 
+export interface configBuildRawNFT1GenesisTx {
+    slpNFT1GenesisOpReturn: Buffer; 
     mintReceiverAddress: string;
     mintReceiverSatoshis?: BigNumber;
     //batonReceiverAddress: string|null;
@@ -154,9 +154,9 @@ export class Slp {
         )
     }
 
-    buildRawNFTGenesisTx(config: configBuildRawNFTGenesisTx, type = 0x01) {
+    buildRawNFT1GenesisTx(config: configBuildRawNFT1GenesisTx, type = 0x01) {
         let config2: configBuildRawGenesisTx = {
-            slpGenesisOpReturn: config.slpNFTGenesisOpReturn,
+            slpGenesisOpReturn: config.slpNFT1GenesisOpReturn,
             mintReceiverAddress: config.mintReceiverAddress,
             mintReceiverSatoshis: config.mintReceiverSatoshis,
             batonReceiverAddress: null,
