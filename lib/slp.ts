@@ -11,6 +11,13 @@ export interface PushDataOperation {
     data: Buffer|null
 }
 
+export interface configBuildNFT1GenesisOpReturn {
+    ticker: string|null;
+    name: string|null;
+    parentTokenIdHex: string;
+    parentInputIndex: number;
+}
+
 export interface configBuildGenesisOpReturn {
     ticker: string|null;
     name: string|null;
@@ -32,6 +39,18 @@ export interface configBuildSendOpReturn {
     outputQtyArray: BigNumber[]
 }
 
+export interface configBuildRawNFTGenesisTx {
+    slpNFTGenesisOpReturn: Buffer; 
+    mintReceiverAddress: string;
+    mintReceiverSatoshis?: BigNumber;
+    //batonReceiverAddress: string|null;
+    //batonReceiverSatoshis?: BigNumber;
+    bchChangeReceiverAddress: string;
+    input_utxos: utxo[];
+    parentTokenIdHex: string;
+    //allowed_token_burning: string[]|null;
+}
+
 export interface configBuildRawGenesisTx {
     slpGenesisOpReturn: Buffer; 
     mintReceiverAddress: string;
@@ -40,6 +59,7 @@ export interface configBuildRawGenesisTx {
     batonReceiverSatoshis?: BigNumber;
     bchChangeReceiverAddress: string;
     input_utxos: utxo[];
+    allowed_token_burning?: string[];
 }
 
 export interface configBuildRawSendTx {
@@ -93,6 +113,15 @@ export class Slp {
 
     get lokadIdHex() { return "534c5000" }
 
+    buildNFT1GenesisOpReturn(config: configBuildNFT1GenesisOpReturn, type = 0x01) {
+        return SlpTokenType1.buildNFT1GenesisOpReturn(
+            config.ticker,
+            config.name,
+            config.parentTokenIdHex,
+            config.parentInputIndex
+        )
+    }
+
     buildGenesisOpReturn(config: configBuildGenesisOpReturn, type = 0x01) {
         let hash;
         try { 
@@ -125,6 +154,20 @@ export class Slp {
         )
     }
 
+    buildRawNFTGenesisTx(config: configBuildRawNFTGenesisTx, type = 0x01) {
+        let config2: configBuildRawGenesisTx = {
+            slpGenesisOpReturn: config.slpNFTGenesisOpReturn,
+            mintReceiverAddress: config.mintReceiverAddress,
+            mintReceiverSatoshis: config.mintReceiverSatoshis,
+            batonReceiverAddress: null,
+            bchChangeReceiverAddress: config.bchChangeReceiverAddress,
+            input_utxos: config.input_utxos,
+            allowed_token_burning: [ config.parentTokenIdHex ]
+        }
+
+        return this.buildRawGenesisTx(config2);
+    }
+
     buildRawGenesisTx(config: configBuildRawGenesisTx, type = 0x01) {
 
         if(config.mintReceiverSatoshis === undefined)
@@ -137,7 +180,13 @@ export class Slp {
         config.input_utxos.forEach(txo => {
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP)
                 return
-            if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
+            if(config.allowed_token_burning && 
+                txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN && 
+                !config.allowed_token_burning!.includes(txo.slpTransactionDetails.tokenIdHex)) 
+            {
+                throw Error("Input UTXOs included a token for another tokenId.")
+            }
+            else if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
                 throw Error("Input UTXOs included a token for another tokenId.")
             }
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)

@@ -4,6 +4,16 @@ import BigNumber from 'bignumber.js';
 export class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
+    static buildNFT1GenesisOpReturn(ticker: string|null, name: string|null, parentTokenIdHex:string, parentInputIndex: number) {
+        const vin = parentInputIndex.toString(16).padStart(4, '0');
+
+        let re = /^([A-Fa-f0-9]{2}){32,32}$/;
+        if (typeof parentTokenIdHex !== 'string' || !re.test(parentTokenIdHex))
+            throw Error("ParentTokenIdHex must be provided as a 64 character hex string.");
+
+        return this.buildGenesisOpReturn(ticker, name, "NFT1_" + parentTokenIdHex + "_" + vin, null, 0, null, new BigNumber(1));
+    }
+
     static buildGenesisOpReturn(ticker: string|null, name: string|null, documentUri:string|null, documentHashHex: string|null, decimals: number, batonVout:number|null, initialQuantity:BigNumber) {
         let script: (number|number[])[] = [];
 
