@@ -438,7 +438,7 @@ let Utils = require('slpjs').Utils;
 
 let slpAddr = Utils.toSlpAddress("bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf");
 console.log(slpAddr);
-// simpleledger:qzkpdhw8xwe2x2dt7mqtxwjrpfnlrclkwqvhlgwxy8
+// simpleledger:qzat5lfxt86mtph2fdmp96stxdmmw8hchy2cnqfh7h
 
 let cashAddr = Utils.toCashAddress(slpAddr);
 console.log(cashAddr);
