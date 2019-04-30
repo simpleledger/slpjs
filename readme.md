@@ -470,7 +470,11 @@ const slpjs = require('slpjs');
 const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
 const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 
-let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
+// Result = false
+let txid = "c2efd10e40d08c9d3867ba2c8eb69f2a9e0db35d9e1219f59c839151446d1d38";
+
+// Result = true
+//let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
 
 let isValid;
 (async function() {
@@ -478,6 +482,8 @@ let isValid;
   console.log("This may take a several seconds...");
   isValid = await slpValidator.isValidSlpTxid(txid);
   console.log("Validation result: ", isValid);
+  if(!isValid)
+    console.log("This transaction is invalid because:", slpValidator.cachedValidations[txid].invalidReason);
 })();
 
 ```
