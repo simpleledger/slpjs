@@ -457,6 +457,31 @@ const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 ```
 
+## Example Local Validator
+
+This example validates a SLP transaction locally by downloading all required raw transactions from remote node, in this case BITBOX REST API.
+
+```js
+
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const slpjs = require('slpjs');
+
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+
+let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
+
+let isValid;
+(async function() {
+  console.log("Validating:", txid);
+  console.log("This may take a several seconds...");
+  isValid = await slpValidator.isValidSlpTxid(txid);
+  console.log("Validation result: ", isValid);
+})();
+
+```
+
 # Caveats
 
 * All SLPJS methods require token quantities to be expressed in the smallest possible unit of account for the token (i.e., token satoshis).  This requires the token's precision to be used to calculate the quantity. For example, token having a decimal precision of 9 sending an amount of 1.01 tokens would need to first calculate the sending amount using `1.01 x 10^9 => 1010000000`.
