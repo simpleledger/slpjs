@@ -1,13 +1,8 @@
 import { Slp } from '../lib/slp';
-import { BitboxNetwork }  from "../lib/bitboxnetwork";
-import { JsonRpcProxyValidator } from '../lib/jsonrpcvalidator';
-
 import * as assert from 'assert';
 import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
 
 const BITBOX = new BITBOXSDK({ restURL: "https://trest.bitcoin.com/v2/" });
-const slpValidator = new JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
-const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
 const scriptUnitTestData = require('slp-unit-test-data/script_tests.json');
 
 let slp = new Slp(BITBOX);

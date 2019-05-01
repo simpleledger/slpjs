@@ -6,19 +6,47 @@ import BigNumber from 'bignumber.js';
 
 export class Utils {
     static isCashAddress(address: string): any {
-        return Bchaddr.isCashAddress(address);
+        try {
+            return Bchaddr.isCashAddress(address);
+        } catch(_) {
+            return false;
+        }
     }
 
     static toCashAddress(address: string) {
         return Bchaddr.toCashAddress(address);
     }
 
+    static slpAddressFromHash160(hash: Uint8Array, network='mainnet', addressType='p2pkh'): string {
+        if(network !== 'mainnet' && network !== 'testnet')
+            throw Error("Invalid network given.")
+        if(addressType !== 'p2pkh' && addressType !== 'p2sh')
+            throw Error("Invalid address type given.")
+        return Bchaddr.encodeAsSlpaddr({ hash: hash, type: addressType, network: network, format: "" })
+    }
+
+    static isSlpAddress(address: string) {
+        try {
+            return Bchaddr.isSlpAddress(address);
+        } catch(_) {
+            return false;
+        }
+    }
+
     static toSlpAddress(address: string) {
         return Bchaddr.toSlpAddress(address);
     }
 
-    static isSlpAddress(address: string) {
-        return Bchaddr.isSlpAddress(address);
+    static isLegacyAddress(address: string){
+        try {
+            return Bchaddr.isLegacyAddress(address);
+        } catch(_) {
+            return false;
+        }
+    }
+
+    static toLegacyAddress(address: string) {
+        return Bchaddr.toLegacyAddress(address);
     }
 
     static isMainnet(address: string) {
