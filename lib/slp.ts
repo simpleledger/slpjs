@@ -67,6 +67,7 @@ export interface configBuildRawSendTx {
     input_token_utxos: utxo[];
     tokenReceiverAddressArray: string[];
     bchChangeReceiverAddress: string;
+    requiredNonTokenOutputs?: { satoshis: number, receiverAddress: string }[]
 }
 
 export interface configBuildBchSendTx {
@@ -308,7 +309,9 @@ export class Slp {
             inputSatoshis = inputSatoshis.plus(token_utxo.satoshis);
         });
 
-        let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length, config.tokenReceiverAddressArray.length, config.bchChangeReceiverAddress);
+        // Compute BCH change amount
+        let bchOnlyCount = config.requiredNonTokenOutputs ? config.requiredNonTokenOutputs.length : 0;
+        let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length, config.tokenReceiverAddressArray.length + bchOnlyCount, config.bchChangeReceiverAddress);
         let bchChangeAfterFeeSatoshis = inputSatoshis.minus(sendCost);
 
         // Genesis OpReturn
@@ -319,6 +322,14 @@ export class Slp {
             outputAddress = bchaddr.toCashAddress(outputAddress);
             transactionBuilder.addOutput(outputAddress, 546);
         })
+
+        // Add required (non-token) BCH outputs
+        if(config.requiredNonTokenOutputs && config.requiredNonTokenOutputs.length > 0) {
+            config.requiredNonTokenOutputs.forEach((output) => {
+                let outputAddress = bchaddr.toCashAddress(output.receiverAddress);
+                transactionBuilder.addOutput(outputAddress, output.satoshis);
+            })
+        }
 
         // Change
         if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
@@ -457,10 +468,8 @@ export class Slp {
 
             if (!bchaddr.isSlpAddress(config.bchChangeReceiverAddress))
                 throw new Error("Token receiver address not in SLP format.");
-
-            // if(config.tokenReceiverAddressArray.length + chgAddr !== sendMsg.sendOutputs.length)
-            //     throw Error("Number of token receivers in config does not match the OP_RETURN outputs")
-        }
+        } else if(!config.tokenIdHex)
+            console.log("[WARNING!] Include 'config.tokenIdHex' in order to accidental token burning.  To supress this log message set 'config.tokenIdHex' to an empty string.")
 
         // Make sure not spending any other tokens or baton UTXOs
         let tokenInputQty = new BigNumber(0);

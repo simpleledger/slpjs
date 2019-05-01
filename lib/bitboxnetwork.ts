@@ -10,6 +10,7 @@ import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
 import * as Bitcore from 'bitcore-lib-cash';
 import Axios from 'axios';
+import { TransactionHelpers } from './transactionhelpers';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -17,6 +18,7 @@ export class BitboxNetwork implements SlpValidator {
     BITBOX: BITBOX;
     slp: Slp;
     validator?: SlpValidator;
+    txnHelpers: TransactionHelpers;
 
     constructor(BITBOX: BITBOX, validator?: SlpValidator | SlpProxyValidator) {
         if(!BITBOX)
@@ -25,6 +27,7 @@ export class BitboxNetwork implements SlpValidator {
             this.validator = validator;
         this.BITBOX = BITBOX;
         this.slp = new Slp(BITBOX);
+        this.txnHelpers = new TransactionHelpers(this.slp);
     }
     
     async getTokenInformation(txid: string): Promise<SlpTransactionDetails> {
@@ -70,208 +73,30 @@ export class BitboxNetwork implements SlpValidator {
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
-    async simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string) {  
-        
-        // normalize token receivers and amounts to array types
-        if(typeof tokenReceiverAddresses === "string")
-            tokenReceiverAddresses = [ tokenReceiverAddresses ];
-        try {
-            let amount = sendAmounts as BigNumber[];
-            amount.forEach(a => a.isGreaterThan(new BigNumber(0)));
-        } catch(_) { sendAmounts = [ sendAmounts ] as BigNumber[]; }
-        if((sendAmounts as BigNumber[]).length !== (tokenReceiverAddresses as string[]).length) {
-            throw Error("Must have send amount item for each token receiver specified.");
-        }
-
-        // 1) Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
-        let totalTokenInputAmount: BigNumber = 
-            inputUtxos
-            .filter(txo => {
-                return Slp.preSendSlpJudgementCheck(txo, tokenId);
-            })
-            .reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => { 
-                return tot.plus(txo.slpUtxoJudgementAmount)
-            }, new BigNumber(0))
-
-        // 2) Compute the token Change amount.
-        let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus((sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
-        
-        let txHex;
-        if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
-            // 3) Create the Send OP_RETURN message
-            let sendOpReturn = this.slp.buildSendOpReturn({
-                tokenIdHex: tokenId,
-                outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ],
-            });
-            // 4) Create the raw Send transaction hex
-            txHex = this.slp.buildRawSendTx({
-                slpSendOpReturn: sendOpReturn,
-                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-                tokenReceiverAddressArray: [ ...tokenReceiverAddresses, changeReceiverAddress ],
-                bchChangeReceiverAddress: changeReceiverAddress
-            });
-        } else if (tokenChangeAmount.isEqualTo(new BigNumber(0))) {
-            // 3) Create the Send OP_RETURN message
-            let sendOpReturn = this.slp.buildSendOpReturn({
-                tokenIdHex: tokenId,
-                outputQtyArray: [ ...(sendAmounts as BigNumber[]) ],
-            });
-            // 4) Create the raw Send transaction hex
-            txHex = this.slp.buildRawSendTx({
-                slpSendOpReturn: sendOpReturn,
-                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-                tokenReceiverAddressArray: [ ...tokenReceiverAddresses ],
-                bchChangeReceiverAddress: changeReceiverAddress
-            });
-        } else
-            throw Error('Token inputs less than the token outputs');
-
-        // 5) Broadcast the transaction over the network using this.BITBOX
+    async simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string, requiredNonTokenOutputs: { satoshis: number, receiverAddress: string }[] = []) {  
+        let txHex = this.txnHelpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddresses, changeReceiverAddress, requiredNonTokenOutputs);
         return await this.sendTx(txHex);
     }
 
     async simpleBchSend(sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], bchReceiverAddresses: string|string[], changeReceiverAddress: string) {
-
-        // normalize token receivers and amounts to array types
-        if(typeof bchReceiverAddresses === "string")
-            bchReceiverAddresses = [ bchReceiverAddresses ];
-
-        if(typeof sendAmounts === "string")
-            sendAmounts = [ sendAmounts ];
-
-        try {
-            let amount = sendAmounts as BigNumber[];
-            amount.forEach(a => a.isGreaterThan(new BigNumber(0)));
-        } catch(_) { sendAmounts = [ sendAmounts ] as BigNumber[]; }
-        if((sendAmounts as BigNumber[]).length !== (bchReceiverAddresses as string[]).length) {
-            throw Error("Must have send amount item for each token receiver specified.");
-        }
-
-        // 4) Create the raw Send transaction hex
-        let txHex = this.slp.buildRawBchOnlyTx({
-            input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-            bchReceiverAddressArray: bchReceiverAddresses,
-            bchReceiverSatoshiAmounts: sendAmounts as BigNumber[],
-            bchChangeReceiverAddress: changeReceiverAddress
-        });
-
-        // 5) Broadcast the transaction over the network using this.BITBOX
-        return await this.sendTx(txHex);
-    }
-
-    async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],) {
-        
-        let genesisOpReturn = this.slp.buildGenesisOpReturn({ 
-            ticker: tokenTicker,
-            name: tokenName,
-            documentUri: documentUri,
-            hash: documentHash, 
-            decimals: decimals,
-            batonVout: batonReceiverAddress ? 2 : null,
-            initialQuantity: tokenAmount,
-        });
-
-        // 4) Create/sign the raw transaction hex for Genesis
-        let genesisTxHex = this.slp.buildRawGenesisTx({
-            slpGenesisOpReturn: genesisOpReturn, 
-            mintReceiverAddress: tokenReceiverAddress,
-            batonReceiverAddress: batonReceiverAddress,
-            bchChangeReceiverAddress: bchChangeReceiverAddress, 
-            input_utxos: Utils.mapToUtxoArray(inputUtxos)
-        });
-
+        let genesisTxHex = this.txnHelpers.simpleBchSend(sendAmounts, inputUtxos, bchReceiverAddresses, changeReceiverAddress);
         return await this.sendTx(genesisTxHex);
     }
 
     async simpleNFT1Genesis(tokenName: string, tokenTicker: string, parentTokenIdHex: string, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]) {
-        let index = inputUtxos.findIndex(i => i.slpTransactionDetails.tokenIdHex === parentTokenIdHex);
-        
-        let genesisOpReturn = this.slp.buildNFT1GenesisOpReturn({ 
-            ticker: tokenTicker,
-            name: tokenName,
-            parentTokenIdHex: parentTokenIdHex,
-            parentInputIndex: index
-        });
-
-        // 4) Create/sign the raw transaction hex for Genesis
-        let genesisTxHex = this.slp.buildRawNFT1GenesisTx({
-            slpNFT1GenesisOpReturn: genesisOpReturn, 
-            mintReceiverAddress: tokenReceiverAddress,
-            bchChangeReceiverAddress: bchChangeReceiverAddress, 
-            input_utxos: Utils.mapToUtxoArray(inputUtxos),
-            parentTokenIdHex: parentTokenIdHex
-        });
-
+        let genesisTxHex = this.txnHelpers.simpleNFT1Genesis(tokenName, tokenTicker, parentTokenIdHex, tokenReceiverAddress, bchChangeReceiverAddress, inputUtxos);
         return await this.sendTx(genesisTxHex);
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string) {  
-        // // convert address to cashAddr from SLP format.
-        // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
-
-        // 1) Create the Send OP_RETURN message
-        let mintOpReturn = this.slp.buildMintOpReturn({
-            tokenIdHex: tokenId,
-            mintQuantity: mintAmount,
-            batonVout: 2
-        });
-
-        // 2) Create the raw Mint transaction hex
-        let txHex = this.slp.buildRawMintTx({
-            input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
-            slpMintOpReturn: mintOpReturn,
-            mintReceiverAddress: tokenReceiverAddress,
-            batonReceiverAddress: batonReceiverAddress,
-            bchChangeReceiverAddress: changeReceiverAddress
-        });
-        
-        //console.log(txHex);
-
-        // 5) Broadcast the transaction over the network using this.BITBOX
+        let txHex = this.txnHelpers.simpleTokenMint(tokenId, mintAmount, inputUtxos, tokenReceiverAddress, batonReceiverAddress, changeReceiverAddress);
         return await this.sendTx(txHex);
     }
 
     // Burn a precise quantity of SLP tokens with remaining tokens (change) sent to a single output address (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
-    async simpleTokenBurn(tokenId: string, burnAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], changeReceiverAddress: string) {  
-    
-        // Set the token send amounts, we'll send 100 tokens to a new receiver and send token change back to the sender
-        let totalTokenInputAmount: BigNumber = 
-            inputUtxos
-            .filter(txo => {
-                return Slp.preSendSlpJudgementCheck(txo, tokenId);
-            })
-            .reduce((tot: BigNumber, txo: SlpAddressUtxoResult) => { 
-                return tot.plus(txo.slpUtxoJudgementAmount)
-            }, new BigNumber(0))
-
-        // Compute the token Change amount.
-        let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(burnAmount);
-        
-        let txHex;
-        if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
-            // Create the Send OP_RETURN message
-            let sendOpReturn = this.slp.buildSendOpReturn({
-                tokenIdHex: tokenId,
-                outputQtyArray: [ tokenChangeAmount ],
-            });
-            // Create the raw Send transaction hex
-            txHex = this.slp.buildRawBurnTx(burnAmount, {
-                slpBurnOpReturn: sendOpReturn,
-                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-                bchChangeReceiverAddress: changeReceiverAddress
-            });
-        } else if (tokenChangeAmount.isLessThanOrEqualTo(new BigNumber(0))) {
-            // Create the raw Send transaction hex
-            txHex = this.slp.buildRawBurnTx(burnAmount, {
-                tokenIdHex: tokenId,
-                input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
-                bchChangeReceiverAddress: changeReceiverAddress
-            });
-        } else
-            throw Error('Token inputs less than the token outputs');
-
-        // Broadcast the transaction over the network using this.BITBOX
+    async simpleTokenBurn(tokenId: string, burnAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], changeReceiverAddress: string) {      
+        let txHex = this.txnHelpers.simpleTokenBurn(tokenId, burnAmount, inputUtxos, changeReceiverAddress);
         return await this.sendTx(txHex);
     }
 
