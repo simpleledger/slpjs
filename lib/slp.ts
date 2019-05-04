@@ -272,6 +272,9 @@ export class Slp {
                 throw new Error("Token receiver address not in SlpAddr format.");
         });
 
+        if (!bchaddr.isSlpAddress(config.bchChangeReceiverAddress))
+            throw new Error("Token/BCH change receiver address is not in SLP format.");
+
         // Make sure not spending any other tokens or baton UTXOs
         let tokenInputQty = new BigNumber(0);
         config.input_token_utxos.forEach(txo => {
@@ -332,7 +335,7 @@ export class Slp {
         }
 
         // Change
-        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if (bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -426,7 +429,7 @@ export class Slp {
         }
 
         // Change (optional)
-        if (config.bchChangeReceiverAddress !== null && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -467,7 +470,7 @@ export class Slp {
                 throw new Error("Token/BCH change address is not provided.");
 
             if (!bchaddr.isSlpAddress(config.bchChangeReceiverAddress))
-                throw new Error("Token receiver address not in SLP format.");
+                throw new Error("Token/BCH change receiver address is not in SLP format.");
         } else if(!config.tokenIdHex)
             console.log("[WARNING!] Include 'config.tokenIdHex' in order to accidental token burning.  To supress this log message set 'config.tokenIdHex' to an empty string.")
 
@@ -524,7 +527,7 @@ export class Slp {
         }
 
         // Change
-        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if (bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
@@ -585,7 +588,7 @@ export class Slp {
         })
 
         // Change
-        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if (bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
