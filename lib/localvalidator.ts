@@ -12,6 +12,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 interface Parent {
     txid: string;
+    vout: number;
     versionType: number;
     valid: boolean|null;
     inputQty: BigNumber|null;
@@ -126,8 +127,15 @@ export class LocalValidator implements SlpValidator {
                         input_slpmsg.tokenIdHex = input_txid;
                     if(input_slpmsg.tokenIdHex === slpmsg.tokenIdHex) {
                         if(input_slpmsg.transactionType === SlpTransactionType.GENESIS || input_slpmsg.transactionType === SlpTransactionType.MINT) {
-                            if(txn.inputs[i].outputIndex === input_slpmsg.batonVout)
-                                this.cachedValidations[txid].parents.push({ txid: txn.inputs[i].prevTxId.toString('hex'), versionType: input_slpmsg.versionType ,valid: null, inputQty: null })
+                            if(txn.inputs[i].outputIndex === input_slpmsg.batonVout) {
+                                this.cachedValidations[txid].parents.push({ 
+                                    txid: txn.inputs[i].prevTxId.toString('hex'), 
+                                    vout: txn.inputs[i].outputIndex, 
+                                    versionType: input_slpmsg.versionType,
+                                    valid: null,
+                                    inputQty: null 
+                                })
+                            }
                         }
                     }
                 } catch(_) {}
@@ -152,13 +160,26 @@ export class LocalValidator implements SlpValidator {
                         if(input_slpmsg.transactionType === SlpTransactionType.SEND) {
                             if(txn.inputs[i].outputIndex <= input_slpmsg.sendOutputs!.length-1) {
                                 tokenInQty = tokenInQty.plus(input_slpmsg.sendOutputs![txn.inputs[i].outputIndex])
-                                this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), versionType: input_slpmsg.versionType, valid: null, inputQty: input_slpmsg.sendOutputs![txn.inputs[i].outputIndex] })
+                                this.cachedValidations[txid].parents.push({ 
+                                    txid: txn.inputs[i].prevTxId.toString('hex'), 
+                                    vout: txn.inputs[i].outputIndex, 
+                                    versionType: input_slpmsg.versionType, 
+                                    valid: null, 
+                                    inputQty: input_slpmsg.sendOutputs![txn.inputs[i].outputIndex] 
+                                })
                             }
                         }
                         else if(input_slpmsg.transactionType === SlpTransactionType.GENESIS || input_slpmsg.transactionType === SlpTransactionType.MINT) {
-                            if(txn.inputs[i].outputIndex === 1)
+                            if(txn.inputs[i].outputIndex === 1) {
                                 tokenInQty = tokenInQty.plus(input_slpmsg.genesisOrMintQuantity!)
-                                this.cachedValidations[txid].parents.push({txid: txn.inputs[i].prevTxId.toString('hex'), versionType: input_slpmsg.versionType, valid: null, inputQty: input_slpmsg.genesisOrMintQuantity })
+                                this.cachedValidations[txid].parents.push({ 
+                                    txid: txn.inputs[i].prevTxId.toString('hex'), 
+                                    vout: txn.inputs[i].outputIndex, 
+                                    versionType: input_slpmsg.versionType, 
+                                    valid: null, 
+                                    inputQty: input_slpmsg.genesisOrMintQuantity 
+                                })
+                            }
                         }
                     }
                 } catch(_) {}
