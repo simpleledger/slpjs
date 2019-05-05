@@ -1,6 +1,6 @@
 # SLPJS
 
-SLPJS is a JavaScript Library for building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) token transactions.  
+SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) SLP token transactions.  See [change log](#change-log) for update including breaking changes documentation.
 
 GENESIS, MINT, and SEND transaction functions are currently supported. 
 
@@ -471,7 +471,7 @@ const getRawTransactions = async function(txids) { return await BITBOX.RawTransa
 const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 
 // Result = false
-let txid = "c2efd10e40d08c9d3867ba2c8eb69f2a9e0db35d9e1219f59c839151446d1d38";
+let txid = "a6fb72d5439d45accdaa07e570d6d9f02708f2a11284507f6f613ea616c79534";
 
 // Result = true
 //let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
@@ -506,3 +506,18 @@ Running the unit tests require node.js v8.15+.
 
 ## Test
 `npm run test`
+
+
+
+# Change Log
+
+### 0.16.0 
+- Breaking changes: 
+  - For all types of SEND transactions the change address must be provided, and the change address must be in simpleledger address format since it may contain token change.
+- Non-breaking changes:
+  - Added new `vout` property to validation parents in `LocalValidator` class
+  - Added change log to `readme.md`
+
+### 0.15.13
+- Fixed issue in `isSlpAddress` where it would throw instead of return false on some inputs.
+- Added `isLegacyAddress`, `toLegacy`, and `slpAddressFromHash160` methods to `Utils` class.
