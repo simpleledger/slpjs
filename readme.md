@@ -1,6 +1,6 @@
 # SLPJS
 
-SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) SLP token transactions.  See [change log](#change-log) for update including breaking changes documentation.
+SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) token transactions.  See [change log](#change-log) for update including breaking changes documentation.
 
 GENESIS, MINT, and SEND transaction functions are currently supported. 
 
@@ -517,7 +517,22 @@ Running the unit tests require node.js v8.15+.
 - Non-breaking changes:
   - Added new `vout` property to validation parents in `LocalValidator` class
   - Added change log to `readme.md`
+  - Refactored transaction builder methods into a new class called `TransactionHelpers`
 
 ### 0.15.13
 - Fixed issue in `isSlpAddress` where it would throw instead of return false on some inputs.
 - Added `isLegacyAddress`, `toLegacy`, and `slpAddressFromHash160` methods to `Utils` class.
+
+### 0.15.12
+- Add transaction helper methods for [NFT1](https://github.com/simpleledger/slp-specifications/blob/master/NFT.md#extension-groupable-supply-limitable-nft-tokens-as-a-derivative-of-fungible-tokens)
+
+### 0.15.11
+- validate chunks of 20 with bitcoin.com validator endpoint
+
+### 0.15.10
+- handle array object type response from `sendRawTransaction` method in `BitboxNetwork` class
+
+### 0,15.9
+- Add default remote validation for BitboxNetwork
+- Simplified all README examples to use default validator
+- Add description for how to override the default validator
