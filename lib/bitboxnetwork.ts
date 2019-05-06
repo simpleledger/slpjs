@@ -2,7 +2,7 @@ import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult } from '
 import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import { Utils } from './utils';
 
-import BITBOXSDK from 'bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/lib/Address';
 import { TxnDetails } from 'bitbox-sdk/lib/Transaction';
 import BigNumber from 'bignumber.js';
@@ -15,12 +15,12 @@ import { TransactionHelpers } from './transactionhelpers';
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export class BitboxNetwork implements SlpValidator {
-    BITBOX: BITBOXSDK;
+    BITBOX: BITBOX;
     slp: Slp;
     validator?: SlpValidator;
     txnHelpers: TransactionHelpers;
 
-    constructor(BITBOX: BITBOXSDK, validator?: SlpValidator | SlpProxyValidator) {
+    constructor(BITBOX: BITBOX, validator?: SlpValidator | SlpProxyValidator) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
         if(validator)

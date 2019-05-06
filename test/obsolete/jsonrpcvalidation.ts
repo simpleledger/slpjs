@@ -1,9 +1,9 @@
 import { JsonRpcProxyValidator } from '../../lib/jsonrpcvalidator';
 
 import * as assert from 'assert';
-import BITBOXSDK from 'bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 
-const bitbox = new BITBOXSDK({ restURL: "https://rest.bitcoin.com/v2/" });
+const bitbox = new BITBOX({ restURL: "https://rest.bitcoin.com/v2/" });
 let mainnetProxy = new JsonRpcProxyValidator(bitbox, 'https://validate.simpleledger.info');
 let testnetProxy = new JsonRpcProxyValidator(bitbox, 'https://testnet-validate.simpleledger.info');
 

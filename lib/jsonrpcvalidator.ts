@@ -1,12 +1,12 @@
 import { Slp, SlpProxyValidator } from './slp';
 
-import BITBOXSDK from 'bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 import axios from 'axios';
 
 export class JsonRpcProxyValidator implements SlpProxyValidator {
     validatorUrl: string;
     slp: Slp;
-    constructor(BITBOX: BITBOXSDK, validatorUrl: string) {
+    constructor(BITBOX: BITBOX, validatorUrl: string) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
         if(!validatorUrl)
