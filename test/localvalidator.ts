@@ -3,7 +3,7 @@ import { SlpValidityUnitTest, SlpTestTxn } from './global';
 
 import * as assert from 'assert';
 import "mocha";
-import { BITBOX } from 'bitbox-sdk';
+let BITBOX = require('bitbox-sdk')
 const bitbox = new BITBOX();
 const txUnitTestData: SlpValidityUnitTest[] = require('slp-unit-test-data/tx_input_tests.json');
 

@@ -1,6 +1,6 @@
 import { Slp } from '../lib/slp';
 import * as assert from 'assert';
-import { BITBOX } from 'bitbox-sdk';
+let BITBOX = require('bitbox-sdk');
 
 const bitbox = new BITBOX({ restURL: "https://trest.bitcoin.com/v2/" });
 const scriptUnitTestData = require('slp-unit-test-data/script_tests.json');
