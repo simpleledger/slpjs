@@ -1,11 +1,11 @@
 import { Slp } from '../lib/slp';
 import * as assert from 'assert';
-import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 
-const BITBOX = new BITBOXSDK({ restURL: "https://trest.bitcoin.com/v2/" });
+const bitbox = new BITBOX({ restURL: "https://trest.bitcoin.com/v2/" });
 const scriptUnitTestData = require('slp-unit-test-data/script_tests.json');
 
-let slp = new Slp(BITBOX);
+let slp = new Slp(bitbox);
 
 describe('Slp', function() {
 

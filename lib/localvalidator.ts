@@ -1,7 +1,7 @@
 import { SlpTransactionType, SlpTransactionDetails } from '../index';
 import { SlpValidator, Slp } from './slp';
 
-import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 import * as Bitcore from 'bitcore-lib-cash';
 import BigNumber from 'bignumber.js';
 

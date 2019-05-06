@@ -2,7 +2,7 @@ import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult } from '
 import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import { Utils } from './utils';
 
-import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/lib/Address';
 import { TxnDetails } from 'bitbox-sdk/lib/Transaction';
 import BigNumber from 'bignumber.js';

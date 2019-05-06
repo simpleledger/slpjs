@@ -34,8 +34,8 @@
   "homepage": "https://github.com/simpleledger/slpjs#readme",
   "devDependencies": {
     "@types/mocha": "^5.1.1",
-    "@types/node": "^10.12.18",
-    "bitbox-sdk": "6.0.0",
+    "@types/node": "^10.14.6",
+    "bitbox-sdk": "6.1.0",
     "browserify": "^16.2.2",
     "mkdirp": "^0.5.1",
     "mocha": "^5.1.1",

@@ -1,11 +1,11 @@
 import { JsonRpcProxyValidator } from '../../lib/jsonrpcvalidator';
 
 import * as assert from 'assert';
-import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 
-const BITBOX = new BITBOXSDK({ restURL: "https://rest.bitcoin.com/v2/" });
-let mainnetProxy = new JsonRpcProxyValidator(BITBOX, 'https://validate.simpleledger.info');
-let testnetProxy = new JsonRpcProxyValidator(BITBOX, 'https://testnet-validate.simpleledger.info');
+const bitbox = new BITBOX({ restURL: "https://rest.bitcoin.com/v2/" });
+let mainnetProxy = new JsonRpcProxyValidator(bitbox, 'https://validate.simpleledger.info');
+let testnetProxy = new JsonRpcProxyValidator(bitbox, 'https://testnet-validate.simpleledger.info');
 
 describe('JsonRpcProxyValidator', function() {
     describe('mainnet isValidSlpTxid()', function() {
