@@ -246,7 +246,7 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber(), transactionBuilder.signatureAlgorithms.SCHNORR);
             i++;
         }
 
@@ -344,7 +344,9 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_token_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined,
+            transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber(),
+            transactionBuilder.signatureAlgorithms.SCHNORR);
             i++;
         }
 
@@ -438,7 +440,9 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_baton_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined,
+            transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber(),
+            transactionBuilder.signatureAlgorithms.SCHNORR);
             i++;
         }
 
@@ -536,7 +540,9 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_token_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined,
+            transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber(),
+            transactionBuilder.signatureAlgorithms.SCHNORR);
             i++;
         }
 
@@ -597,7 +603,9 @@ export class Slp {
         let i = 0;
         for (const txo of config.input_token_utxos) {
             let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            transactionBuilder.sign(i, paymentKeyPair, undefined,
+            transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber(),
+            transactionBuilder.signatureAlgorithms.SCHNORR);
             i++;
         }
 
