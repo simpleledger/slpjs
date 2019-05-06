@@ -1,7 +1,7 @@
 import { SlpTransactionType, SlpTransactionDetails } from '../index';
 import { SlpValidator, Slp } from './slp';
 
-import { BITBOX } from 'bitbox-sdk';
+import BITBOXSDK from 'bitbox-sdk';
 import * as Bitcore from 'bitcore-lib-cash';
 import BigNumber from 'bignumber.js';
 
@@ -19,13 +19,13 @@ interface Parent {
 }
 
 export class LocalValidator implements SlpValidator {
-    BITBOX: BITBOX;
+    BITBOX: BITBOXSDK;
     cachedRawTransactions: { [txid: string]: string }
     cachedValidations: { [txid: string]: Validation }
     getRawTransactions: GetRawTransactionsAsync;
     slp: Slp;
 
-    constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync) {
+    constructor(BITBOX: BITBOXSDK, getRawTransactions: GetRawTransactionsAsync) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
         if(!getRawTransactions)

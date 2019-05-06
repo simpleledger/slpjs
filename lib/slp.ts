@@ -2,7 +2,7 @@ import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtx
 import { SlpTokenType1 } from './slptokentype1';
 import { Utils } from './utils';
 
-import { BITBOX } from 'bitbox-sdk';
+import BITBOXSDK from 'bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 
@@ -105,8 +105,8 @@ export interface SlpProxyValidator extends SlpValidator {
 }
 
 export class Slp {
-    BITBOX: BITBOX;
-    constructor(BITBOX: BITBOX) {
+    BITBOX: BITBOXSDK;
+    constructor(BITBOX: BITBOXSDK) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
         this.BITBOX = BITBOX;
