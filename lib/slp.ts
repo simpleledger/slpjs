@@ -256,7 +256,7 @@ export class Slp {
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number, o: any)=>v += o.value, 0);
         let inValue: BigNumber = config.input_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
-            throw Error("Transaction fee is not high enough.")
+            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.")
 
         // TODO: Check for fee too large or send leftover to target address
 
@@ -354,7 +354,7 @@ export class Slp {
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_token_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
-            throw Error("Transaction fee is not high enough.")
+            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.")
 
         // TODO: Check for fee too large or send leftover to target address
 
@@ -448,7 +448,7 @@ export class Slp {
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)  => v += o.value, 0);
         let inValue: BigNumber = config.input_baton_utxos.reduce((v, i)=> v = v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length / 2))
-            throw Error("Transaction fee is not high enough.")
+            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.")
 
         // TODO: Check for fee too large or send leftover to target address
 
@@ -546,7 +546,7 @@ export class Slp {
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any) => v+=o.value, 0);
         let inValue: BigNumber = config.input_token_utxos.reduce((v,i) => v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
-            throw Error("Transaction fee is not high enough.")
+            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.")
 
         return tx;
     }
@@ -607,7 +607,7 @@ export class Slp {
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_token_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
         if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
-            throw Error("Transaction fee is not high enough.")
+            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.")
 
         // TODO: Check for fee too large or send leftover to target address
 
