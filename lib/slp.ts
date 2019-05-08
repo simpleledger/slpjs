@@ -1,4 +1,4 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType } from '../index';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType, logger } from '../index';
 import { SlpTokenType1 } from './slptokentype1';
 import { Utils } from './utils';
 
@@ -95,7 +95,7 @@ export interface configBuildRawBurnTx {
 }
 
 export interface SlpValidator {
-    isValidSlpTxid(txid: string): Promise<boolean>;
+    isValidSlpTxid(txid: string, tokenIdFilter?: string, logger?: logger): Promise<boolean>;
     getRawTransactions: (txid: string[]) => Promise<string[]>;
     validateSlpTransactions(txids: string[]): Promise<string[]>;
 }

@@ -468,22 +468,25 @@ const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 const slpjs = require('slpjs');
 
 const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+const logger = console;
+
+// Uncomment for local validation
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions, logger);
+
+// Uncomment for remote validation
+//const slpValidator = new slpjs.BitboxNetwork(BITBOX, undefined, logger);
 
 // Result = false
-let txid = "a6fb72d5439d45accdaa07e570d6d9f02708f2a11284507f6f613ea616c79534";
+//let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
 
 // Result = true
-//let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
+let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
 
 let isValid;
 (async function() {
   console.log("Validating:", txid);
   console.log("This may take a several seconds...");
   isValid = await slpValidator.isValidSlpTxid(txid);
-  console.log("Validation result: ", isValid);
-  if(!isValid)
-    console.log("This transaction is invalid because:", slpValidator.cachedValidations[txid].invalidReason);
 })();
 
 ```
@@ -510,6 +513,14 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.16.2
+- Added optional logger to LocalValidator & BitboxNetwork classes
+- Fixed bug in default remote validation for BitboxNetwork.isValidSlpTxid()
+- Added comments warning users about two rate limited methods
+
+### 0.16.1
+- Improved error messages for insufficient inputs and fee too low
 
 ### 0.16.0 
 - Breaking changes: 

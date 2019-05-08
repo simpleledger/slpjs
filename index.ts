@@ -9,6 +9,10 @@ export * from './lib/bitboxnetwork';
 
 import BigNumber from 'bignumber.js';
 
+export interface logger {
+    log: (s: string)=>any;
+}
+
 export enum SlpTransactionType {
     "GENESIS" = "GENESIS", 
     "MINT" = "MINT", 

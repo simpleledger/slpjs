@@ -1,4 +1,4 @@
-import { SlpTransactionType, SlpTransactionDetails } from '../index';
+import { SlpTransactionType, SlpTransactionDetails, logger } from '../index';
 import { SlpValidator, Slp } from './slp';
 
 import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
@@ -24,12 +24,15 @@ export class LocalValidator implements SlpValidator {
     cachedValidations: { [txid: string]: Validation }
     getRawTransactions: GetRawTransactionsAsync;
     slp: Slp;
+    logger: logger = { log: (s: string)=>null }
 
-    constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync) {
+    constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync, logger?: logger) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
         if(!getRawTransactions)
             throw Error("Must provide method getRawTransactions to class constructor.")
+        if(logger)
+            this.logger = logger;
         this.BITBOX = BITBOX;
         this.getRawTransactions = getRawTransactions;
         this.slp = new Slp(BITBOX);
@@ -81,6 +84,17 @@ export class LocalValidator implements SlpValidator {
     }
 
     async isValidSlpTxid(txid: string, tokenIdFilter?: string): Promise<boolean> {
+        this.logger.log("SLPJS Validating: " + txid);
+        let valid = await this._isValidSlpTxid(txid, tokenIdFilter);
+        this.logger.log("SLPJS Result: " + valid + " (" + txid + ")");
+        if(!valid && this.cachedValidations[txid].invalidReason)
+            this.logger.log("SLPJS Invalid Reason: " + this.cachedValidations[txid].invalidReason);
+        else if(!valid)
+            this.logger.log("SLPJS Invalid Reason: unknown (result is user supplied)")
+        return valid;
+    }
+
+    async _isValidSlpTxid(txid: string, tokenIdFilter?: string): Promise<boolean> {
         if(!this.cachedValidations[txid]) {
             this.cachedValidations[txid] = { validity: null, parents: [], details: null, invalidReason: null }
             await this.retrieveRawTransaction(txid);

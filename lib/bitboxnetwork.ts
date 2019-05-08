@@ -1,4 +1,4 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult } from '../index';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult, logger } from '../index';
 import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import { Utils } from './utils';
 
@@ -19,10 +19,13 @@ export class BitboxNetwork implements SlpValidator {
     slp: Slp;
     validator?: SlpValidator;
     txnHelpers: TransactionHelpers;
+    logger: logger = { log: (s: string) => null }
 
-    constructor(BITBOX: BITBOX, validator?: SlpValidator | SlpProxyValidator) {
+    constructor(BITBOX: BITBOX, validator?: SlpValidator | SlpProxyValidator, logger?: logger) {
         if(!BITBOX)
             throw Error("Must provide BITBOX instance to class constructor.")
+        if(logger)
+            this.logger = logger;
         if(validator)
             this.validator = validator;
         this.BITBOX = BITBOX;
@@ -36,11 +39,12 @@ export class BitboxNetwork implements SlpValidator {
         return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
     }
 
+    // WARNING: this method is limited to 60 transactions per minute
     async getTransactionDetails(txid: string) {
         let txn: any = (await this.BITBOX.Transaction.details([ txid ]))[0];
         try {
             txn.tokenInfo = await this.getTokenInformation(txid);
-            txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid) : await this.isValidSlpTxid(txid);
+            txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, undefined, this.logger) : await this.isValidSlpTxid(txid);
         } catch(_) {
             txn.tokenInfo = null;
             txn.tokenIsValid = false;
@@ -202,19 +206,22 @@ export class BitboxNetwork implements SlpValidator {
 
     async isValidSlpTxid(txid: string): Promise<boolean> {
         if(this.validator)
-            return await this.validator.isValidSlpTxid(txid);
+            return await this.validator.isValidSlpTxid(txid, undefined, this.logger);
+        // WARNING: the following method is limited to 60 transactions per minute
         let validatorUrl = this.setRemoteValidatorUrl();
-        let txids = [ txid ];
+        this.logger.log("SLPJS Validating (remote: " + validatorUrl + "): " + txid);
         const result = await Axios({
             method: "post",
             url: validatorUrl,
             data: {
-                txids: txids
+                txids: [ txid ]
             }
         })
+        let res = false;
         if (result && result.data)
-            return (<{ txid: string, valid: boolean }[]>result.data).map(i => { return i.txid; }).includes(txid) ? true : false;
-        return false
+           res = (<{ txid: string, valid: boolean }[]>result.data).filter(i => i.valid).length > 0 ? true : false;
+        this.logger.log("SLPJS Validator Result: " + res + " (remote: " + validatorUrl + "): " + txid);
+        return res;
     }
 
     async validateSlpTransactions(txids: string[]): Promise<string[]> {
