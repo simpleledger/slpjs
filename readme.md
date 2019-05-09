@@ -457,30 +457,55 @@ const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 ```
 
-## Example Local Validator
+## Validation Example 1: Local Validator / Remote Full Node RPC
 
-This example validates a SLP transaction locally by downloading all required raw transactions from remote node, in this case BITBOX REST API.
+This example validates a SLP transaction locally by downloading all required raw transactions from a remote full  node, in this case BITBOX REST API.
 
 ```js
 
 const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
 const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
 const slpjs = require('slpjs');
-
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
 const logger = console;
 
-// Uncomment for local validation
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
 const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions, logger);
-
-// Uncomment for remote validation
-//const slpValidator = new slpjs.BitboxNetwork(BITBOX, undefined, logger);
 
 // Result = false
 //let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
 
 // Result = true
-let txid = "44b2567e6a1c9f8d6ac5256ea4be02c31904d63cbe0f7a299c0ee28521443764";
+let txid = "ab1550876e217d68bfac55e50b4a82535bb20842f976bdfbc07cca19e8028f13";
+
+let isValid;
+(async function() {
+  console.log("Validating:", txid);
+  console.log("This may take a several seconds...");
+  isValid = await slpValidator.isValidSlpTxid(txid);
+})();
+
+```
+
+## Validation Example 2: Local Validator / Local Full Node RPC
+```js
+// TODO
+```
+
+## Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)
+
+```js
+const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const slpjs = require('slpjs');
+const logger = console;
+
+const slpValidator = new slpjs.BitboxNetwork(BITBOX, undefined, logger);
+
+// Result = false
+//let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
+
+// Result = true
+let txid = "ab1550876e217d68bfac55e50b4a82535bb20842f976bdfbc07cca19e8028f13";
 
 let isValid;
 (async function() {
