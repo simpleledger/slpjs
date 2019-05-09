@@ -42,6 +42,14 @@ export class BitboxNetwork implements SlpValidator {
     // WARNING: this method is limited to 60 transactions per minute
     async getTransactionDetails(txid: string) {
         let txn: any = (await this.BITBOX.Transaction.details([ txid ]))[0];
+
+        // add slp address format to transaction details
+        txn.vin.forEach((input: any) => { 
+            try { input.slpAddress = Utils.toSlpAddress(input.legacyAddress); } catch(_){}});
+        txn.vout.forEach((output: any) => { 
+            try { output.scriptPubKey.slpAddrs = [ Utils.toSlpAddress(output.scriptPubKey.cashAddrs[0]) ] } catch(_){}});
+
+        // add token information to transaction details
         try {
             txn.tokenInfo = await this.getTokenInformation(txid);
             txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, undefined, this.logger) : await this.isValidSlpTxid(txid);
