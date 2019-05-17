@@ -1,6 +1,6 @@
 import { SlpAddressUtxoResult, utxo } from '../index';
 
-import { AddressUtxoResult } from 'bitbox-sdk/lib/Address';
+import { AddressUtxoResult } from 'bitcoin-com-rest';
 import * as Bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 

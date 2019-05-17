@@ -3,9 +3,9 @@ import { SlpValidityUnitTest, SlpTestTxn } from './global';
 
 import * as assert from 'assert';
 import "mocha";
-import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 
-const BITBOX = new BITBOXSDK();
+const bitbox = new BITBOX();
 const txUnitTestData: SlpValidityUnitTest[] = require('slp-unit-test-data/tx_input_tests.json');
 
 describe('Slp', function() {
@@ -17,7 +17,7 @@ describe('Slp', function() {
                 let getRawUnitTestTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
                     let allTxns: SlpTestTxn[] = test.when.concat(test.should);
                     let txn = allTxns.find(i => {
-                        let hash = (<Buffer>BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(i.tx, 'hex'))).reverse()).toString('hex');
+                        let hash = (<Buffer>bitbox.Crypto.sha256(bitbox.Crypto.sha256(Buffer.from(i.tx, 'hex'))).reverse()).toString('hex');
                         return hash === txids[0] 
                     });
                     if(txn)
@@ -26,14 +26,14 @@ describe('Slp', function() {
                 }
     
                 // Create instance of Local Validator
-                var slpValidator = new LocalValidator(BITBOX, getRawUnitTestTransactions);
+                var slpValidator = new LocalValidator(bitbox, getRawUnitTestTransactions);
 
                 // Pre-Load Validator the unit-test inputs
                 test.when.forEach(w => {
                     slpValidator.addValidationFromStore(w.tx, w.valid)
                 });
 
-                let txid = (<Buffer>BITBOX.Crypto.sha256(BITBOX.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).reverse()).toString('hex');
+                let txid = (<Buffer>bitbox.Crypto.sha256(bitbox.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).reverse()).toString('hex');
                 let shouldBeValid = test.should[0].valid;
                 let isValid = await slpValidator.isValidSlpTxid(txid);
                 if(isValid === false)

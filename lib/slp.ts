@@ -2,7 +2,7 @@ import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtx
 import { SlpTokenType1 } from './slptokentype1';
 import { Utils } from './utils';
 
-import BITBOXSDK from 'bitbox-sdk/lib/bitbox-sdk';
+import { BITBOX } from 'bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 
@@ -95,7 +95,7 @@ export interface configBuildRawBurnTx {
 }
 
 export interface SlpValidator {
-    isValidSlpTxid(txid: string, tokenIdFilter?: string, logger?: logger): Promise<boolean>;
+    isValidSlpTxid(txid: string, tokenIdFilter?: string|null, logger?: logger): Promise<boolean>;
     getRawTransactions: (txid: string[]) => Promise<string[]>;
     validateSlpTransactions(txids: string[]): Promise<string[]>;
 }
@@ -105,11 +105,11 @@ export interface SlpProxyValidator extends SlpValidator {
 }
 
 export class Slp {
-    BITBOX: BITBOXSDK;
-    constructor(BITBOX: BITBOXSDK) {
-        if(!BITBOX)
+    BITBOX: BITBOX;
+    constructor(bitbox: BITBOX) {
+        if(!bitbox)
             throw Error("Must provide BITBOX instance to class constructor.")
-        this.BITBOX = BITBOX;
+        this.BITBOX = bitbox;
     }
 
     get lokadIdHex() { return "534c5000" }
@@ -721,7 +721,11 @@ export class Slp {
             slpMsg.genesisOrMintQuantity = Utils.buffer2BigNumber(chunks[5]!);
         }
         else
-            throw Error('Bad transaction type');
+            throw Error("Bad transaction type");
+
+        if(!slpMsg.genesisOrMintQuantity && (!slpMsg.sendOutputs || slpMsg.sendOutputs.length === 0))
+            throw Error("SLP message must have either Genesis/Mint outputs or Send outputs, both are missing");
+
         return slpMsg;
     }
  

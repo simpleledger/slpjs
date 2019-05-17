@@ -31,16 +31,16 @@ NOTE: For fast validation performance all of the following examples show how to 
 ```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOXSDK = require('bitbox-sdk')
 const slpjs = require('slpjs');
 
-// FOR TESTNET UNCOMMENT
-let addr = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-
 // FOR MAINNET UNCOMMENT
-// let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+let addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+
+// FOR TESTNET UNCOMMENT
+// let addr = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
 
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
@@ -77,27 +77,27 @@ GENESIS is the most simple type of SLP transaction since no special inputs are r
 ```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
-// FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
-const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-// For unlimited issuance provide a "batonReceiverAddress"
-const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-
 // FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
-// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
-// const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
-// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
+const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
+// For unlimited issuance provide a "batonReceiverAddress"
+const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
+
+// FOR TESTNET UNCOMMENT
+// const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
+// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
+// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 // // For unlimited issuance provide a "batonReceiverAddress"
-// const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
+// const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
 
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
@@ -152,11 +152,11 @@ Non-fungible tokens can be created with the `simpleNFT1Genesis` method with thes
 ```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
-const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
 const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
 const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
@@ -210,28 +210,28 @@ Adding additional tokens for a token that already exists is possible if you are 
 ```javascript
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
-// FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
-const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-const tokenIdHexToMint = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
+// FOR MAINNET UNCOMMENT
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
+const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
+const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
+const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
+const tokenIdHexToMint = "adcf120f51d45056bc79353a2831ecd1843922b3d9fac5f109160bd2d49d3f4c";
 let additionalTokenQty = 1000
 
-// FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
-// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
-// const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
-// const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
-// const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
-// const tokenIdHexToMint = "495322b37d6b2eae81f045eda612b95870a0c2b6069c58f70cf8ef4e6a9fd43a";
+// FOR TESTNET UNCOMMENT
+// const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
+// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
+// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+// const tokenIdHexToMint = "a67e2abb2fcfaa605c6a3b0dfb642cc830b63138d85b5e95eee523fdbded4d74";
 // let additionalTokenQty = 1000
 
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
@@ -295,27 +295,27 @@ This example shows the general workflow for sending an existing token.
 ```js
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default;
+const BITBOXSDK = require('bitbox-sdk');
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
 // FOR MAINNET UNCOMMENT
-// const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
-// const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be simpleledger format
-// const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
-// const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be simpleledger format
-// const bchChangeReceiverAddress = "simpleledger:qrxx766pq856sm7l0nny5wtygnqlga52dvvhy9smlh";     // <-- must be simpleledger format
-// let tokenId = "347975ff25c8ca30b309f229cd6f1968d6c37bf81ef8f4d0b3b28cb59f48acf3";
-// let sendAmounts = [ 1 ];
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be simpleledger format
+const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
+const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be simpleledger format
+const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be simpleledger format
+let tokenId = "adcf120f51d45056bc79353a2831ecd1843922b3d9fac5f109160bd2d49d3f4c";
+let sendAmounts = [ 1 ];
 
 // FOR TESTNET UNCOMMENT
-const BITBOX = new BITBOXSDK({ restURL: 'https://trest.bitcoin.com/v2/' });
-const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
-const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
-const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
-const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
-let tokenId = "78d57a82a0dd9930cc17843d9d06677f267777dd6b25055bad0ae43f1b884091";
-let sendAmounts = [ 10 ];
+// const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
+// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
+// const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
+// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
+// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
+// let tokenId = "78d57a82a0dd9930cc17843d9d06677f267777dd6b25055bad0ae43f1b884091";
+// let sendAmounts = [ 10 ];
 
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
@@ -334,7 +334,10 @@ let balances;
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
   console.log("'balances' variable is set.");
-  console.log("Token balance:", balances.slpTokenBalances[tokenId].toNumber() / 10**tokenDecimals);
+  console.log(balances);
+  if(balances.slpTokenBalances[tokenId] === undefined)
+    console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")
+  console.log("Token balance:", balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals);
 })();
 
 // Wait for network responses...
@@ -374,11 +377,11 @@ This example shows the general workflow for sending an existing token.
 
 // Install BITBOX-SDK v3.0.2+ instance for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
+const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
 const slpjs = require('slpjs');
 
-const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
 const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
 const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
 const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
@@ -400,7 +403,7 @@ let balances;
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
   console.log("'balances' variable is set.");
-  console.log('Token balance:', balances.slpTokenBalances[tokenId].toNumber() / 10**tokenDecimals)
+  console.log('Token balance:', balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals)
 })();
 
 // Wait for network responses...
@@ -463,8 +466,8 @@ This example validates a SLP transaction locally by downloading all required raw
 
 ```js
 
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
-const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const BITBOXSDK = require('bitbox-sdk')
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
 const slpjs = require('slpjs');
 const logger = console;
 
@@ -475,13 +478,14 @@ const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions, logger
 //let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
 
 // Result = true
-let txid = "ab1550876e217d68bfac55e50b4a82535bb20842f976bdfbc07cca19e8028f13";
+let txid = "4a3829d6da924a16bbc0cc43d5d62b40996648a0c8f74725c15ec56ee930d0fa";
 
 let isValid;
 (async function() {
   console.log("Validating:", txid);
   console.log("This may take a several seconds...");
   isValid = await slpValidator.isValidSlpTxid(txid);
+  console.log("Final Result:", isValid);
 })();
 
 ```
@@ -494,8 +498,8 @@ let isValid;
 ## Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)
 
 ```js
-const BITBOXSDK = require('bitbox-sdk/lib/bitbox-sdk').default
-const BITBOX = new BITBOXSDK({ restURL: 'https://rest.bitcoin.com/v2/' });
+const BITBOXSDK = require('bitbox-sdk')
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
 const slpjs = require('slpjs');
 const logger = console;
 
@@ -512,6 +516,7 @@ let isValid;
   console.log("Validating:", txid);
   console.log("This may take a several seconds...");
   isValid = await slpValidator.isValidSlpTxid(txid);
+  console.log("Final Result:", isValid);
 })();
 
 ```
@@ -538,6 +543,17 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.17.0
+- Breaking changes:
+  - Dev dependency BITBOX updated to latestest version 8.0.1 from 3.0.11
+  - Throws on network error instead of returning null/false
+- Non-breaking changes:
+  - Added tests for BitboxNetwork class
+  - added "decimalConversion" parameter to getTransactionDetails() and getTokenInformation() methods in BitboxNetwork, default is false
+
+### 0.16.3
+- Added slp address to getTransactionDetails() response
 
 ### 0.16.2
 - Added optional logger to LocalValidator & BitboxNetwork classes

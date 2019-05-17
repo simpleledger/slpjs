@@ -1,10 +1,9 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult, logger } from '../index';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult, logger, SlpTransactionType } from '../index';
 import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import { Utils } from './utils';
 
-import BITBOX from 'bitbox-sdk/lib/bitbox-sdk';
-import { AddressUtxoResult, AddressDetailsResult } from 'bitbox-sdk/lib/Address';
-import { TxnDetails } from 'bitbox-sdk/lib/Transaction';
+import { BITBOX } from 'bitbox-sdk';
+import { AddressUtxoResult, AddressDetailsResult, TxnDetailsResult, VerboseRawTransactionResult } from 'bitcoin-com-rest';
 import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
@@ -33,16 +32,35 @@ export class BitboxNetwork implements SlpValidator {
         this.txnHelpers = new TransactionHelpers(this.slp);
     }
     
-    async getTokenInformation(txid: string): Promise<SlpTransactionDetails> {
-        let txhex: string = (await this.BITBOX.RawTransactions.getRawTransaction([txid]))[0];
+    async getTokenInformation(txid: string, decimalConversion=false): Promise<SlpTransactionDetails|any> {
+        let res: string[];
+        try {
+            res = <string[]|any>await this.BITBOX.RawTransactions.getRawTransaction([txid]);
+        } catch (e) {
+            throw Error(e.error)
+        }
+        
+        if(!Array.isArray(res) || res.length !== 1)
+            throw Error("BITBOX response error for 'RawTransactions.getRawTransaction'");
+
+        let txhex = res[0];
         let txn: Bitcore.Transaction = new Bitcore.Transaction(txhex)
-        return this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
+
+        let slpMsg = this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
+        if(slpMsg.transactionType === SlpTransactionType.GENESIS) {
+            slpMsg.tokenIdHex = txid;
+            if(decimalConversion)
+                slpMsg.genesisOrMintQuantity = slpMsg.genesisOrMintQuantity!.dividedBy(10**slpMsg.decimals)
+        } else {
+            if(decimalConversion)
+                slpMsg.sendOutputs!.map(o => o.dividedBy(10**slpMsg.decimals))
+        }
+        return slpMsg;
     }
 
     // WARNING: this method is limited to 60 transactions per minute
-    async getTransactionDetails(txid: string) {
-        let txn: any = (await this.BITBOX.Transaction.details([ txid ]))[0];
-
+    async getTransactionDetails(txid: string, decimalConversion=false) {
+        let txn: any = (<TxnDetailsResult[]>await this.BITBOX.Transaction.details([ txid ]))[0];
         // add slp address format to transaction details
         txn.vin.forEach((input: any) => { 
             try { input.slpAddress = Utils.toSlpAddress(input.legacyAddress); } catch(_){}});
@@ -50,13 +68,8 @@ export class BitboxNetwork implements SlpValidator {
             try { output.scriptPubKey.slpAddrs = [ Utils.toSlpAddress(output.scriptPubKey.cashAddrs[0]) ] } catch(_){}});
 
         // add token information to transaction details
-        try {
-            txn.tokenInfo = await this.getTokenInformation(txid);
-            txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, undefined, this.logger) : await this.isValidSlpTxid(txid);
-        } catch(_) {
-            txn.tokenInfo = null;
-            txn.tokenIsValid = false;
-        }
+        txn.tokenInfo = await this.getTokenInformation(txid, decimalConversion);
+        txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, null, this.logger) : await this.isValidSlpTxid(txid);
         return txn;
     }
 
@@ -65,7 +78,7 @@ export class BitboxNetwork implements SlpValidator {
         let res: AddressUtxoResult;
         if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
-        res = (await this.BITBOX.Address.utxo([address]))[0];
+        res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([address]))[0];
         return res;
     }
 
@@ -127,24 +140,24 @@ export class BitboxNetwork implements SlpValidator {
 
     async getUtxoWithTxDetails(address: string) {
         let utxos = Utils.mapToSlpAddressUtxoResultArray(await this.getUtxoWithRetry(address));
-        let txIds = utxos.map(i => i.txid)    
+        let txIds = utxos.map((i: { txid: string; }) => i.txid)    
         if(txIds.length === 0)
             return [];
         // Split txIds into chunks of 20 (BitBox limit), run the detail queries in parallel
-        let txDetails: any[] = (await Promise.all(_.chunk(txIds, 20).map((txids: string[]) => {
+        let txDetails: any[] = (await Promise.all(_.chunk(txIds, 20).map((txids: any[]) => {
             return this.getTransactionDetailsWithRetry([...new Set(txids)]);
         })));
         // concat the chunked arrays
-        txDetails = <TxnDetails[]>[].concat(...txDetails);
-        utxos = utxos.map(i => { i.tx = txDetails.find((d: TxnDetails) => d.txid === i.txid ); return i;})
+        txDetails = <TxnDetailsResult[]>[].concat(...txDetails);
+        utxos = utxos.map((i: SlpAddressUtxoResult) => { i.tx = txDetails.find((d: TxnDetailsResult) => d.txid === i.txid ); return i;})
         return utxos;
     }
     
     async getTransactionDetailsWithRetry(txids: string[], retries = 40) {
-        let result!: TxnDetails[];
+        let result!: TxnDetailsResult[];
         let count = 0;
         while(result === undefined){
-            result = await this.BITBOX.Transaction.details(txids);
+            result = <TxnDetailsResult[]>await this.BITBOX.Transaction.details(txids);
             if(result)
                 return result;
             count++;
@@ -161,7 +174,7 @@ export class BitboxNetwork implements SlpValidator {
 		let result: AddressDetailsResult[] | undefined;
 		let count = 0;
 		while(result === undefined){
-            result = await this.BITBOX.Address.details([address]);
+            result = <AddressDetailsResult[]>await this.BITBOX.Address.details([address]);
             if(result)
                 return result;
 			count++;
@@ -203,7 +216,7 @@ export class BitboxNetwork implements SlpValidator {
     async getRawTransactions(txids: string[]): Promise<string[]> {
         if(this.validator)
             return await this.validator.getRawTransactions(txids);
-        return await this.BITBOX.RawTransactions.getRawTransaction(txids);
+        return <any[]>await this.BITBOX.RawTransactions.getRawTransaction(txids);
     }
 
     async processUtxosForSlp(utxos: SlpAddressUtxoResult[]) {

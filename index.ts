@@ -37,7 +37,7 @@ export interface SlpTransactionDetails {
     transactionType: SlpTransactionType;
     tokenIdHex: string;
     versionType: SlpVersionType;
-    timestamp: string;
+    timestamp?: string;
     symbol: string;
     name: string;
     documentUri: string; 
