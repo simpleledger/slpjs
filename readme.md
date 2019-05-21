@@ -492,7 +492,30 @@ let isValid;
 
 ## Validation Example 2: Local Validator / Local Full Node RPC
 ```js
-// TODO
+
+const BITBOXSDK = require('bitbox-sdk')
+const BITBOX = new BITBOXSDK.BITBOX();
+const slpjs = require('slpjs');
+const logger = console;
+const RpcClient = require('bitcoin-rpc-promise');
+const connectionString = 'http://bitcoin:password@localhost:8332'
+const rpc = new RpcClient(connectionString);
+const slpValidator = new slpjs.LocalValidator(BITBOX, async (txids) => [ await rpc.getRawTransaction(txids[0]) ], logger)
+
+// Result = false
+//let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
+
+// Result = true
+let txid = "4a3829d6da924a16bbc0cc43d5d62b40996648a0c8f74725c15ec56ee930d0fa";
+
+let isValid;
+(async function() {
+  console.log("Validating:", txid);
+  console.log("This may take a several seconds...");
+  isValid = await slpValidator.isValidSlpTxid(txid);
+  console.log("Final Result:", isValid);
+})();
+
 ```
 
 ## Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)
