@@ -6,6 +6,14 @@ import { BITBOX } from 'bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 
+export interface SlpPaymentRequest {
+    address: string,
+    amountBch?: number, 
+    amountToken?: number,
+    tokenId?: string,
+    tokenFlags?: string[]
+}
+
 export interface PushDataOperation {
     opcode: number, 
     data: Buffer|null

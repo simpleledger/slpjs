@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -35,7 +35,7 @@
   "devDependencies": {
     "@types/mocha": "^5.1.1",
     "@types/node": "^10.12.18",
-    "bitbox-sdk": "8.0.1",
+    "bitbox-sdk": "8.1.0",
     "bitcoin-rpc-promise": "^2.1.6",
     "browserify": "^16.2.2",
     "mkdirp": "^0.5.1",

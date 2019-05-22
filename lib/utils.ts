@@ -1,4 +1,4 @@
-import { SlpAddressUtxoResult, utxo } from '../index';
+import { SlpAddressUtxoResult, utxo, SlpPaymentRequest } from '../index';
 
 import { AddressUtxoResult } from 'bitcoin-com-rest';
 import * as Bchaddr from 'bchaddrjs-slp';
@@ -143,5 +143,72 @@ export class Utils {
         })
 
         return buffer
+    }
+
+    static buildSlpUri(address: string, amountBch?: number, amountToken?: number, tokenId?: string): string {
+        let uri = "";
+        if(!this.isSlpAddress(address))
+            throw Error("Not a valid SLP address");
+        if(address.startsWith("simpleledger:"))
+            uri = uri.concat(address);
+        else
+            uri = uri.concat("simpleledger:" + address);
+        if(amountBch || amountToken)
+            uri = uri.concat("?");
+        let n: number = 0;
+        if(amountBch) {
+            uri = uri.concat("amount=" + amountBch.toString());
+            n++;
+        }
+        if(amountToken) {
+            if(!tokenId)
+                throw Error("Missing tokenId parameter");
+            let re = /^([A-Fa-f0-9]{2}){32,32}$/;
+            if(!re.test(tokenId))
+                throw Error("TokenId is invalid, must be 32-byte hexidecimal string");
+            if (n > 0)
+                uri = uri.concat("&amount" + n.toString() + "=" + amountToken.toString() + "-" + tokenId);
+            else
+                uri = uri.concat("amount" + "=" + amountToken.toString() + "-" + tokenId);
+        }
+        return uri;
+    }
+
+    static parseSlpUri(uri: string): SlpPaymentRequest {
+        if(!uri.startsWith("simpleledger:"))
+            throw Error("Input does not start with 'simpleledger:'");
+        else
+            uri = uri.replace("simpleledger:", "");
+        let splitUri = uri.split('?');
+        if(splitUri.length > 2)
+            throw Error("Cannot have character '?' more than once.");
+        if(!this.isSlpAddress(splitUri[0]))
+            throw Error("Address is not an SLP formatted address.");
+        let result: SlpPaymentRequest = { address: "simpleledger:" + splitUri[0] };
+        if(splitUri.length > 1) {
+            splitUri = splitUri[1].split('&');
+            let paramNames: string[] = [];
+            splitUri.forEach(param => {
+                if(param.split('=').length === 2) {
+                    let str = param.split('=');
+                    if(paramNames.includes(str[0]))
+                        throw Error("Cannot have duplicate parameter names in URI string");
+                    if(str[0].startsWith('amount') && str[1].split('-').length === 1) {
+                        result.amountBch = parseFloat(str[1]);
+                    } else if(str[0].startsWith('amount') && str[1].split('-').length > 1) {
+                        let p = str[1].split('-');
+                        if(p.length > 2)
+                            throw Error("Token flags params not yet implemented.");
+                        let re = /^([A-Fa-f0-9]{2}){32,32}$/;
+                        if(p.length > 1 && !re.test(p[1]))
+                            throw Error("Token id in URI is not a valid 32-byte hexidecimal string");
+                        result.amountToken = parseFloat(p[0]);
+                        result.tokenId = p[1];
+                    }
+                    paramNames.push(str[0]);
+                }
+            });
+        }
+        return result;
     }
 }

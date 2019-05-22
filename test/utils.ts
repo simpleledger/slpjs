@@ -1,9 +1,121 @@
 import { Utils } from '../lib/utils';
 import * as assert from 'assert';
 import "mocha";
+import { SlpPaymentRequest } from '..';
 
 describe('Utils', function() {
     describe('Address Conversion and Network Detection', function() {
+        it("buildSlpUri()", () => {
+            let expected_uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk"
+            let uri = Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk")
+            assert.equal(expected_uri, uri)
+        })
+        it("buildSlpUri()", () => {
+            let expected_uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.1"
+            let uri = Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk", 10.1)
+            assert.equal(expected_uri, uri)
+        })
+        it("buildSlpUri()", () => {
+            let expected_uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=1.01-fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+            let uri = Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk", undefined, 1.01, "fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f")
+            assert.equal(expected_uri, uri)
+        })
+        it("buildSlpUri()", () => {
+            let expected_uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.1&amount1=1.01-fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+            let uri = Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk", 10.1, 1.01, "fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f")
+            assert.equal(expected_uri, uri)
+        })
+        it("buildSlpUri()", () => {
+            let f = function() {
+                Utils.buildSlpUri("abc")
+            }
+            assert.throws(f, Error("Not a valid SLP address"))
+        })
+        it("buildSlpUri()", () => {
+            let f = function() {
+                Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk", undefined, 1.01)
+            }
+            assert.throws(f, Error("Missing tokenId parameter"))
+        })
+        it("buildSlpUri()", () => {
+            let f = function() {
+                Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk", undefined, 1.01, "abc");
+            }
+            assert.throws(f, Error("TokenId is invalid, must be 32-byte hexidecimal string"))
+        })
+        it("parseSlpUri()", () => {
+            let uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk"
+            let r = Utils.parseSlpUri(uri);
+            let r_expected: SlpPaymentRequest = {
+                address: "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk"
+            }
+            assert.deepEqual(r, r_expected)
+        })
+        it("parseSlpUri()", () => {
+            let uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=1.01&amount1=10.123-fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+            let r = Utils.parseSlpUri(uri);
+            let r_expected: SlpPaymentRequest = {
+                address: "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk",
+                amountBch: 1.01, 
+                amountToken: 10.123, 
+                tokenId: "fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+            }
+            assert.deepEqual(r, r_expected)
+        })
+        it("parseSlpUri()", () => {
+            let uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.123-fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+            let r = Utils.parseSlpUri(uri);
+            let r_expected: SlpPaymentRequest = {
+                address: "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk",
+                amountToken: 10.123, 
+                tokenId: "fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+            }
+            assert.deepEqual(r, r_expected)
+        })
+        it("parseSlpUri()", () => {
+            let uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.123"
+            let r = Utils.parseSlpUri(uri);
+            let r_expected: SlpPaymentRequest = {
+                address: "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk",
+                amountBch: 10.123
+            }
+            assert.deepEqual(r, r_expected)
+        })
+        it("parseSlpUri()", () => {
+            let f = function() {
+                let uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.123-abch"
+                Utils.parseSlpUri(uri)
+            }
+            assert.throws(f, Error("Token id in URI is not a valid 32-byte hexidecimal string"))
+        })
+        it("parseSlpUri()", () => {
+            let f = function() {
+                let uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.123-fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f-isgroup"
+                Utils.parseSlpUri(uri)
+            }
+            assert.throws(f, Error("Token flags params not yet implemented."))
+        })
+        it("parseSlpUri()", () => {
+            let f = function() {
+                let uri = "simpleledger:qra3uard8aqxxc9tswlsugad9x0uglyehc74puah4w?amount=10.123-fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f"
+                Utils.parseSlpUri(uri)
+            }
+            assert.throws(f, Error("Address is not an SLP formatted address."))
+        })
+        it("parseSlpUri()", () => {
+            let f = function() {
+                let uri = "simpleledger:qra3uard8aqxxc9tswlsugad9x0uglyehc74puah4w?amount=10.123?fa6c74c52450fc164e17402a46645ce494a8a8e93b1383fa27460086931ef59f-isgroup"
+                Utils.parseSlpUri(uri)
+            }
+            assert.throws(f, Error("Cannot have character '?' more than once."))
+        })
+        it("parseSlpUri()", () => {
+            let f = function() {
+                let uri = "bitcoincash:qra3uard8aqxxc9tswlsugad9x0uglyehc74puah4w?amount=10.123"
+                Utils.parseSlpUri(uri)
+            }
+            assert.throws(f, Error("Input does not start with 'simpleledger:'"))
+        })
         it("slpAddressFromHash160()", () => {
             let hash160 = Buffer.from("e9d42fb8b90cc1b8dcf698280bb3a066ce08876f", 'hex')
             let network = "mainnet"; // or "testnet"

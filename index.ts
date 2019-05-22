@@ -3,7 +3,6 @@
 export * from './lib/slp';
 export * from './lib/utils';
 export * from './lib/bitdbnetwork';
-export * from './lib/jsonrpcvalidator';
 export * from './lib/localvalidator';
 export * from './lib/bitboxnetwork';
 
