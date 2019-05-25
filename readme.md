@@ -1,8 +1,8 @@
 # SLPJS
 
-SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) token transactions.  See [change log](#change-log) for update including breaking changes documentation.
+SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) token transactions.  See [change log](#change-log) for updates.
 
-GENESIS, MINT, and SEND transaction functions are currently supported. 
+GENESIS, MINT, and SEND transaction functions are supported. 
 
 [![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
 
@@ -29,7 +29,7 @@ NOTE: For fast validation performance all of the following examples show how to 
 ## Get Balances
 
 ```js
-// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// Install BITBOX-SDK v8.1+ for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk')
 const slpjs = require('slpjs');
@@ -75,7 +75,7 @@ let balances;
 GENESIS is the most simple type of SLP transaction since no special inputs are required.
 
 ```js
-// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// Install BITBOX-SDK v8.1+ for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
@@ -150,7 +150,7 @@ let genesisTxid;
 Non-fungible tokens can be created with the `simpleNFT1Genesis` method with these parameters:
 
 ```js
-// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// Install BITBOX-SDK v8.1+ for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
@@ -208,7 +208,7 @@ let genesisTxid;
 Adding additional tokens for a token that already exists is possible if you are in control of the minting "baton".  This minting baton is a special UTXO that gives authority to add to the token's circulating supply.  
 
 ```javascript
-// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// Install BITBOX-SDK v8.1+ for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
@@ -293,7 +293,7 @@ let mintTxid;
 This example shows the general workflow for sending an existing token.
 
 ```js
-// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// Install BITBOX-SDK v8.1+ for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk');
 const BigNumber = require('bignumber.js');
@@ -375,7 +375,7 @@ This example shows the general workflow for sending an existing token.
 
 ```javascript
 
-// Install BITBOX-SDK v3.0.2+ instance for blockchain access
+// Install BITBOX-SDK v8.1+ for blockchain access
 // For more information visit: https://www.npmjs.com/package/bitbox-sdk
 const BITBOXSDK = require('bitbox-sdk')
 const BigNumber = require('bignumber.js');
@@ -460,9 +460,9 @@ const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
 ```
 
-## Validation Example 1: Local Validator / Remote Full Node RPC
+## Validation Example 1: Local Validator & Remote Full Node RPC
 
-This example validates a SLP transaction locally by downloading all required raw transactions from a remote full  node, in this case BITBOX REST API.
+Validate SLP transaction locally with a remote full node (i.e., rest.bitcoin.com).
 
 ```js
 
@@ -490,7 +490,10 @@ let isValid;
 
 ```
 
-## Validation Example 2: Local Validator / Local Full Node RPC
+## Validation Example 2: Local Validator & Local Full Node RPC
+
+Validate SLP transaction locally with a local full node.
+
 ```js
 
 const BITBOXSDK = require('bitbox-sdk')
@@ -519,6 +522,8 @@ let isValid;
 ```
 
 ## Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)
+
+Validate SLP transaction using rest.bitcoin.com. 
 
 ```js
 const BITBOXSDK = require('bitbox-sdk')
@@ -566,6 +571,11 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.18.0
+- Added `simpleledger:` URI scheme parser & builder to Utils class per [spec](https://github.com/simpleledger/slp-specifications/blob/master/slp-uri-scheme.md) 
+- Removed unused remote proxy validator code
+- Bumped Bitbox dep to v8.1 with TypeScript updates
 
 ### 0.17.0
 - Breaking changes:
