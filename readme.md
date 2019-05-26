@@ -305,17 +305,8 @@ const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpsta
 const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
 const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be simpleledger format
 const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be simpleledger format
-let tokenId = "adcf120f51d45056bc79353a2831ecd1843922b3d9fac5f109160bd2d49d3f4c";
+let tokenId = "d32b4191d3f78909f43a3f5853ba59e9f2d137925f28e7780e717f4b4bfd4a3f";
 let sendAmounts = [ 1 ];
-
-// FOR TESTNET UNCOMMENT
-// const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
-// const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
-// const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy"; // <-- compressed WIF format
-// const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
-// const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";   // <-- must be simpleledger format
-// let tokenId = "78d57a82a0dd9930cc17843d9d06677f267777dd6b25055bad0ae43f1b884091";
-// let sendAmounts = [ 10 ];
 
 const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 
@@ -367,6 +358,97 @@ let sendTxid;
     console.log("SEND txn complete:", sendTxid);
 })();
 ```
+
+## SEND from P2SH 2-of-2 multisig - Example of sending tokens using 2-of-2 multisig contract
+
+This example shows the general workflow for sending from an P2SH address, and specifically from 2-of-2 multisig address.
+
+```js
+// Install BITBOX-SDK v8.1+ for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk');
+const BigNumber = require('bignumber.js');
+const slpjs = require('slpjs');
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+const slp = new slpjs.Slp(BITBOX);
+let helpers = new slpjs.TransactionHelpers(slp);
+
+const pubkey_signer_1 = "02471e07bcf7d47afd40e0bf4f806347f9e8af4dfbbb3c45691bbaefd4ea926307"; // Signer #1
+const pubkey_signer_2 = "03472cfca5da3bf06a85c5fd860ffe911ef374cf2a9b754fd861d1ead668b15a32"; // Signer #2
+
+// we have two signers for this 2-of-2 multisig address (we're cheating here... normally we would only have one of these!)
+const wifs = [ "Ky6iiLSL2K9stMd4G5dLeXfpVKu5YRB6dhjCsHyof3eaB2cDngSr", "L2AdfmxwsYu3KnRASZ51C3UEnduUDy1b21sSF9JbLNVEPzsxEZib" ];
+
+// to keep this example alive we will just send everything to the same address
+const tokenReceiverAddress     = [ "simpleledger:pphnuh7dx24rcwjkj0sl6xqfyfzf23aj7udr0837gn" ]; // <-- must be simpleledger format
+const bchChangeReceiverAddress = "simpleledger:pphnuh7dx24rcwjkj0sl6xqfyfzf23aj7udr0837gn";     // <-- must be simpleledger format
+let tokenId = "497291b8a1dfe69c8daea50677a3d31a5ef0e9484d8bebb610dac64bbc202fb7";
+let sendAmounts = [ 1 ];
+
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
+
+// 1) Fetch critical token information
+let tokenDecimals;
+(async function() {
+    const tokenInfo = await bitboxNetwork.getTokenInformation(tokenId);
+    tokenDecimals = tokenInfo.decimals; 
+    console.log("Token precision: " + tokenDecimals.toString());
+})();
+
+// Wait for network responses...
+
+// 2) Check that token balance is greater than our desired sendAmount
+let redeemData = helpers.build_P2SH_multisig_redeem_data(2, [pubkey_signer_1, pubkey_signer_2]);
+let fundingAddress = redeemData.address;
+let balances; 
+(async function() {
+  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+  console.log("'balances' variable is set.");
+  console.log(balances);
+  if(balances.slpTokenBalances[tokenId] === undefined)
+    console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")
+  console.log("Token balance:", balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals);
+})();
+
+// Wait for network responses...
+
+// 3) Calculate send amount in "Token Satoshis".  In this example we want to just send 1 token unit to someone...
+sendAmounts = sendAmounts.map(a => (new BigNumber(a)).times(10**tokenDecimals));  // Don't forget to account for token precision
+
+// 4) Get all of our token's UTXOs
+let inputUtxos = balances.slpTokenUtxos[tokenId];
+
+// 5) Simply sweep our BCH utxos to fuel the transaction
+inputUtxos = inputUtxos.concat(balances.nonSlpUtxos);
+
+// 6) Estimate the additional fee for our larger p2sh scriptSigs
+let extraFee = (2 * 33 +  // two pub keys in each redeemScript
+                2 * 72 +  // two signatures in scriptSig
+                10) *     // for OP_CMS and various length bytes
+                inputUtxos.length  // this many times since we swept inputs from p2sh address
+
+// 6) Build an unsigned transaction hex
+let unsignedTxnHex = helpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddress, bchChangeReceiverAddress, [], extraFee);
+
+// 7) Get scriptSigs from both signers for all intputs
+let scriptSigs = inputUtxos.map((txo, i) => {
+    let sigData = redeemData.pubKeys.map((pk, j) =>  helpers.get_transaction_sig_p2sh(unsignedTxnHex, wifs[j], i, txo.satoshis, redeemData.lockingScript))
+    return helpers.build_P2SH_multisig_scriptSig(redeemData, i, sigData)
+})
+
+// 8) apply our scriptSigs to the unsigned transaction
+let signedTxn = helpers.addScriptSigs(unsignedTxnHex, scriptSigs);
+
+// 9) Send token
+let sendTxid;
+(async function(){
+    sendTxid = await bitboxNetwork.sendTx(signedTxn)
+    console.log("SEND txn complete:", sendTxid);
+})();
+```
+3efd59
+32f54239d887cfc2b5a4047414906f0695872d79b691badeebae8163e82e9a0b
+0b9a2e
 
 
 ## BURN Tokens for a certain Token Id
