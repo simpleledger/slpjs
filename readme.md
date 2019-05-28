@@ -10,7 +10,7 @@ Table of Contents
 =================
 
    * [Installation](#installation)
-   * [Transaction Examples](#example-usage)
+   * [Transaction Examples](#transaction-examples)
       * [Get Balances](#get-balances)
       * [GENESIS - Create a new token (fungible)](#genesis---create-a-new-token-fungible)
       * [GENESIS - Create a new token (non-fungible)](#genesis---create-a-new-token-non-fungible)
@@ -19,7 +19,7 @@ Table of Contents
       * [SEND - Send tokens from 2-of-2 multisig (P2SH)](#send---send-tokens-from-2-of-2-multisig-p2sh)
       * [BURN - Destroy tokens for a certain Token Id](#burn---destroy-tokens-for-a-certain-token-id)
       * [Address Conversion](#address-conversion)
-   * [Validation Examples](#local-validation)
+   * [Validation Examples](#validation-examples)
       * [Validation Example 1: Local Validator &amp; Remote Full Node RPC](#validation-example-1-local-validator--remote-full-node-rpc)
       * [Validation Example 2: Local Validator &amp; Local Full Node RPC](#validation-example-2-local-validator--local-full-node-rpc)
       * [Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)](#validation-example-3-remote-validator-restbitcoincomv2slpvalidatetxid-post)
@@ -463,10 +463,10 @@ let extraFee = (2 * 33 +  // two pub keys in each redeemScript
                 10) *     // for OP_CMS and various length bytes
                 inputUtxos.length  // this many times since we swept inputs from p2sh address
 
-// 6) Build an unsigned transaction
+// 7) Build an unsigned transaction
 let unsignedTxnHex = helpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddress, bchChangeReceiverAddress, [], extraFee);
 
-// 7) Build scriptSigs for all intputs
+// 8) Build scriptSigs for all intputs
 let redeemData = helpers.build_P2SH_multisig_redeem_data(2, [pubkey_signer_1, pubkey_signer_2]);
 let scriptSigs = inputUtxos.map((txo, i) => {
     let sigData = redeemData.pubKeys.map((pk, j) => {
@@ -480,14 +480,14 @@ let scriptSigs = inputUtxos.map((txo, i) => {
     return helpers.build_P2SH_multisig_scriptSig(redeemData, i, sigData)
 })
 
-// 8) apply our scriptSigs to the unsigned transaction
+// 9) apply our scriptSigs to the unsigned transaction
 let signedTxn = helpers.addScriptSigs(unsignedTxnHex, scriptSigs);
 
-// 9) Update transaction hex with input values to allow for our second signer who is using Electron Cash SLP edition (https://simpleledger.cash/project/electron-cash-slp-edition/)
+// 10) Update transaction hex with input values to allow for our second signer who is using Electron Cash SLP edition (https://simpleledger.cash/project/electron-cash-slp-edition/)
 let input_values = inputUtxos.map(txo => txo.satoshis)
 signedTxn = helpers.insert_input_values_for_EC_signers(signedTxn, input_values)
 
-// 10) Send token
+// 11) Send token
 let sendTxid;
 (async function(){
     sendTxid = await bitboxNetwork.sendTx(signedTxn)
