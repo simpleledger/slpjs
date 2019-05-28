@@ -18,11 +18,15 @@ declare module "bchaddrjs-slp" {
 
 declare module "bitcore-lib-cash" {
     export interface TxnInput {
+        redeemScript: any;
+        output: any;
         script: Script;
         _scriptBuffer: Buffer;
         prevTxId: Buffer;
         outputIndex: number;
         sequenceNumber: number;
+        setScript(script: Script): void;
+        getSignatures(transaction: Transaction, privKey: PrivateKey, index: number, sigtype?: number, hashData?: Buffer): any;
     }
 
     export interface Script {
@@ -50,15 +54,33 @@ declare module "bitcore-lib-cash" {
         satoshis: number;
     }
 
+    export class crypto {
+        static BN: any;
+    }
+
     export class Transaction implements Transaction {
+        static Input: any;
+        static Output: any;
+        static Sighash: any;
         constructor(txhex: string);
         constructor();
     }
+
+    export class PrivateKey {
+        constructor(key: string);
+    }
+
+    export class Script {
+        static fromAddress(arg0: any): any;
+        constructor(script: Buffer);
+    }
+
     export interface Transaction {
         inputs: TxnInput[];
         outputs: TxnOutput[];
         toObject(): any;
-        serialize(unsafe?: boolean): string
+        serialize(unsafe?: boolean): string;
+        sign(key: PrivateKey): Promise<string|Buffer>;
         hash: string;
         id: string;
     }

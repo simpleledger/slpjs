@@ -1,10 +1,33 @@
 # SLPJS
 
-SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) token transactions.  See [change log](#change-log) for updates.
-
-GENESIS, MINT, and SEND transaction functions are supported. 
+SLPJS is a JavaScript Library for validating and building [Simple Ledger Protocol (SLP)](https://github.com/simpleledger/slp-specification/blob/master/slp-token-type-1.md) token transactions.   GENESIS, MINT, and SEND token functions are supported.  See [change log](#change-log) for updates.
 
 [![NPM](https://nodei.co/npm/slpjs.png)](https://nodei.co/npm/slpjs/)
+
+
+
+Table of Contents
+=================
+
+   * [Installation](#installation)
+   * [Transaction Examples](#example-usage)
+      * [Get Balances](#get-balances)
+      * [GENESIS - Create a new token (fungible)](#genesis---create-a-new-token-fungible)
+      * [GENESIS - Create a new token (non-fungible)](#genesis---create-a-new-token-non-fungible)
+      * [MINT - Create additional tokens](#mint---create-additional-tokens)
+      * [SEND - Send tokens](#send---send-tokens)
+      * [SEND - Send tokens from 2-of-2 multisig (P2SH)](#send---send-tokens-from-2-of-2-multisig-p2sh)
+      * [BURN - Destroy tokens for a certain Token Id](#burn---destroy-tokens-for-a-certain-token-id)
+      * [Address Conversion](#address-conversion)
+   * [Validation Examples](#local-validation)
+      * [Validation Example 1: Local Validator &amp; Remote Full Node RPC](#validation-example-1-local-validator--remote-full-node-rpc)
+      * [Validation Example 2: Local Validator &amp; Local Full Node RPC](#validation-example-2-local-validator--local-full-node-rpc)
+      * [Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)](#validation-example-3-remote-validator-restbitcoincomv2slpvalidatetxid-post)
+   * [Building &amp; Testing](#building--testing)
+      * [Requirements](#requirements)
+      * [Build](#build)
+      * [Test](#test)
+   * [Change Log](#change-log)
 
 
 
@@ -18,13 +41,17 @@ GENESIS, MINT, and SEND transaction functions are supported.
 
 
 
-# Example Usage
+# Transaction Examples
 
-The following examples show how this library should be used.
+The following examples show how this library can be used to make simple token transactions.
 
-NOTE: The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is used to avoid precision issues with numbers having more than 15 significant digits.
+Wallets utilizing this library will want to write their own methods in place of the methods found in `TransactionHelpers` and `BitboxNetwork` classes.
 
-NOTE: For fast validation performance all of the following examples show how to use SLPJS using default SLP validation via rest.bitcoin.com.  See [Local Validation](#local-validation) section for instructions on how to validate SLP locally.
+NOTES: 
+
+* The [BigNumber.js library](https://github.com/MikeMcl/bignumber.js) is used to avoid precision issues with numbers having more than 15 significant digits.
+* For the fastest validation performance all of the following transaction examples show how to use SLPJS using default SLP validation via `rest.bitcoin.com`.  See the [Local Validation](#local-validation) section for instructions on how to validate SLP locally with your own full node.
+* All SLPJS methods require token quantities to be expressed in the smallest possible unit of account for the token (i.e., token satoshis).  This requires the token's precision to be used to calculate the quantity. For example, token having a decimal precision of 9 sending an amount of 1.01 tokens would need to first calculate the sending amount using `1.01 x 10^9 => 1010000000`.
 
 ## Get Balances
 
@@ -51,6 +78,7 @@ let balances;
 })();
 
 // RETURNS ALL BALANCES & UTXOs: 
+
 // { satoshis_available_bch: 190889,
 //   satoshis_locked_in_slp_baton: 546,
 //   satoshis_locked_in_slp_token: 1092,
@@ -70,7 +98,7 @@ let balances;
 
 
 
-## GENESIS - New token creation (fungible)
+## GENESIS - Create a new token (fungible)
 
 GENESIS is the most simple type of SLP transaction since no special inputs are required.
 
@@ -145,7 +173,7 @@ let genesisTxid;
 
 ```
 
-## GENESIS - NFT1 creation (non-fungible token per [spec](https://github.com/simpleledger/slp-specifications/blob/master/NFT.md))
+## GENESIS - Create a new token ([non-fungible](https://github.com/simpleledger/slp-specifications/blob/master/NFT.md))
 
 Non-fungible tokens can be created with the `simpleNFT1Genesis` method with these parameters:
 
@@ -203,7 +231,7 @@ let genesisTxid;
 ```
 
 
-## MINT - Create more tokens
+## MINT - Create additional tokens
 
 Adding additional tokens for a token that already exists is possible if you are in control of the minting "baton".  This minting baton is a special UTXO that gives authority to add to the token's circulating supply.  
 
@@ -305,7 +333,7 @@ const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpsta
 const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";        // <-- compressed WIF format
 const tokenReceiverAddress     = [ "simpleledger:qplrqmjgpug2qrfx4epuknvwaf7vxpnuevyswakrq9" ]; // <-- must be simpleledger format
 const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";     // <-- must be simpleledger format
-let tokenId = "adcf120f51d45056bc79353a2831ecd1843922b3d9fac5f109160bd2d49d3f4c";
+let tokenId = "d32b4191d3f78909f43a3f5853ba59e9f2d137925f28e7780e717f4b4bfd4a3f";
 let sendAmounts = [ 1 ];
 
 // FOR TESTNET UNCOMMENT
@@ -368,8 +396,106 @@ let sendTxid;
 })();
 ```
 
+## SEND - Send tokens from 2-of-2 multisig (P2SH)
 
-## BURN Tokens for a certain Token Id
+This example shows the general workflow for sending tokens from a P2SH multisig address.  Electron Cash SLP edition [3.4.13](https://simpleledger.cash/project/electron-cash-slp-edition/) is compatible with signing the partially signed transactions generated from this example by using the `insert_input_values_for_EC_signers` helper method.
+
+```js
+// Install BITBOX-SDK v8.1+ for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk');
+const BigNumber = require('bignumber.js');
+const slpjs = require('slpjs');
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+const slp = new slpjs.Slp(BITBOX);
+const helpers = new slpjs.TransactionHelpers(slp);
+
+const pubkey_signer_1 = "02471e07bcf7d47afd40e0bf4f806347f9e8af4dfbbb3c45691bbaefd4ea926307"; // Signer #1
+const pubkey_signer_2 = "03472cfca5da3bf06a85c5fd860ffe911ef374cf2a9b754fd861d1ead668b15a32"; // Signer #2
+
+// we have two signers for this 2-of-2 multisig address (so for the missing key we just put "null")
+const wifs = [ null, "L2AdfmxwsYu3KnRASZ51C3UEnduUDy1b21sSF9JbLNVEPzsxEZib"] //[ "Ky6iiLSL2K9stMd4G5dLeXfpVKu5YRB6dhjCsHyof3eaB2cDngSr", null ];
+
+// to keep this example alive we will just send everything to the same address
+const tokenReceiverAddress     = [ "simpleledger:pphnuh7dx24rcwjkj0sl6xqfyfzf23aj7udr0837gn" ]; // <-- must be simpleledger format
+const bchChangeReceiverAddress = "simpleledger:pphnuh7dx24rcwjkj0sl6xqfyfzf23aj7udr0837gn";     // <-- must be simpleledger format
+let tokenId = "497291b8a1dfe69c8daea50677a3d31a5ef0e9484d8bebb610dac64bbc202fb7";
+let sendAmounts = [ 1 ];
+
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
+
+// 1) Fetch critical token information
+let tokenDecimals;
+(async function() {
+    const tokenInfo = await bitboxNetwork.getTokenInformation(tokenId);
+    tokenDecimals = tokenInfo.decimals; 
+    console.log("Token precision: " + tokenDecimals.toString());
+})();
+
+// Wait for network responses...
+
+// 2) Check that token balance is greater than our desired sendAmount
+let fundingAddress = "simpleledger:pphnuh7dx24rcwjkj0sl6xqfyfzf23aj7udr0837gn";
+let balances; 
+(async function() {
+  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+  console.log("'balances' variable is set.");
+  console.log(balances);
+  if(balances.slpTokenBalances[tokenId] === undefined)
+    console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")
+  console.log("Token balance:", balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals);
+})();
+
+// Wait for network responses...
+
+// 3) Calculate send amount in "Token Satoshis".  In this example we want to just send 1 token unit to someone...
+sendAmounts = sendAmounts.map(a => (new BigNumber(a)).times(10**tokenDecimals));  // Don't forget to account for token precision
+
+// 4) Get all of our token's UTXOs
+let inputUtxos = balances.slpTokenUtxos[tokenId];
+
+// 5) Simply sweep our BCH utxos to fuel the transaction
+inputUtxos = inputUtxos.concat(balances.nonSlpUtxos);
+
+// 6) Estimate the additional fee for our larger p2sh scriptSigs
+let extraFee = (2 * 33 +  // two pub keys in each redeemScript
+                2 * 72 +  // two signatures in scriptSig
+                10) *     // for OP_CMS and various length bytes
+                inputUtxos.length  // this many times since we swept inputs from p2sh address
+
+// 6) Build an unsigned transaction
+let unsignedTxnHex = helpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddress, bchChangeReceiverAddress, [], extraFee);
+
+// 7) Build scriptSigs for all intputs
+let redeemData = helpers.build_P2SH_multisig_redeem_data(2, [pubkey_signer_1, pubkey_signer_2]);
+let scriptSigs = inputUtxos.map((txo, i) => {
+    let sigData = redeemData.pubKeys.map((pk, j) => {
+      if(wifs[j]) {
+        return helpers.get_transaction_sig_p2sh(unsignedTxnHex, wifs[j], i, txo.satoshis, redeemData.lockingScript)
+      }
+      else {
+        return helpers.get_transaction_sig_filler(i, pk)
+      }
+    })
+    return helpers.build_P2SH_multisig_scriptSig(redeemData, i, sigData)
+})
+
+// 8) apply our scriptSigs to the unsigned transaction
+let signedTxn = helpers.addScriptSigs(unsignedTxnHex, scriptSigs);
+
+// 9) Update transaction hex with input values to allow for our second signer who is using Electron Cash SLP edition (https://simpleledger.cash/project/electron-cash-slp-edition/)
+let input_values = inputUtxos.map(txo => txo.satoshis)
+signedTxn = helpers.insert_input_values_for_EC_signers(signedTxn, input_values)
+
+// 10) Send token
+let sendTxid;
+(async function(){
+    sendTxid = await bitboxNetwork.sendTx(signedTxn)
+    console.log("SEND txn complete:", sendTxid);
+})();
+```
+
+## BURN - Destroy tokens for a certain Token Id
 
 This example shows the general workflow for sending an existing token.
 
@@ -434,7 +560,7 @@ let sendTxid;
 ```
 
 
-## SLP Address Conversion
+## Address Conversion
 
 ```javascript
 let Utils = require('slpjs').Utils;
@@ -448,24 +574,55 @@ console.log(cashAddr);
 // bitcoincash:qzat5lfxt86mtph2fdmp96stxdmmw8hchyxrcmuhqf
 ```
 
-# Local Validation
 
-The examples above use default remote validation powered by rest.bitcoin.com `/slp/validateTxid` endpoint, and is enabled with the following code:
-`const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);`
 
-You can override this behavior to validate SLP transaction locally by replacing that code with the following lines:
+# Validation Examples
+
+The following examples show three different ways how you can use this library to validate SLP transactions.  The validation techniques include:
+
+* Local Validator with a JSON RPC full node connection
+* Local Validation with a remote full node (using `rest.bitcoin.com`)
+* Remote Validation (using `rest.bitcoin.com`)
+
+
+
+## Local Validator with a JSON RPC full node connection
+
+Validate SLP transaction locally with a local full node.
+
+
 ```js
-const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
-const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+const BITBOXSDK = require('bitbox-sdk')
+const BITBOX = new BITBOXSDK.BITBOX();
+const slpjs = require('slpjs');
+const logger = console;
+const RpcClient = require('bitcoin-rpc-promise');
+const connectionString = 'http://bitcoin:password@localhost:8332'
+const rpc = new RpcClient(connectionString);
+const slpValidator = new slpjs.LocalValidator(BITBOX, async (txids) => [ await rpc.getRawTransaction(txids[0]) ], logger)
+
+// Result = false
+//let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
+
+// Result = true
+let txid = "4a3829d6da924a16bbc0cc43d5d62b40996648a0c8f74725c15ec56ee930d0fa";
+
+let isValid;
+(async function() {
+  console.log("Validating:", txid);
+  console.log("This may take a several seconds...");
+  isValid = await slpValidator.isValidSlpTxid(txid);
+  console.log("Final Result:", isValid);
+})();
 ```
 
-## Validation Example 1: Local Validator & Remote Full Node RPC
+
+
+## Local Validation with a remote full node (using `rest.bitcoin.com`)
 
 Validate SLP transaction locally with a remote full node (i.e., rest.bitcoin.com).
 
 ```js
-
 const BITBOXSDK = require('bitbox-sdk')
 const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
 const slpjs = require('slpjs');
@@ -490,38 +647,9 @@ let isValid;
 
 ```
 
-## Validation Example 2: Local Validator & Local Full Node RPC
 
-Validate SLP transaction locally with a local full node.
 
-```js
-
-const BITBOXSDK = require('bitbox-sdk')
-const BITBOX = new BITBOXSDK.BITBOX();
-const slpjs = require('slpjs');
-const logger = console;
-const RpcClient = require('bitcoin-rpc-promise');
-const connectionString = 'http://bitcoin:password@localhost:8332'
-const rpc = new RpcClient(connectionString);
-const slpValidator = new slpjs.LocalValidator(BITBOX, async (txids) => [ await rpc.getRawTransaction(txids[0]) ], logger)
-
-// Result = false
-//let txid = "903432f451049357d51c19eb529478621272e7572b05179f89bcb7be31e55aa7";
-
-// Result = true
-let txid = "4a3829d6da924a16bbc0cc43d5d62b40996648a0c8f74725c15ec56ee930d0fa";
-
-let isValid;
-(async function() {
-  console.log("Validating:", txid);
-  console.log("This may take a several seconds...");
-  isValid = await slpValidator.isValidSlpTxid(txid);
-  console.log("Final Result:", isValid);
-})();
-
-```
-
-## Validation Example 3: Remote Validator (rest.bitcoin.com/v2/slp/validateTxid POST)
+## Remote Validation (using `rest.bitcoin.com`)
 
 Validate SLP transaction using rest.bitcoin.com. 
 
@@ -549,10 +677,6 @@ let isValid;
 
 ```
 
-# Caveats
-
-* All SLPJS methods require token quantities to be expressed in the smallest possible unit of account for the token (i.e., token satoshis).  This requires the token's precision to be used to calculate the quantity. For example, token having a decimal precision of 9 sending an amount of 1.01 tokens would need to first calculate the sending amount using `1.01 x 10^9 => 1010000000`.
-
 
 
 # Building & Testing
@@ -571,6 +695,11 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.18.1
+- Added generic support for P2SH 
+- Added specific helper methods for multisig compatible with Electron Cash signing
+- Added README example for multisig w/ Electron Cash SLP co-signer
 
 ### 0.18.0
 - Added `simpleledger:` URI scheme parser & builder to Utils class per [spec](https://github.com/simpleledger/slp-specifications/blob/master/slp-uri-scheme.md) 

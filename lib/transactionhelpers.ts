@@ -1,5 +1,38 @@
 import { Utils, SlpAddressUtxoResult, Slp } from "..";
 import BigNumber from "bignumber.js";
+import * as Bitcore from "bitcore-lib-cash";
+import { Primatives } from "./primatives";
+
+export interface InputSigData {
+    index: number;
+    pubKeyBuf: Buffer;
+    signatureBuf: Buffer;
+}
+
+export interface ScriptSigP2PK {
+    index: number;
+    signatureBuf: Buffer;
+}
+
+export interface ScriptSigP2PKH {
+    index: number;
+    pubKeyBuf: Buffer;
+    signatureBuf: Buffer;
+}
+
+export interface ScriptSigP2SH {
+    index: number;
+    address: string;           //   <-- used to check against the provided locking script
+    lockingScriptBuf: Buffer;  //   <-- aka "redeem" script
+    unlockingScriptBufArray: number|Buffer|(number|Buffer)[]; 
+}
+
+export interface MultisigRedeemData {
+    m: number,                 // number of signers required
+    address: string,           // slp formatted address
+    pubKeys: Buffer[],         // pub keys used
+    lockingScript: Buffer      // raw redeemscript
+}
 
 export class TransactionHelpers {
     slp: Slp;
@@ -221,5 +254,231 @@ export class TransactionHelpers {
 
         // Return raw hex for this transaction
         return txHex;
+    }
+
+    get_transaction_sig_filler(input_index:  number, pubKeyBuf: Buffer): InputSigData {
+        return { signatureBuf: Buffer.from('ff', 'hex'), pubKeyBuf: pubKeyBuf, index: input_index}
+    }
+
+    get_transaction_sig_p2pkh(txHex: string, wif: string, input_index: number, input_satoshis: number, sigHashType=0x41): InputSigData {
+        
+        // deserialize the unsigned transaction
+
+        let txn = new Bitcore.Transaction(txHex);
+
+        // we need to get the key pair from wif
+        // this will be used by bitcore-lib input sig generation
+        // NOTE: Only works for compressed-WIF format
+
+        let ecpair = this.slp.BITBOX.ECPair.fromWIF(wif);
+
+        // we set the previous output for the input
+        // again, this is for bitcore-lib input sig generation
+
+        txn.inputs[input_index].output = new Bitcore.Transaction.Output({
+            satoshis: input_satoshis, 
+            script: Bitcore.Script.fromAddress(Utils.toCashAddress(ecpair.getAddress())) 
+        });
+
+        // Update input to be non-abstract type so we can get the p2pkh sign method
+
+        txn.inputs[input_index] = new Bitcore.Transaction.Input.PublicKeyHash(txn.inputs[input_index]);
+
+        // produce a signature that is specific to this input
+        // NOTE: currently only uses ecdsa
+
+        let privateKey = new Bitcore.PrivateKey(wif);
+        let sig = txn.inputs[input_index].getSignatures(txn, privateKey, input_index, sigHashType);
+
+        // add have to add the sighash type manually.. :(
+        // NOTE: signature is in DER format and is specific to ecdsa & sigHash 0x41
+
+        let sigBuf = Buffer.concat([ sig[0].signature.toDER(), Buffer.alloc(1, sigHashType) ]);  
+
+        // we can return a object conforming to InputSigData<P2pkhSig> interface
+
+        return {
+            index: input_index, 
+            pubKeyBuf: ecpair.getPublicKeyBuffer(), 
+            signatureBuf: sigBuf  
+        }
+    }
+
+    get_transaction_sig_p2sh(txHex: string, wif: string, input_index: number, input_satoshis: number, redeemScript: Buffer, sigHashType=0x41): InputSigData {
+        
+        // deserialize the unsigned transaction
+
+        let txn = new Bitcore.Transaction(txHex);
+
+        // we need to get the key pair from wif
+        // this will be used by bitcore-lib input sig generation
+        // NOTE: Only works for compressed-WIF format
+
+        let ecpair = this.slp.BITBOX.ECPair.fromWIF(wif);
+
+        // we set the previous output for the input
+        // again, this is for bitcore-lib input sig generation
+
+        txn.inputs[input_index].output = new Bitcore.Transaction.Output({
+            satoshis: input_satoshis, 
+            script: redeemScript
+        });
+
+        // produce a signature that is specific to this input
+        // NOTE: currently only uses ecdsa
+
+        let privateKey = new Bitcore.PrivateKey(wif);
+        var sig = Bitcore.Transaction.Sighash.sign(txn, privateKey, sigHashType, input_index, redeemScript, Bitcore.crypto.BN.fromNumber(input_satoshis));
+        
+        // add have to add the sighash type manually.. :(
+        // NOTE: signature is in DER format and is specific to ecdsa & sigHash 0x41
+
+        let sigBuf = Buffer.concat([ sig.toDER(), Buffer.alloc(1, sigHashType) ]);  
+
+        // we can return a object conforming to InputSigData<P2pkhSig> interface
+
+        return {
+            index: input_index, 
+            pubKeyBuf: ecpair.getPublicKeyBuffer(), 
+            signatureBuf: sigBuf  
+        }
+    }
+
+    build_P2PKH_scriptSig(sigData: InputSigData): ScriptSigP2PKH {
+        return sigData;
+    }
+
+    // build_P2PK_scriptSig(sigData: InputSigData): scriptSigP2PK {
+    //     return {
+    //         index: sigData.index,
+    //         signatureBuf: sigData.signatureBuf
+    //     }
+    // }
+
+    build_P2SH_multisig_redeem_data(m: number, pubKeys: string[]|Buffer[]): MultisigRedeemData {
+
+        // allow pubkeys to be passed in as strings
+
+        pubKeys.forEach((k: any, i: number) => {
+            if(typeof k === "string")
+                pubKeys[i] = Buffer.from(k, 'hex')
+        });
+
+        // use bitbox function to get multisig redeem script
+
+        let redeemScript = this.slp.BITBOX.Script.encodeP2MSOutput(m, pubKeys as Buffer[]);
+
+        // compute this multisig address
+
+        let addr = this.slp.BITBOX.Address.fromOutputScript(
+                        this.slp.BITBOX.Script.scriptHash.output.encode(
+                            this.slp.BITBOX.Crypto.hash160(
+                                redeemScript)))
+    
+        return {
+            m: m,
+            pubKeys: pubKeys as Buffer[],
+            address: Utils.toSlpAddress(addr),
+            lockingScript: redeemScript
+        }
+    }
+
+    insert_input_values_for_EC_signers(txnHex: string, input_values: number[]): string {
+        let source = new Primatives.ArraySource(Array.from(Buffer.from(txnHex, 'hex').values()))
+        let stream = new Primatives.ByteStream(source)
+        let txn = Primatives.Transaction.parse(stream);
+        input_values.forEach((v, i) => {
+            if(v && v > 0) {
+                txn.inputs[i].satoshis = v;
+                txn.inputs[i].incomplete = true;
+            }
+        })
+        return txn.toHex();
+    }
+
+    build_P2SH_multisig_scriptSig(redeemData: MultisigRedeemData, input_index: number, sigs: InputSigData[]): ScriptSigP2SH {
+
+        // check we have enough signatures
+
+        if(sigs.length < redeemData.m)
+            throw Error("Not enough signatures.")
+
+        // check not too many signataures 
+
+        if(sigs.length > redeemData.pubKeys.length)
+            throw Error("Too many pubKeys provided.")
+        
+        // check all provided signatures belong to the given possible pubkeys
+
+        let pubKeysHex: string[] = redeemData.pubKeys.map(k => k.toString('hex'))
+        let pubKeysGivenHex: string[] = sigs.map(d => d.pubKeyBuf.toString('hex'))
+        pubKeysGivenHex.forEach(k => {
+            if(!pubKeysHex.includes(k)) {
+                throw Error("One of the public keys provided is a signer")
+            }
+        });
+
+        // ordered sigs properly for OP_CHECKMULTISIG
+
+        let orderedSigs = pubKeysHex.map(pub => {
+            let sig = sigs.find(s => s.pubKeyBuf.toString('hex') === pub)
+            return sig!.signatureBuf;
+        })
+
+        // build the unlocking script for multisig p2sh
+
+        let unlockingScript = [ 0x00, ...orderedSigs ]; //this.slp.BITBOX.Script.encodeP2MSInput(orderedSigs)
+
+        return {
+            index: input_index,
+            address: redeemData.address,
+            lockingScriptBuf: redeemData.lockingScript, 
+            unlockingScriptBufArray: unlockingScript
+        }
+    }
+
+    addScriptSigs(unsignedTxnHex: string, scriptSigs: (ScriptSigP2PKH|ScriptSigP2SH|ScriptSigP2PK)[]): string {
+
+        // deserialize unsigned transaction so we can add sigs to it
+
+        let txn = new Bitcore.Transaction(unsignedTxnHex);
+        let bip62Encoded: Buffer;
+        scriptSigs.forEach(s => {
+
+            // for p2pkh encode scriptSig
+
+            if((s as ScriptSigP2PKH).pubKeyBuf) {  
+                let sigBuf = (s as ScriptSigP2PKH).signatureBuf;
+                let pubKeyBuf = (s as ScriptSigP2PKH).pubKeyBuf;
+                bip62Encoded = this.slp.BITBOX.Script.encode([ sigBuf, pubKeyBuf ]);
+            }
+
+            // for p2sh encode scriptSig 
+
+            else if((s as ScriptSigP2SH).lockingScriptBuf) {
+                let unlockingBufArray = (s as ScriptSigP2SH).unlockingScriptBufArray;
+                let lockingBuf = (s as ScriptSigP2SH).lockingScriptBuf;
+                bip62Encoded = this.slp.BITBOX.Script.encode([ ...unlockingBufArray, lockingBuf ]);
+            }
+
+            // p2pk encode scriptSig
+
+            else if(!(s as ScriptSigP2PKH).pubKeyBuf && (s as ScriptSigP2PKH).signatureBuf) {
+                bip62Encoded = this.slp.BITBOX.Script.encode([ (s as ScriptSigP2PKH).signatureBuf ]);
+            }
+
+            // throw if input data did not result in encoded scriptSig
+
+            if(!bip62Encoded)
+                throw Error("Was not able to set input script for index="+s.index);
+
+            // actually set the input's scriptSig property
+
+            let script = new Bitcore.Script(bip62Encoded);
+            txn.inputs[s.index].setScript(script);
+         // console.log("scriptSig for index", s.input_index, ":", bip62Encoded.toString('hex'))
+        })
+
+        return txn.toString();
     }
 }
