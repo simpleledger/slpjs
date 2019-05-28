@@ -9,7 +9,7 @@ export class TransactionHelpers {
     }
 
     // Create raw transaction hex to: Send SLP tokens to one or more token receivers, include optional BCH only outputs
-    simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string, requiredNonTokenOutputs: { satoshis: number, receiverAddress: string }[] = []): string {  
+    simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string, requiredNonTokenOutputs: { satoshis: number, receiverAddress: string }[] = [], extraFee = 0): string {  
         
         // normalize token receivers and amounts to array types
         if(typeof tokenReceiverAddresses === "string")
@@ -38,7 +38,7 @@ export class TransactionHelpers {
         let txHex;
         if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
             // 3) Create the Send OP_RETURN message
-            let sendOpReturn = this.slp.buildSendOpReturn({
+            let sendOpReturn = Slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
                 outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ],
             });
@@ -48,11 +48,12 @@ export class TransactionHelpers {
                 input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
                 tokenReceiverAddressArray: [ ...tokenReceiverAddresses, changeReceiverAddress ],
                 bchChangeReceiverAddress: changeReceiverAddress,
-                requiredNonTokenOutputs: requiredNonTokenOutputs
+                requiredNonTokenOutputs: requiredNonTokenOutputs,
+                extraFee: extraFee
             });
         } else if (tokenChangeAmount.isEqualTo(new BigNumber(0))) {
             // 3) Create the Send OP_RETURN message
-            let sendOpReturn = this.slp.buildSendOpReturn({
+            let sendOpReturn = Slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
                 outputQtyArray: [ ...(sendAmounts as BigNumber[]) ],
             });
@@ -62,7 +63,8 @@ export class TransactionHelpers {
                 input_token_utxos: Utils.mapToUtxoArray(inputUtxos),
                 tokenReceiverAddressArray: [ ...tokenReceiverAddresses ],
                 bchChangeReceiverAddress: changeReceiverAddress,
-                requiredNonTokenOutputs: requiredNonTokenOutputs
+                requiredNonTokenOutputs: requiredNonTokenOutputs,
+                extraFee: extraFee
             });
         } else
             throw Error('Token inputs less than the token outputs');
@@ -104,7 +106,7 @@ export class TransactionHelpers {
     // Create raw transaction hex to: Create a token Genesis issuance
     simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]): string {
         
-        let genesisOpReturn = this.slp.buildGenesisOpReturn({ 
+        let genesisOpReturn = Slp.buildGenesisOpReturn({ 
             ticker: tokenTicker,
             name: tokenName,
             documentUri: documentUri,
@@ -131,7 +133,7 @@ export class TransactionHelpers {
     simpleNFT1Genesis(tokenName: string, tokenTicker: string, parentTokenIdHex: string, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]): string {
         let index = inputUtxos.findIndex(i => i.slpTransactionDetails.tokenIdHex === parentTokenIdHex);
         
-        let genesisOpReturn = this.slp.buildNFT1GenesisOpReturn({ 
+        let genesisOpReturn = Slp.buildNFT1GenesisOpReturn({ 
             ticker: tokenTicker,
             name: tokenName,
             parentTokenIdHex: parentTokenIdHex,
@@ -157,7 +159,7 @@ export class TransactionHelpers {
         // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
 
         // 1) Create the Send OP_RETURN message
-        let mintOpReturn = this.slp.buildMintOpReturn({
+        let mintOpReturn = Slp.buildMintOpReturn({
             tokenIdHex: tokenId,
             mintQuantity: mintAmount,
             batonVout: 2
@@ -197,7 +199,7 @@ export class TransactionHelpers {
         let txHex;
         if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
             // Create the Send OP_RETURN message
-            let sendOpReturn = this.slp.buildSendOpReturn({
+            let sendOpReturn = Slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
                 outputQtyArray: [ tokenChangeAmount ],
             });

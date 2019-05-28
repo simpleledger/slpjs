@@ -5,6 +5,7 @@ export * from './lib/utils';
 export * from './lib/bitdbnetwork';
 export * from './lib/localvalidator';
 export * from './lib/bitboxnetwork';
+export * from './lib/transactionhelpers';
 
 import BigNumber from 'bignumber.js';
 
@@ -83,7 +84,7 @@ export interface utxo {
     txid: string;
     vout: number;
     satoshis: BigNumber;
-    wif: string;
+    wif?: string;
     slpTransactionDetails: SlpTransactionDetails;
     slpUtxoJudgement: SlpUtxoJudgement;
     slpUtxoJudgementAmount: BigNumber;

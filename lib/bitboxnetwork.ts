@@ -100,6 +100,10 @@ export class BitboxNetwork implements SlpValidator {
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string, requiredNonTokenOutputs: { satoshis: number, receiverAddress: string }[] = []) {  
         let txHex = this.txnHelpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddresses, changeReceiverAddress, requiredNonTokenOutputs);
+
+        if(!inputUtxos.every(i => typeof i.wif === "string"))
+            throw Error("The BitboxNetwork version of this method requires a private key WIF be provided with each input.  If you want more control over the signing process use Slp.simpleTokenSend() to get the unsigned transaction, then after the transaction is signed you can use BitboxNetwork.sendTx()")
+
         return await this.sendTx(txHex);
     }
 

@@ -76,6 +76,7 @@ export interface configBuildRawSendTx {
     tokenReceiverAddressArray: string[];
     bchChangeReceiverAddress: string;
     requiredNonTokenOutputs?: { satoshis: number, receiverAddress: string }[]
+    extraFee?: number;
 }
 
 export interface configBuildBchSendTx {
@@ -122,7 +123,7 @@ export class Slp {
 
     get lokadIdHex() { return "534c5000" }
 
-    buildNFT1GenesisOpReturn(config: configBuildNFT1GenesisOpReturn, type = 0x01) {
+    static buildNFT1GenesisOpReturn(config: configBuildNFT1GenesisOpReturn, type = 0x01) {
         return SlpTokenType1.buildNFT1GenesisOpReturn(
             config.ticker,
             config.name,
@@ -131,7 +132,7 @@ export class Slp {
         )
     }
 
-    buildGenesisOpReturn(config: configBuildGenesisOpReturn, type = 0x01) {
+    static buildGenesisOpReturn(config: configBuildGenesisOpReturn, type = 0x01) {
         let hash;
         try { 
             hash = config.hash!.toString('hex')
@@ -148,7 +149,7 @@ export class Slp {
         )
     }
 
-    buildMintOpReturn(config: configBuildMintOpReturn, type = 0x01) {
+    static buildMintOpReturn(config: configBuildMintOpReturn, type = 0x01) {
         return SlpTokenType1.buildMintOpReturn(
             config.tokenIdHex,
             config.batonVout,
@@ -156,7 +157,7 @@ export class Slp {
         )
     }
 
-    buildSendOpReturn(config: configBuildSendOpReturn, type = 0x01) {
+    static buildSendOpReturn(config: configBuildSendOpReturn, type = 0x01) {
         return SlpTokenType1.buildSendOpReturn(
             config.tokenIdHex,
             config.outputQtyArray
@@ -273,8 +274,8 @@ export class Slp {
 
     buildRawSendTx(config: configBuildRawSendTx, type = 0x01) {
 
-        const sendMsg = this.parseSlpOutputScript(config.slpSendOpReturn);
-        
+        // Check proper address formats are given
+
         config.tokenReceiverAddressArray.forEach(outputAddress => {
             if (!bchaddr.isSlpAddress(outputAddress))
                 throw new Error("Token receiver address not in SlpAddr format.");
@@ -283,7 +284,12 @@ export class Slp {
         if (!bchaddr.isSlpAddress(config.bchChangeReceiverAddress))
             throw new Error("Token/BCH change receiver address is not in SLP format.");
 
-        // Make sure not spending any other tokens or baton UTXOs
+        // Parse the SLP SEND OP_RETURN message
+
+        const sendMsg = this.parseSlpOutputScript(config.slpSendOpReturn);
+        
+        // Make sure we're not spending inputs from any other token or baton
+
         let tokenInputQty = new BigNumber(0);
         config.input_token_utxos.forEach(txo => {
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.NOT_SLP)
@@ -296,45 +302,75 @@ export class Slp {
             }
             if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
                 throw Error("Cannot spend a minting baton.")
-            if(txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG || txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG)
+            if(txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG || 
+                txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG)
                 throw Error("Cannot currently spend UTXOs with invalid DAGs.")
             throw Error("Cannot spend utxo with no SLP judgement.")
         })
 
-        // Make sure the number of output receivers matches the outputs in the OP_RETURN message.
+        // Make sure the number of output receivers 
+        // matches the outputs in the OP_RETURN message.
+
         let chgAddr = config.bchChangeReceiverAddress ? 1 : 0;
         if(!sendMsg.sendOutputs)
             throw Error("OP_RETURN contains no SLP send outputs.");
         if(config.tokenReceiverAddressArray.length + chgAddr !== sendMsg.sendOutputs.length)
             throw Error("Number of token receivers in config does not match the OP_RETURN outputs")
 
-        // Make sure token inputs equals token outputs in OP_RETURN
+        // Make sure token inputs == token outputs
+
         let outputTokenQty = sendMsg.sendOutputs.reduce((v,o)=>v=v.plus(o), new BigNumber(0));
         if(!tokenInputQty.isEqualTo(outputTokenQty))
             throw Error("Token input quantity does not match token outputs.")
 
-        let transactionBuilder = new this.BITBOX.TransactionBuilder(Utils.txnBuilderString(config.tokenReceiverAddressArray[0]));
-        let inputSatoshis = new BigNumber(0);
-        config.input_token_utxos.forEach(token_utxo => {
-            transactionBuilder.addInput(token_utxo.txid, token_utxo.vout);
-            inputSatoshis = inputSatoshis.plus(token_utxo.satoshis);
-        });
+        // Create a transaction builder
+
+        let transactionBuilder = new this.BITBOX.TransactionBuilder(
+            Utils.txnBuilderString(config.tokenReceiverAddressArray[0]));
+    //  let sequence = 0xffffffff - 1;
+    //  let locktime = 0;
+
+        // Calculate the total input amount & add all inputs to the transaction
+        
+        let inputSatoshis = config.input_token_utxos.reduce((t, i) => t.plus(i.satoshis), new BigNumber(0));
+        config.input_token_utxos.forEach(
+            token_utxo => transactionBuilder.addInput(token_utxo.txid, token_utxo.vout)); //, sequence);
+
+        // Calculate the amount of outputs set aside for special BCH-only outputs for fee calculation
+
+        let bchOnlyCount = config.requiredNonTokenOutputs ? config.requiredNonTokenOutputs.length : 0;
+        let bcOnlyOutputSatoshis = config.requiredNonTokenOutputs ? config.requiredNonTokenOutputs.reduce((t, v)=> t+=v.satoshis, 0): 0
+
+        // Calculate mining fee cost
+
+        let sendCost = this.calculateSendCost(
+                            config.slpSendOpReturn.length, 
+                            config.input_token_utxos.length, 
+                            config.tokenReceiverAddressArray.length + bchOnlyCount, 
+                            config.bchChangeReceiverAddress);
 
         // Compute BCH change amount
-        let bchOnlyCount = config.requiredNonTokenOutputs ? config.requiredNonTokenOutputs.length : 0;
-        let sendCost = this.calculateSendCost(config.slpSendOpReturn.length, config.input_token_utxos.length, config.tokenReceiverAddressArray.length + bchOnlyCount, config.bchChangeReceiverAddress);
-        let bchChangeAfterFeeSatoshis = inputSatoshis.minus(sendCost);
 
-        // Genesis OpReturn
+        let bchChangeAfterFeeSatoshis = 
+            inputSatoshis
+                .minus(sendCost)
+                .minus(bcOnlyOutputSatoshis)
+                .minus(config.extraFee ? config.extraFee : 0);
+
+        // Start adding outputs to transaction
+        // Add SLP SEND OP_RETURN message
+
         transactionBuilder.addOutput(config.slpSendOpReturn, 0);
 
-        // Token distribution outputs
+        // Add dust dust outputs associated with tokens
+
         config.tokenReceiverAddressArray.forEach((outputAddress) => {
             outputAddress = bchaddr.toCashAddress(outputAddress);
             transactionBuilder.addOutput(outputAddress, 546);
         })
 
-        // Add required (non-token) BCH outputs
+        // Add BCH-only outputs
+
         if(config.requiredNonTokenOutputs && config.requiredNonTokenOutputs.length > 0) {
             config.requiredNonTokenOutputs.forEach((output) => {
                 let outputAddress = bchaddr.toCashAddress(output.receiverAddress);
@@ -342,31 +378,49 @@ export class Slp {
             })
         }
 
-        // Change
+        // Add change, if any
+
         if (bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
 
-        // sign inputs
+        // Sign txn and add sig to p2pkh input for convenience if wif is provided, 
+        // otherwise skip signing.
+
         let i = 0;
+        let isComplete = true;
         for (const txo of config.input_token_utxos) {
-            let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            if(txo.wif) {
+                let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            } 
+            else
+                isComplete = false;
             i++;
         }
 
-        let tx = transactionBuilder.build().toHex();
+        // Build the transaction to hex and return
+        // warn user if the transaction was not fully signed
+
+        let hex: string;
+        if(!isComplete) {
+            console.log("WARNING: Transaction signing is not complete.");
+            let tx = transactionBuilder.transaction.buildIncomplete();
+        //  tx.locktime = locktime;
+            hex = tx.toHex();
+        } 
+        else
+            hex = transactionBuilder.build().toHex();
 
         // Check For Low Fee
+
         let outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number,o: any)=>v+=o.value, 0);
         let inValue: BigNumber = config.input_token_utxos.reduce((v,i)=>v=v.plus(i.satoshis), new BigNumber(0))
-        if(inValue.minus(outValue).isLessThanOrEqualTo(tx.length/2))
-            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.")
+        if(inValue.minus(outValue).isLessThanOrEqualTo(hex.length/2))
+            throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.");
 
-        // TODO: Check for fee too large or send leftover to target address
-
-        return tx;
+        return hex;
     }
 
     buildRawMintTx(config: configBuildRawMintTx, type = 0x01) {
