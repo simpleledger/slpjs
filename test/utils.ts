@@ -11,6 +11,11 @@ describe('Utils', function() {
             assert.equal(expected_uri, uri)
         })
         it("buildSlpUri()", () => {
+            let expected_uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk"
+            let uri = Utils.buildSlpUri("simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk")
+            assert.equal(expected_uri, uri)
+        })
+        it("buildSlpUri()", () => {
             let expected_uri = "simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk?amount=10.1"
             let uri = Utils.buildSlpUri("qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk", 10.1)
             assert.equal(expected_uri, uri)
