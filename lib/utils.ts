@@ -211,4 +211,25 @@ export class Utils {
         }
         return result;
     }
+
+    static get_BIP62_locktime_hex(unixtime: number){
+        return Utils.convertBE2LE32(unixtime.toString(16));
+    }
+
+    // convert Big Endian to Little Endian for the given Hex string
+    static convertBE2LE32(hex: string) {
+        if (hex === '') return null;
+        if (!Utils.isHexString(hex)) return null;
+        if (hex.length % 2 > 0)
+            hex = '0' + hex;
+        hex = hex.match(/.{2}/g)!.reverse().join('');
+        return hex;
+    };
+
+    // check validation of hex string
+    static isHexString(hex: string) {
+        let regexp = /^[0-9a-fA-F]+$/;
+        if (!regexp.test(hex)) return false;
+        return true;
+    };
 }
