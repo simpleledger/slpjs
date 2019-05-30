@@ -22,7 +22,6 @@ export interface ScriptSigP2PKH {
 
 export interface ScriptSigP2SH {
     index: number;
-    address: string;           //   <-- used to check against the provided locking script
     lockingScriptBuf: Buffer;  //   <-- aka "redeem" script
     unlockingScriptBufArray: number|Buffer|(number|Buffer)[]; 
 }
@@ -431,7 +430,6 @@ export class TransactionHelpers {
 
         return {
             index: input_index,
-            address: redeemData.address,
             lockingScriptBuf: redeemData.lockingScript, 
             unlockingScriptBufArray: unlockingScript
         }
@@ -480,5 +478,23 @@ export class TransactionHelpers {
         })
 
         return txn.toString();
+    }
+
+    setTxnLocktime(unsignedTxnHex: string, locktime: number) {
+        let source = new Primatives.ArraySource(Array.from(Buffer.from(unsignedTxnHex, 'hex').values()))
+        let stream = new Primatives.ByteStream(source)
+        let txn = Primatives.Transaction.parse(stream);
+        txn.lockTime = locktime;
+        return txn.toHex();
+    }
+
+    enableInputsCLTV(unsignedTxnHex: string) {
+        let source = new Primatives.ArraySource(Array.from(Buffer.from(unsignedTxnHex, 'hex').values()))
+        let stream = new Primatives.ByteStream(source)
+        let txn = Primatives.Transaction.parse(stream);
+        txn.inputs.forEach(input => {
+            input.sequenceNo = 'ffffffef';
+        });
+        return txn.toHex();
     }
 }
