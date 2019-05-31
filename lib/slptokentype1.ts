@@ -14,7 +14,7 @@ export class SlpTokenType1 {
         return this.buildGenesisOpReturn(ticker, name, "NFT1_" + parentTokenIdHex + "_" + vin, null, 0, null, new BigNumber(1));
     }
 
-    static buildGenesisOpReturn(ticker: string|null, name: string|null, documentUri:string|null, documentHashHex: string|null, decimals: number, batonVout:number|null, initialQuantity:BigNumber) {
+    static buildGenesisOpReturn(ticker: string|null, name: string|null, documentUri:string|Buffer|null, documentHashHex: string|null, decimals: number, batonVout:number|null, initialQuantity:BigNumber) {
         let script: (number|number[])[] = [];
 
         // OP Return Prefix
@@ -58,10 +58,13 @@ export class SlpTokenType1 {
         }
 
         // Document URL
-        if (documentUri &&  typeof documentUri !== 'string') {
-            throw Error("documentUri must be a string")
+        if (documentUri && typeof documentUri !== 'string' && !(documentUri instanceof Buffer)) {
+            throw Error("documentUri must be a string or a buffer")
         } else if (!documentUri || documentUri.length === 0) {
             [0x4c, 0x00].forEach((item) => script.push(item))
+        } else if (documentUri instanceof Buffer) {
+            script.push(Utils.getPushDataOpcode(documentUri))
+            documentUri.forEach((item) => script.push(item))
         } else {
             let documentUriBuf = Buffer.from(documentUri, 'ascii')
             script.push(Utils.getPushDataOpcode(documentUriBuf))
