@@ -815,6 +815,14 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.18.3
+- Added simpleTokenGenesis to bitbox network class
+
+### 0.18.2 
+- Added example for freezing tokens
+- Added Locktime and CLTV helper methods to TransactionHelpers
+- Added get_BIP62_locktime_hex method to Utils
+
 ### 0.18.1
 - Added generic support for P2SH 
 - Added specific helper methods for multisig compatible with Electron Cash signing
