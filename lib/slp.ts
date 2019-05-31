@@ -29,7 +29,7 @@ export interface configBuildNFT1GenesisOpReturn {
 export interface configBuildGenesisOpReturn {
     ticker: string|null;
     name: string|null;
-    documentUri: string|null;
+    documentUri: string|Buffer|null;
     hash: Buffer|null,
     decimals: number;
     batonVout: number|null; // normally this is null (for fixed supply) or 2+ for flexible

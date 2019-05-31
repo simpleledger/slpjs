@@ -16,6 +16,17 @@ describe('SlpTokenType1', function() {
             let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity)
             assert.equal(op_return.toString('hex'), '6a04534c500001010747454e455349534c004c004c004c0001004c00080000000000000064')
         })
+        it('Succeeds with documentURI as Buffer', () => {
+            let ticker = null
+            let name = null
+            let documentUri = Buffer.from('010101', 'hex')
+            let documentHashHex = null
+            let decimals = 0
+            let batonVout = null
+            let initialQuantity = new BigNumber(100)
+            let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity)
+            assert.equal(op_return.toString('hex'), '6a04534c500001010747454e455349534c004c00030101014c0001004c00080000000000000064')
+        })
         it('Throws without BigNumber', () => {
             let ticker: null = null
             let name: null = null
@@ -157,15 +168,15 @@ describe('SlpTokenType1', function() {
             let initialQuantity: any = null
             assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity as BigNumber) }, Error("Amount must be an instance of BigNumber"))
         })
-        it('Throws when documentUri is provided as Buffer', () => {
+        it('Throws when documentUri is provided as Number', () => {
             let ticker: null = null
             let name: null = null
             let documentUri: null = null
-            let documentHashHex: any = Buffer.from('00', 'hex')
+            let documentHashHex: any = 100
             let decimals = 0
             let batonVout: null = null
             let initialQuantity = new BigNumber('18446744073709551615')
-            assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex as string, decimals, batonVout, initialQuantity) }, Error("Document hash must be provided as a 64 character hex string"))
+            assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity) }, Error("Document hash must be provided as a 64 character hex string"))
         })
         it('Throws when documentUri is provided as non-hex string', () => {
             let ticker: null = null
@@ -205,7 +216,7 @@ describe('SlpTokenType1', function() {
             let decimals = 0
             let batonVout: null = null
             let initialQuantity = new BigNumber('18446744073709551615')
-            assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri as string, documentHashHex, decimals, batonVout, initialQuantity) }, Error("documentUri must be a string"))
+            assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri as string, documentHashHex, decimals, batonVout, initialQuantity) }, Error("documentUri must be a string or a buffer"))
         })
         it('Throws when documentHashHex is not a string', () => {
             let ticker: null = null
