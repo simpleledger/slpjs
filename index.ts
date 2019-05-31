@@ -7,6 +7,7 @@ export * from './lib/bitdbnetwork';
 export * from './lib/localvalidator';
 export * from './lib/bitboxnetwork';
 export * from './lib/transactionhelpers';
+export * from './lib/cashy';
 
 import BigNumber from 'bignumber.js';
 
