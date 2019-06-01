@@ -10,6 +10,7 @@ import * as bchaddr from 'bchaddrjs-slp';
 import * as Bitcore from 'bitcore-lib-cash';
 import Axios from 'axios';
 import { TransactionHelpers } from './transactionhelpers';
+import { PaymentMonitor } from './paymentmonitor';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -73,12 +74,12 @@ export class BitboxNetwork implements SlpValidator {
         return txn;
     }
 
-    async getUtxos(address: string) {
+    async getUtxos(address: string): Promise<AddressUtxoResult|undefined> {
         // must be a cash or legacy addr
         let res: AddressUtxoResult;
         if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
-        res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([address]))[0];
+        res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([ address ]))[0];
         return res;
     }
 
@@ -202,16 +203,17 @@ export class BitboxNetwork implements SlpValidator {
         return res;
     }
 
+    // Will be depreciated in version 0.19.0.
     async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function) {
-        let utxo: AddressUtxoResult | undefined;
+        let result: AddressUtxoResult | undefined;
         // must be a cash or legacy addr
         if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         while (true) {
             try {
-                utxo = await this.getUtxos(paymentAddress);
-                if (utxo)
-                    if(utxo.utxos[0].satoshis >= fee)
+                result = await this.getUtxos(paymentAddress);
+                if (result)
+                    if(result.utxos[0].satoshis >= fee)
                         break
             } catch (ex) {
                 console.log(ex)
@@ -221,6 +223,11 @@ export class BitboxNetwork implements SlpValidator {
         onPaymentCB()
     }
 
+    createNewPaymentMonitor(paymentAddress: string, fee: number, onPaymentCB: (res:AddressUtxoResult)=>any): PaymentMonitor {
+        let monitor = new PaymentMonitor(this.getUtxos);
+        monitor.monitorForBchPayment(paymentAddress, fee, onPaymentCB);
+        return monitor;
+    }
 
     async getRawTransactions(txids: string[]): Promise<string[]> {
         if(this.validator)
