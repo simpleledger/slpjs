@@ -9,32 +9,45 @@ export enum PaymentStatus {
     "WAITING_FOR_PAYMENT" = "WAITING_FOR_PAYMENT",
     "PAYMENT_TOO_LOW" = "PAYMENT_TOO_LOW",
     "PAYMENT_SUCCESS" = "PAYMENT_SUCCESS",
-    "PAYMENT_CANCELLED" = "PAYMENT_CANCELLED"
+    "PAYMENT_CANCELLED" = "PAYMENT_CANCELLED",
+    "ERROR" = "ERROR"
 }
 
 export class PaymentMonitor {
     paymentAddress?: string;
     paymentSatoshis?: number;
+    addressUtxoResult: AddressUtxoResult|null = null;
     bchPaymentStatus = PaymentStatus.NOT_MONITORING;
     slpPaymentStatus = PaymentStatus.NOT_MONITORING;
     bchSatoshisReceived = 0;
     slpSatoshisReceived = new BigNumber(0);
+    statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any
     getUtxos: (address: string) => Promise<AddressUtxoResult|undefined>
     //paymentTokenId?: string;
     //paymentSlpSatoshis?: BigNumber;
 
-    constructor(getUtxos: (address: string) => Promise<AddressUtxoResult|undefined>) {
+    constructor(getUtxos: (address: string) => Promise<AddressUtxoResult|undefined>, statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any) {
         this.getUtxos = getUtxos;
+        this.statusChangeCallback = statusChangeCallback;
     }
 
     cancelPayment() {
         this.bchPaymentStatus = PaymentStatus.PAYMENT_CANCELLED;
     }
 
-    async monitorForBchPayment(address: string, paymentSatoshis: number, onPaymentCB: (res:AddressUtxoResult)=>any): Promise<void> {
-        if(this.bchPaymentStatus === PaymentStatus.WAITING_FOR_PAYMENT)
-            throw Error("Already monitoring for a payment.");
-        this.bchPaymentStatus = PaymentStatus.WAITING_FOR_PAYMENT;
+    _changeBchPaymentStatus(newStatus: PaymentStatus) {
+        if(this.bchPaymentStatus === newStatus) {
+            this._changeBchPaymentStatus(PaymentStatus.ERROR);
+            throw Error("Already monitoring for a payment, status cannot be changed to the same state");
+        }
+        this.bchPaymentStatus = newStatus;
+        if(this.statusChangeCallback)
+            this.statusChangeCallback(this.addressUtxoResult, this.bchPaymentStatus)
+    }
+
+    async monitorForBchPayment(address: string, paymentSatoshis: number): Promise<void> {
+        this.addressUtxoResult = null;
+        this._changeBchPaymentStatus(PaymentStatus.WAITING_FOR_PAYMENT);
         this.paymentAddress = address;
         this.paymentSatoshis = paymentSatoshis;
         let result: AddressUtxoResult | undefined;
@@ -47,8 +60,8 @@ export class PaymentMonitor {
                 if (result) {
                     this.bchSatoshisReceived = result.utxos.reduce((t,v) => t+=v.satoshis, 0);
                     if(result.utxos.reduce((t,v) => t+=v.satoshis,0) >= paymentSatoshis) {
-                        this.bchPaymentStatus = PaymentStatus.PAYMENT_SUCCESS;
-                        onPaymentCB(result);
+                        this.addressUtxoResult = result;
+                        this._changeBchPaymentStatus(PaymentStatus.PAYMENT_SUCCESS);
                         break;
                     }
                 }

@@ -10,7 +10,7 @@ import * as bchaddr from 'bchaddrjs-slp';
 import * as Bitcore from 'bitcore-lib-cash';
 import Axios from 'axios';
 import { TransactionHelpers } from './transactionhelpers';
-import { PaymentMonitor } from './paymentmonitor';
+import { PaymentMonitor, PaymentStatus } from './paymentmonitor';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -223,9 +223,9 @@ export class BitboxNetwork implements SlpValidator {
         onPaymentCB()
     }
 
-    createNewPaymentMonitor(paymentAddress: string, fee: number, onPaymentCB: (res:AddressUtxoResult)=>any): PaymentMonitor {
-        let monitor = new PaymentMonitor(this.getUtxos);
-        monitor.monitorForBchPayment(paymentAddress, fee, onPaymentCB);
+    createNewPaymentMonitor(paymentAddress: string, fee: number, statusChangeCallback: (result: AddressUtxoResult|null, status: PaymentStatus)=>any): PaymentMonitor {
+        let monitor = new PaymentMonitor(this.getUtxos, statusChangeCallback);
+        monitor.monitorForBchPayment(paymentAddress, fee);
         return monitor;
     }
 
