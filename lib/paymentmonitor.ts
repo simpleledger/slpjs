@@ -32,7 +32,7 @@ export class PaymentMonitor {
     }
 
     cancelPayment() {
-        this.bchPaymentStatus = PaymentStatus.PAYMENT_CANCELLED;
+        this._changeBchPaymentStatus(PaymentStatus.PAYMENT_CANCELLED);
     }
 
     _changeBchPaymentStatus(newStatus: PaymentStatus) {
