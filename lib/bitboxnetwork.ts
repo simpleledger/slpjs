@@ -6,7 +6,6 @@ import { BITBOX } from 'bitbox-sdk';
 import { AddressUtxoResult, AddressDetailsResult, TxnDetailsResult, VerboseRawTransactionResult } from 'bitcoin-com-rest';
 import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
-import * as bchaddr from 'bchaddrjs-slp';
 import * as Bitcore from 'bitcore-lib-cash';
 import Axios from 'axios';
 import { TransactionHelpers } from './transactionhelpers';
@@ -77,19 +76,20 @@ export class BitboxNetwork implements SlpValidator {
     async getUtxos(address: string): Promise<AddressUtxoResult|undefined> {
         // must be a cash or legacy addr
         let res: AddressUtxoResult;
-        if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
-            throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
+        if(!Utils.isCashAddress(address) && !Utils.isLegacyAddress(address)) 
+            address = Utils.toCashAddress(address)
+            //throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([ address ]))[0];
         return res;
     }
 
     async getAllSlpBalancesAndUtxos(address: string|string[]) {
         if(typeof address === "string") {
-            address = bchaddr.toCashAddress(address);
+            address = Utils.toCashAddress(address);
             let result = await this.getUtxoWithTxDetails(address);
             return await this.processUtxosForSlp(result);
         }
-        address = address.map(a => bchaddr.toCashAddress(a));
+        address = address.map(a => Utils.toCashAddress(a));
         let results: { address: string, result: SlpBalancesResult }[] = []
         for(let i = 0; i < address.length; i++) {
             let utxos = await this.getUtxoWithTxDetails(address[i]);
@@ -179,7 +179,7 @@ export class BitboxNetwork implements SlpValidator {
 
 	async getAddressDetailsWithRetry(address: string, retries = 40) {
         // must be a cash or legacy addr
-        if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
+        if(!Utils.isCashAddress(address) && !Utils.isLegacyAddress(address)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
 		let result: AddressDetailsResult[] | undefined;
 		let count = 0;
@@ -207,7 +207,7 @@ export class BitboxNetwork implements SlpValidator {
     async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function) {
         let result: AddressUtxoResult | undefined;
         // must be a cash or legacy addr
-        if(!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) 
+        if(!Utils.isCashAddress(paymentAddress) && !Utils.isLegacyAddress(paymentAddress)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         while (true) {
             try {
