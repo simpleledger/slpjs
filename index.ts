@@ -46,7 +46,7 @@ export interface SlpTransactionDetails {
     timestamp?: string;
     symbol: string;
     name: string;
-    documentUri: string; 
+    documentUri: string|Buffer; 
     documentSha256: Buffer|null;
     decimals: number;
     containsBaton: boolean;
