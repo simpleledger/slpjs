@@ -244,7 +244,7 @@ export class BitboxNetwork implements SlpValidator {
     }
 
     createNewPaymentMonitor(paymentAddress: string, fee: number, statusChangeCallback: (result: AddressUtxoResult|null, status: PaymentStatus)=>any): PaymentMonitor {
-        let monitor = new PaymentMonitor(this.getUtxos, statusChangeCallback);
+        let monitor = new PaymentMonitor(this.BITBOX, statusChangeCallback);
         monitor.monitorForBchPayment(paymentAddress, fee);
         return monitor;
     }

@@ -1,6 +1,8 @@
 import { AddressUtxoResult } from "bitcoin-com-rest";
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from "bignumber.js";
+import { BITBOX } from "bitbox-sdk";
+import { Utils } from "..";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -14,6 +16,7 @@ export enum PaymentStatus {
 }
 
 export class PaymentMonitor {
+    BITBOX: BITBOX;
     paymentAddress?: string;
     paymentSatoshis?: number;
     addressUtxoResult: AddressUtxoResult|null = null;
@@ -22,13 +25,14 @@ export class PaymentMonitor {
     bchSatoshisReceived = 0;
     slpSatoshisReceived = new BigNumber(0);
     statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any
-    getUtxos: (address: string) => Promise<AddressUtxoResult|undefined>
+    interval: number;
     //paymentTokenId?: string;
     //paymentSlpSatoshis?: BigNumber;
 
-    constructor(getUtxos: (address: string) => Promise<AddressUtxoResult|undefined>, statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any) {
-        this.getUtxos = getUtxos;
+    constructor(BITBOX: BITBOX, statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any, pollingIntervalMs=1000) {
+        this.BITBOX = BITBOX;
         this.statusChangeCallback = statusChangeCallback;
+        this.interval = pollingIntervalMs;
     }
 
     cancelPayment() {
@@ -36,9 +40,9 @@ export class PaymentMonitor {
     }
 
     _changeBchPaymentStatus(newStatus: PaymentStatus) {
-        if(this.bchPaymentStatus === newStatus) {
+        if(this.bchPaymentStatus === PaymentStatus.WAITING_FOR_PAYMENT && newStatus == PaymentStatus.WAITING_FOR_PAYMENT) {
             this._changeBchPaymentStatus(PaymentStatus.ERROR);
-            throw Error("Already monitoring for a payment, status cannot be changed to the same state");
+            throw Error("Already monitoring for a payment, cannot change state to waiting for a payment");
         }
         this.bchPaymentStatus = newStatus;
         if(this.statusChangeCallback)
@@ -52,14 +56,16 @@ export class PaymentMonitor {
         this.paymentSatoshis = paymentSatoshis;
         let result: AddressUtxoResult | undefined;
         // must be a cash or legacy addr
-        if(!bchaddr.isCashAddress(this.paymentAddress) && !bchaddr.isLegacyAddress(this.paymentAddress)) 
-            throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
+        if(!Utils.isCashAddress(this.paymentAddress) && !Utils.isLegacyAddress(this.paymentAddress)) 
+            this.paymentAddress = Utils.toCashAddress(this.paymentAddress);
         while (this.bchPaymentStatus === PaymentStatus.WAITING_FOR_PAYMENT) {
             try {
                 result = await this.getUtxos(address);
-                if (result) {
+                console.log("waiting for payment");
+                console.log("payment result", result);
+                if (result && result.utxos.length > 0) {
                     this.bchSatoshisReceived = result.utxos.reduce((t,v) => t+=v.satoshis, 0);
-                    if(result.utxos.reduce((t,v) => t+=v.satoshis,0) >= paymentSatoshis) {
+                    if(result.utxos.reduce((t,v) => t+=v.satoshis, 0) >= paymentSatoshis) {
                         this.addressUtxoResult = result;
                         this._changeBchPaymentStatus(PaymentStatus.PAYMENT_SUCCESS);
                         break;
@@ -68,7 +74,18 @@ export class PaymentMonitor {
             } catch (ex) {
                 console.log(ex);
             }
-            await sleep(1000);
+            await sleep(this.interval);
         }
     }
+
+    async getUtxos(address: string): Promise<AddressUtxoResult|undefined> {
+        // must be a cash or legacy addr
+        let res: AddressUtxoResult;
+        if(!Utils.isCashAddress(address) && !Utils.isLegacyAddress(address)) 
+            address = Utils.toCashAddress(address)
+            //throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
+        res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([ address ]))[0];
+        return res;
+    }
+
 }
