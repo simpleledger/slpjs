@@ -6,6 +6,8 @@ import { BITBOX } from 'bitbox-sdk';
 import * as bchaddr from 'bchaddrjs-slp';
 import BigNumber from 'bignumber.js';
 
+import * as Bitcore from 'bitcore-lib-cash';
+
 export interface SlpPaymentRequest {
     address: string,
     amountBch?: number, 
@@ -674,6 +676,16 @@ export class Slp {
         // TODO: Check for fee too large or send leftover to target address
 
         return tx;
+    }
+
+    parseSlpOutputScriptFromTxHex(txhex: string): SlpTransactionDetails {
+        let txn = new Bitcore.Transaction(txhex);
+        return this.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
+    }
+
+    parseOpReturnToChunksFromTxHex(txhex: string): (Buffer|null)[] {
+        let txn = new Bitcore.Transaction(txhex);
+        return this.parseOpReturnToChunks(txn.outputs[0]._scriptBuffer);
     }
 
     parseSlpOutputScript(outputScript: Buffer): SlpTransactionDetails {

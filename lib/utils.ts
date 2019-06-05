@@ -25,6 +25,10 @@ export class Utils {
         return Bchaddr.encodeAsSlpaddr({ hash: hash, type: addressType, network: network, format: "" })
     }
 
+    static getHash160Buffer(address: string) {
+        return Bchaddr.decodeAddress(address).hash;
+    }
+
     static isSlpAddress(address: string) {
         try {
             return Bchaddr.isSlpAddress(address);

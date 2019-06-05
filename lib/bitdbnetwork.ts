@@ -6,7 +6,7 @@ import BigNumber from 'bignumber.js';
 export class BitdbNetwork {
     bitdbUrl: string;
 
-    constructor(bitdbUrl='https://bitdb.bch.sx/q/'){
+    constructor(bitdbUrl='https://bitdb.bitcoin.com/q/'){
         this.bitdbUrl = bitdbUrl;
     }
 
