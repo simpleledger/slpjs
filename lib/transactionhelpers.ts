@@ -23,7 +23,7 @@ export interface ScriptSigP2PKH {
 export interface ScriptSigP2SH {
     index: number;
     lockingScriptBuf: Buffer;  //   <-- aka "redeem" script
-    unlockingScriptBufArray: number|Buffer|(number|Buffer)[]; 
+    unlockingScriptBufArray: (number|Buffer)[]; 
 }
 
 export interface MultisigRedeemData {
