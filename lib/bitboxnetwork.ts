@@ -135,16 +135,16 @@ export class BitboxNetwork implements SlpValidator {
     }
 
     async getUtxoWithRetry(address: string, retries = 40) {
-		let result: AddressUtxoResult | undefined;
-		let count = 0;
-		while(result === undefined){
-			result = await this.getUtxos(address)
-			count++;
-			if(count > retries)
-				throw new Error("this.BITBOX.Address.utxo endpoint experienced a problem");
-			await sleep(250);
-		}
-		return result;
+        let result: AddressUtxoResult | undefined;
+        let count = 0;
+        while(result === undefined){
+            result = await this.getUtxos(address)
+            count++;
+            if(count > retries)
+                throw new Error("this.BITBOX.Address.utxo endpoint experienced a problem");
+            await sleep(250);
+        }
+        return result;
     }
 
     async getUtxoWithTxDetails(address: string) {
@@ -176,22 +176,22 @@ export class BitboxNetwork implements SlpValidator {
         }
     }
 
-	async getAddressDetailsWithRetry(address: string, retries = 40) {
+    async getAddressDetailsWithRetry(address: string, retries = 40) {
         // must be a cash or legacy addr
         if(!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) 
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
-		let result: AddressDetailsResult[] | undefined;
-		let count = 0;
-		while(result === undefined){
+        let result: AddressDetailsResult[] | undefined;
+        let count = 0;
+        while(result === undefined){
             result = <AddressDetailsResult[]>await this.BITBOX.Address.details([address]);
             if(result)
                 return result;
-			count++;
-			if(count > retries)
-				throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
-			await sleep(250);
-		}
-	}
+            count++;
+            if(count > retries)
+                throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
+            await sleep(250);
+        }
+    }
 
     async sendTx(hex: string): Promise<string> {
         let res = await this.BITBOX.RawTransactions.sendRawTransaction([ hex ]as any);
