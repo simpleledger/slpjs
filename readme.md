@@ -815,6 +815,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.18.4
+- Tweaked type for ScriptSigP2SH.unlockingScriptBufArray
+
 ### 0.18.3
 - Added simpleTokenGenesis to bitbox network class
 
@@ -822,6 +825,7 @@ Running the unit tests require node.js v8.15+.
 - Added example for freezing tokens
 - Added Locktime and CLTV helper methods to TransactionHelpers
 - Added get_BIP62_locktime_hex method to Utils
+- Breaking Change: Updated Slp.buildSendOpReturn, Slp.buildMintOpReturn, and Slp.buildGenesisOpReturn methods to static
 
 ### 0.18.1
 - Added generic support for P2SH 
