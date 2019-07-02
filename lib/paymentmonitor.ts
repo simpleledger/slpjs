@@ -4,6 +4,8 @@ import BigNumber from "bignumber.js";
 import { BITBOX } from "bitbox-sdk";
 import { Utils } from "..";
 
+import * as bchrpc from 'grpc-bchrpc-web';
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export enum PaymentStatus {
@@ -26,10 +28,13 @@ export class PaymentMonitor {
     slpSatoshisReceived = new BigNumber(0);
     statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any
     interval: number;
+    //bchClient: bchrpc.Client;
     //paymentTokenId?: string;
     //paymentSlpSatoshis?: BigNumber;
 
+    //constructor(grpcUrl: string, statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any, pollingIntervalMs=1000) {
     constructor(BITBOX: BITBOX, statusChangeCallback?: (result: AddressUtxoResult|null, status: PaymentStatus)=>any, pollingIntervalMs=1000) {
+        //this.bchClient = new bchrpc.Client(grpcUrl);
         this.BITBOX = BITBOX;
         this.statusChangeCallback = statusChangeCallback;
         this.interval = pollingIntervalMs;
@@ -87,5 +92,33 @@ export class PaymentMonitor {
         res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([ address ]))[0];
         return res;
     }
+
+
+    // async getUtxos(address: string): Promise<AddressUtxoResult> {
+    //     // must be a cash or legacy addr
+
+    //     let currentHeight = (await this.bchClient.getBlockchainInfo()).getBestHeight();
+
+    //     if(!Utils.isCashAddress(address) && !Utils.isLegacyAddress(address)) 
+    //         address = Utils.toCashAddress(address)
+    //         //throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
+    //     //res = (<AddressUtxoResult[]>await this.BITBOX.Address.utxo([ address ]))[0];
+
+    //     let r = await this.bchClient.getAddressUtxos(address);
+    //     let utxos = r.getOutputsList().map<any>(o => { return {
+    //         txid: Buffer.from(o.getOutpoint()!.getHash_asU8().reverse()).toString('hex'), 
+    //         vout: o.getOutpoint()!.getIndex(),
+    //         amount: o.getValue() / 10**8,
+    //         satoshis: o.getValue(),
+    //         height: o.getBlockHeight(),
+    //         confirmations: currentHeight - o.getBlockHeight()
+    //     }})
+    //     return {
+    //         legacyAddress: address,
+    //         cashAddress: address,
+    //         scriptPubKey: Buffer.from(r.getOutputsList()[0].getPubkeyScript_asU8()).toString('hex'),
+    //         utxos: <any>utxos
+    //     };
+    // }
 
 }

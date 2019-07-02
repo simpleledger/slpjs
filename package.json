@@ -50,6 +50,7 @@
     "bchaddrjs-slp": "git://github.com/simpleledger/bchaddrjs.git#master",
     "bignumber.js": "^8.1.1",
     "bitcore-lib-cash": "^0.19.0",
-    "lodash": "^4.17.14"
+    "lodash": "^4.17.14",
+    "grpc-bchrpc-web": "^0.4.0"
   }
 }
