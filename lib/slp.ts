@@ -104,7 +104,7 @@ export interface configBuildRawBurnTx {
 }
 
 export interface SlpValidator {
-    isValidSlpTxid(txid: string, tokenIdFilter?: string|null, logger?: logger): Promise<boolean>;
+    isValidSlpTxid(txid: string, tokenIdFilter?: string|null, tokenTypeFilter?: number|null, logger?: logger): Promise<boolean>;
     getRawTransactions: (txid: string[]) => Promise<string[]>;
     validateSlpTransactions(txids: string[]): Promise<string[]>;
 }

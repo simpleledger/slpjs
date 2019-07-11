@@ -69,7 +69,7 @@ export class BitboxNetwork implements SlpValidator {
 
         // add token information to transaction details
         txn.tokenInfo = await this.getTokenInformation(txid, decimalConversion);
-        txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, null, this.logger) : await this.isValidSlpTxid(txid);
+        txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, null, null, this.logger) : await this.isValidSlpTxid(txid);
         return txn;
     }
 
@@ -236,7 +236,7 @@ export class BitboxNetwork implements SlpValidator {
 
     async isValidSlpTxid(txid: string): Promise<boolean> {
         if(this.validator)
-            return await this.validator.isValidSlpTxid(txid, undefined, this.logger);
+            return await this.validator.isValidSlpTxid(txid, null, null, this.logger);
         // WARNING: the following method is limited to 60 transactions per minute
         let validatorUrl = this.setRemoteValidatorUrl();
         this.logger.log("SLPJS Validating (remote: " + validatorUrl + "): " + txid);

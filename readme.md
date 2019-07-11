@@ -815,6 +815,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.19.0
+- Breaking Change: Added NFT1 validation support.  Change is breaking due to new parameter in method `isValid
+
 ### 0.18.4
 - Tweaked type for ScriptSigP2SH.unlockingScriptBufArray
 

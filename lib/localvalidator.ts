@@ -83,9 +83,9 @@ export class LocalValidator implements SlpValidator {
         throw Error("Transaction data not provided (null or undefined).")
     }
 
-    async isValidSlpTxid(txid: string, tokenIdFilter?: string): Promise<boolean> {
+    async isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
         this.logger.log("SLPJS Validating: " + txid);
-        let valid = await this._isValidSlpTxid(txid, tokenIdFilter);
+        let valid = await this._isValidSlpTxid(txid, tokenIdFilter, tokenTypeFilter);
         this.logger.log("SLPJS Result: " + valid + " (" + txid + ")");
         if(!valid && this.cachedValidations[txid].invalidReason)
             this.logger.log("SLPJS Invalid Reason: " + this.cachedValidations[txid].invalidReason);
@@ -94,7 +94,7 @@ export class LocalValidator implements SlpValidator {
         return valid;
     }
 
-    async _isValidSlpTxid(txid: string, tokenIdFilter?: string): Promise<boolean> {
+    async _isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
         if(!this.cachedValidations[txid]) {
             this.cachedValidations[txid] = { validity: null, parents: [], details: null, invalidReason: null }
             await this.retrieveRawTransaction(txid);
@@ -122,14 +122,45 @@ export class LocalValidator implements SlpValidator {
 
         // Check for tokenId filter
         if(tokenIdFilter && slpmsg.tokenIdHex !== tokenIdFilter) {
-            this.cachedValidations[txid].invalidReason = "Only tokenId " + tokenIdFilter + " was considered by validator.";
-            return this.cachedValidations[txid].validity = false;
+            this.cachedValidations[txid].invalidReason = "Validator was run with filter only considering tokenId " + tokenIdFilter + " as valid.";
+            return false; // Don't save boolean result to cache incase cache is ever used without tokenIdFilter.
+        } else {
+            this.cachedValidations[txid].invalidReason = null;
+        }
+
+        // Check specified token type is being respected
+        if(tokenTypeFilter && slpmsg.versionType !== tokenTypeFilter) {
+            this.cachedValidations[txid].invalidReason = "Validator was run with filter only considering token type: " + tokenTypeFilter + " as valid.";
+            return false; // Don't save boolean result to cache incase cache is ever used with different token type.
+        } else {
+            this.cachedValidations[txid].invalidReason = null;
         }
 
         // Check DAG validity
         if(slpmsg.transactionType === SlpTransactionType.GENESIS) {
-            return this.cachedValidations[txid].validity = true;
-        } 
+            if(slpmsg.versionType === 0x41) {
+                let input_txid = txn.inputs[0].prevTxId.toString('hex');
+                let input_txhex = await this.retrieveRawTransaction(input_txid);
+                let input_tx: Bitcore.Transaction = new Bitcore.Transaction(input_txhex);
+                let input_slpmsg;
+                try {
+                    input_slpmsg = this.slp.parseSlpOutputScript(input_tx.outputs[0]._scriptBuffer);
+                } catch(_) { }
+                if(!input_slpmsg || input_slpmsg.versionType !== 0x81) {
+                    this.cachedValidations[txid].invalidReason = "NFT1 child GENESIS does not have a valid NFT1 parent input.";
+                    return this.cachedValidations[txid].validity = false;
+                }
+                let nft_parent_dag_validity = await this.isValidSlpTxid(input_txid, undefined, 0x81);
+                if(nft_parent_dag_validity) {
+                    return this.cachedValidations[txid].validity = true;
+                } else {
+                    this.cachedValidations[txid].invalidReason = "NFT1 child GENESIS does not have valid parent DAG."
+                    return this.cachedValidations[txid].validity = false;
+                }
+            } else {
+                return this.cachedValidations[txid].validity = true;
+            }
+        }
         else if (slpmsg.transactionType === SlpTransactionType.MINT) {
             for(let i = 0; i < txn.inputs.length; i++) {
                 let input_txid = txn.inputs[i].prevTxId.toString('hex')
