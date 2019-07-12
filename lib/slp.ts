@@ -740,8 +740,8 @@ export class Slp {
                 throw Error("Bad Genesis quantity buffer")
             if(chunks[9]!.length !== 8)
                 throw Error("Genesis quantity must be provided as an 8-byte buffer")
-            slpMsg.genesisOrMintQuantity = Utils.buffer2BigNumber(chunks[9]!);
-            if(slpMsg.versionType === 0x41 && slpMsg.genesisOrMintQuantity !== new BigNumber(1))
+            slpMsg.genesisOrMintQuantity = Utils.buffer2BigNumber(chunks[9]!);                
+            if(slpMsg.versionType === 0x41 && !slpMsg.genesisOrMintQuantity.isEqualTo(1))
                 throw Error("NFT1 child token must have GENESIS quantity of 1.")
         }
         else if(slpMsg.transactionType === SlpTransactionType.SEND) {
