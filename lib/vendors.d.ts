@@ -17,6 +17,7 @@ declare module "bchaddrjs-slp" {
 }
 
 declare module "bitcore-lib-cash" {
+
     export interface TxnInput {
         redeemScript: any;
         output: any;
@@ -27,6 +28,12 @@ declare module "bitcore-lib-cash" {
         sequenceNumber: number;
         setScript(script: Script): void;
         getSignatures(transaction: Transaction, privKey: PrivateKey, index: number, sigtype?: number, hashData?: Buffer): any;
+    }
+
+    export interface BlockTxnInput {
+        script: { raw: Buffer; code: { value:number; data:Buffer }[]; }
+        prevout: { hash: Buffer; index: number; }
+        sequence: number;
     }
 
     export interface Script {
