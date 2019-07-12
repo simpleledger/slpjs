@@ -20,7 +20,9 @@ export enum SlpTransactionType {
 }
 
 export enum SlpVersionType {
-    "TokenVersionType1" = 1
+    "TokenVersionType1" = 1,
+    "TokenVersionType1_NFT_Child" = 65,
+    "TokenVersionType1_NFT_Parent" = 129
 }
 
 // negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)
@@ -30,7 +32,8 @@ export enum SlpUtxoJudgement {
     "INVALID_TOKEN_DAG" = "INVALID_TOKEN_DAG", 
     "NOT_SLP" = "NOT_SLP", 
     "SLP_TOKEN" = "SLP_TOKEN", 
-    "SLP_BATON" = "SLP_BATON"
+    "SLP_BATON" = "SLP_BATON",
+    "UNSUPPORTED_TYPE" = "UNSUPPORTED_TYPE"
 }
 
 export interface SlpTransactionDetails {

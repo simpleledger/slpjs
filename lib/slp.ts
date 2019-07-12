@@ -696,7 +696,11 @@ export class Slp {
         if(!chunks[1])
             throw Error("Bad versionType buffer")
         slpMsg.versionType = <SlpVersionType>Slp.parseChunkToInt(chunks[1]!, 1, 2, true);
-        if(slpMsg.versionType !== SlpVersionType.TokenVersionType1)
+        let supportedTypes = [   
+                SlpVersionType.TokenVersionType1, 
+                SlpVersionType.TokenVersionType1_NFT_Parent,
+                SlpVersionType.TokenVersionType1_NFT_Child ];
+        if(!supportedTypes.includes(slpMsg.versionType))
             throw Error('Unsupported token type: ' + slpMsg.versionType);
         if(chunks.length === 2)
             throw Error('Missing SLP transaction type');
@@ -720,6 +724,8 @@ export class Slp {
             if(!chunks[7])
                 throw Error("Bad decimals buffer")
             slpMsg.decimals = <number>Slp.parseChunkToInt(chunks[7]!, 1, 1, true);
+            if(slpMsg.versionType === 0x41 && slpMsg.decimals !== 0)
+                throw Error('NFT1 child token must have divisibility set to 0 decimal places.')
             if(slpMsg.decimals > 9)
                 throw Error('Too many decimals')
             slpMsg.batonVout = chunks[8] ? Slp.parseChunkToInt(chunks[8]!, 1, 1) : null;
@@ -728,11 +734,15 @@ export class Slp {
                     throw Error('Mint baton cannot be on vout=0 or 1');
                 slpMsg.containsBaton = true;
             }
+            if(slpMsg.versionType === 0x41 && slpMsg.batonVout !== null)
+                throw Error("NFT1 child token must not have a minting baton!")
             if(!chunks[9])
                 throw Error("Bad Genesis quantity buffer")
             if(chunks[9]!.length !== 8)
                 throw Error("Genesis quantity must be provided as an 8-byte buffer")
             slpMsg.genesisOrMintQuantity = Utils.buffer2BigNumber(chunks[9]!);
+            if(slpMsg.versionType === 0x41 && slpMsg.genesisOrMintQuantity !== new BigNumber(1))
+                throw Error("NFT1 child token must have GENESIS quantity of 1.")
         }
         else if(slpMsg.transactionType === SlpTransactionType.SEND) {
             if(chunks.length < 4)
@@ -763,6 +773,8 @@ export class Slp {
                 throw Error('More than 19 output amounts');
         }
         else if(slpMsg.transactionType === SlpTransactionType.MINT) {
+            if(slpMsg.versionType === 0x41)
+                throw Error("NFT1 Child cannot have MINT transaction type.")
             if(chunks.length != 6)
                 throw Error('MINT with incorrect number of parameters');
             if(!chunks[3])
@@ -936,6 +948,8 @@ export class Slp {
     static preSendSlpJudgementCheck(txo: SlpAddressUtxoResult, tokenId: string){
         if (txo.slpUtxoJudgement === undefined || txo.slpUtxoJudgement === null || txo.slpUtxoJudgement === SlpUtxoJudgement.UNKNOWN)
             throw Error("There at least one input UTXO that does not have a proper SLP judgement")
+        if (txo.slpUtxoJudgement === SlpUtxoJudgement.UNSUPPORTED_TYPE)
+            throw Error("There is at least one input UTXO that is an Unsupported SLP type.")
         if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)
             throw Error("There is at least one input UTXO that is a baton.  You can only spend batons in a MINT transaction.")
         if (txo.slpTransactionDetails) {
@@ -1067,8 +1081,10 @@ export class Slp {
             }
         }
         catch (e) {
-            // any errors in parsing SLP OP_RETURN means the TXN is NOT SLP.
-            txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+            if(e.message.includes("Unsupported token type"))
+                txo.slpUtxoJudgement = SlpUtxoJudgement.UNSUPPORTED_TYPE
+            else
+                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
         }
     }
 
@@ -1078,6 +1094,7 @@ export class Slp {
             ...new Set(utxos.filter(txOut => {
                 if (txOut.slpTransactionDetails &&
                     txOut.slpUtxoJudgement !== SlpUtxoJudgement.UNKNOWN &&
+                    txOut.slpUtxoJudgement !== SlpUtxoJudgement.UNSUPPORTED_TYPE &&
                     txOut.slpUtxoJudgement !== SlpUtxoJudgement.NOT_SLP)
                     return true;
                 return false;
