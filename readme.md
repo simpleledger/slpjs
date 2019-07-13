@@ -815,8 +815,13 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.20.0
+- Added full NFT1 validation support with updates to both the validator and parser.
+- Critical Issue Fixed: This version fixed a critical bug associated with unsupported token types.  All previous versions will allow unsupported token types to be burned because they are treated as if they are non-SLP UTXOs.  This version includes a new type of UTXO judgement for unsupported token types (`UNSUPPORTED_TYPE`), and they any UTXO receiving this judgement is prevented from being spent in the built-in transaction methods. 
+- Added more descriptive code commenting to localvalidator.ts.
+
 ### 0.19.0
-- Breaking Change: Added NFT1 validation support.  Change is breaking due to new parameter in method `isValid
+- Breaking Change: Added initial NFT1 validation support (not yet activated in parser).  Change is breaking due to new parameter in method `isValid
 
 ### 0.18.4
 - Tweaked type for ScriptSigP2SH.unlockingScriptBufArray
