@@ -32,7 +32,7 @@ declare module "bitcore-lib-cash" {
 
     export interface BlockTxnInput {
         script: { raw: Buffer; code: { value:number; data:Buffer }[]; }
-        prevout: { hash: Buffer; index: number; }
+        prevout: { hash: Buffer; index: number; txid: ()=>string }
         sequence: number;
     }
 
