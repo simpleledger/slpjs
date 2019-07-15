@@ -113,10 +113,10 @@ export namespace Primatives {
     
     export class Transaction {
         version: number;
-        inputs: any[];
+        inputs: TransactionInput[];
         outputs: any[];
         lockTime: number;
-        constructor(version?: number, inputs?: any[], outputs?: any[], lockTime?: number) {
+        constructor(version?: number, inputs?: TransactionInput[], outputs?: any[], lockTime?: number) {
             this.version = version || 1;
             this.inputs = inputs || [];
             this.outputs = outputs || [];
@@ -128,7 +128,7 @@ export namespace Primatives {
             this.serializeInto(sink);
             return Buffer.from(sink.rawBytes).toString('hex')
         }
-    
+
         serializeInto(stream: ArraySink) {
             stream.writeInt(this.version, 4);
         
@@ -151,7 +151,12 @@ export namespace Primatives {
             stream.writeInt(this.lockTime, 4);
         };
         
-    
+        static parseFromBuffer(buffer: Buffer) {
+            let source = new Primatives.ArraySource(buffer.toJSON().data)
+            let stream = new Primatives.ByteStream(source);
+            return Transaction.parse(stream);
+        }
+      
         static parse(stream: ByteStream, mayIncludeUnsignedInputs=false) {
             var transaction = new Transaction();
             transaction.version = stream.readInt(4);

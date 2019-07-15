@@ -2,6 +2,7 @@
 
 export * from './lib/slp';
 export * from './lib/utils';
+export * from './lib/primatives';
 export * from './lib/bitdbnetwork';
 export * from './lib/localvalidator';
 export * from './lib/bitboxnetwork';
