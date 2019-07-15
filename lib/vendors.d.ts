@@ -30,12 +30,6 @@ declare module "bitcore-lib-cash" {
         getSignatures(transaction: Transaction, privKey: PrivateKey, index: number, sigtype?: number, hashData?: Buffer): any;
     }
 
-    export interface BlockTxnInput {
-        script: { raw: Buffer; code: { value:number; data:Buffer }[]; }
-        prevout: { hash: Buffer; index: number; txid: ()=>string }
-        sequence: number;
-    }
-
     export interface Script {
         fromBuffer(buffer: Buffer): Script;
         toBuffer(): Buffer;

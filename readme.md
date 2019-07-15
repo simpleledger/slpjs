@@ -815,6 +815,15 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.20.2
+- Export Primatives namespace
+- Add 'Primatives.parseFromBuffer()' method
+- Remove unused typing from vendors.d.ts
+- Update dependency versions to address security flags
+
+### 0.20.1
+- Minor typings update
+
 ### 0.20.0
 - Added full NFT1 validation support with updates to both the validator and parser.
 - Critical Issue Fixed: This version fixed a critical bug associated with unsupported token types.  All previous versions will allow unsupported token types to be burned because they are treated as if they are non-SLP UTXOs.  This version includes a new type of UTXO judgement for unsupported token types (`UNSUPPORTED_TYPE`), and they any UTXO receiving this judgement is prevented from being spent in the built-in transaction methods. 
