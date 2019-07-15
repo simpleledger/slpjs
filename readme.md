@@ -815,6 +815,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.20.3
+- Bump version for npm issue with previous version
+
 ### 0.20.2
 - Export Primatives namespace
 - Add 'Primatives.parseFromBuffer()' method
