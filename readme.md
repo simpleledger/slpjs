@@ -89,6 +89,16 @@ let balances;
 //      '1cda254d0a995c713b7955298ed246822bee487458cd9747a91d9e81d9d28125': BigNumber { s: 1, e: 3, c: [ 1000 ] },
 //      '047918c612e94cce03876f1ad2bd6c9da43b586026811d9b0d02c3c3e910f972': BigNumber { s: 1, e: 2, c: [ 100 ] } 
 //   },
+//   nftParentChildBalances: {
+//      'parentId1': {
+//            'childId1': BigNumber
+//            'childId2': BigNumber
+//      }
+//      'parentId2': {
+//            'childId1': BigNumber
+//            'childId2': BigNumber
+//      }
+//   }
 //   slpTokenUtxos: [ ... ],
 //   slpBatonUtxos: [ ... ],
 //   invalidTokenUtxos: [ ... ],
@@ -814,6 +824,12 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.20.4
+- Now NFT Parents/Children are readily visible when using `getAllSlpBalancesAndUtxos(<address>)`
+  - Add `nftParentChildBalances` dict/map to `SlpBalancesResult`.
+  - Add `nftParentId` property to each SLP UTXO object (in type `SlpAddressUtxoResult`).
+- Created an examples directory, starting to mirror/migrate README examples to this folder. This will allow easier execution of the examples when they are in TypeScript
 
 ### 0.20.3
 - Bump version for npm issue with previous version
