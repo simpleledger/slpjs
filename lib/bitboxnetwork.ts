@@ -1,9 +1,9 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult, logger, SlpTransactionType } from '../index';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpBalancesResult, logger, SlpTransactionType, SlpVersionType, Primatives } from '../index';
 import { Slp, SlpProxyValidator, SlpValidator } from './slp';
 import { Utils } from './utils';
 
 import { BITBOX } from 'bitbox-sdk';
-import { AddressUtxoResult, AddressDetailsResult, TxnDetailsResult, VerboseRawTransactionResult } from 'bitcoin-com-rest';
+import { AddressUtxoResult, AddressDetailsResult, TxnDetailsResult } from 'bitcoin-com-rest';
 import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
@@ -70,7 +70,27 @@ export class BitboxNetwork implements SlpValidator {
         // add token information to transaction details
         txn.tokenInfo = await this.getTokenInformation(txid, decimalConversion);
         txn.tokenIsValid = this.validator ? await this.validator.isValidSlpTxid(txid, null, null, this.logger) : await this.isValidSlpTxid(txid);
+
+        // add tokenNftParentId if token is a NFT child
+        if(txn.tokenIsValid && txn.tokenInfo.versionType === SlpVersionType.TokenVersionType1_NFT_Child)
+            txn.tokenNftParentId = await this.getNftParentId(txn.tokenInfo.tokenIdHex);
+
         return txn;
+    }
+
+    private async getNftParentId(tokenIdHex: string) {
+        let txnhex = (await this.validator!.getRawTransactions([tokenIdHex]))[0];
+        let tx = Primatives.Transaction.parseFromBuffer(Buffer.from(txnhex, 'hex'));
+        let nftBurnTxnHex = (await this.validator!.getRawTransactions([tx.inputs[0].previousTxHash]))[0];
+        let nftBurnTxn = Primatives.Transaction.parseFromBuffer(Buffer.from(nftBurnTxnHex, 'hex'));
+        let slp = new Slp(this.BITBOX);
+        let nftBurnSlp = slp.parseSlpOutputScript(Buffer.from(nftBurnTxn.outputs[0].scriptPubKey));
+        if (nftBurnSlp.transactionType === SlpTransactionType.GENESIS) {
+            return tx.inputs[0].previousTxHash;
+        }
+        else {
+            return nftBurnSlp.tokenIdHex;
+        }
     }
 
     async getUtxos(address: string) {

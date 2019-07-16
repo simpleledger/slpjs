@@ -1,4 +1,4 @@
-import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType, logger } from '../index';
+import { SlpAddressUtxoResult, SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpBalancesResult, utxo, SlpVersionType, logger, Primatives } from '../index';
 import { SlpTokenType1 } from './slptokentype1';
 import { Utils } from './utils';
 
@@ -998,6 +998,7 @@ export class Slp {
             satoshis_in_invalid_token_dag: 0,
             satoshis_in_invalid_baton_dag: 0,
             slpTokenBalances: {},
+            nftParentChildBalances: {},
             slpTokenUtxos: {},
             slpBatonUtxos: {},
             nonSlpUtxos: [],
@@ -1022,6 +1023,21 @@ export class Slp {
                 result.satoshis_in_slp_token += txo.satoshis;
                 if(!(txo.slpTransactionDetails.tokenIdHex in result.slpTokenUtxos))
                     result.slpTokenUtxos[txo.slpTransactionDetails.tokenIdHex] = [];
+
+                // NFT1 Children Balances (nftParentChildBalances):
+                if(txo.slpTransactionDetails.versionType === SlpVersionType.TokenVersionType1_NFT_Child) {
+                    if(!(txo.nftParentId! in result.nftParentChildBalances)) {
+                        result.nftParentChildBalances[txo.nftParentId!] = {};
+                    }
+                    if(!(txo.slpTransactionDetails.tokenIdHex in result.nftParentChildBalances[txo.nftParentId!])) {
+                        result.nftParentChildBalances[txo.nftParentId!][txo.slpTransactionDetails.tokenIdHex] = txo.slpUtxoJudgementAmount;
+                    } else {
+                        // NOTE: this does not cover the 0 quantity SEND case
+                        throw Error("Cannot have 2 UTXOs with the same NFT1 child token designation.")
+                    }
+                }
+
+                // All token balances (includes Type 1, and NFT1(65/129)):
                 result.slpTokenUtxos[txo.slpTransactionDetails.tokenIdHex].push(txo);
             }
             else if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
@@ -1053,9 +1069,11 @@ export class Slp {
                 throw 'Utxo contains no Vout!';
             let vout0script = Buffer.from(vout.scriptPubKey.hex, 'hex');
             txo.slpTransactionDetails = this.parseSlpOutputScript(vout0script);
+
             // populate txid for GENESIS
             if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS)
                 txo.slpTransactionDetails.tokenIdHex = txo.txid;
+
             // apply initial SLP judgement to the UTXO (based on OP_RETURN parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
             if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS ||
                 txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
@@ -1111,5 +1129,33 @@ export class Slp {
                 }
             }
         });
+
+        // function for determination of NFT1 parent ID
+        let getNftParentId = async (tokenIdHex: string) => {
+            let txnhex = (await asyncSlpValidator.getRawTransactions([tokenIdHex]))[0];
+            let tx = Primatives.Transaction.parseFromBuffer(Buffer.from(txnhex, 'hex'));
+            let nftBurnTxnHex = (await asyncSlpValidator.getRawTransactions([tx.inputs[0].previousTxHash]))[0];
+            let nftBurnTxn = Primatives.Transaction.parseFromBuffer(Buffer.from(nftBurnTxnHex, 'hex'));
+            let slp = new Slp(this.BITBOX);
+            let nftBurnSlp = slp.parseSlpOutputScript(Buffer.from(nftBurnTxn.outputs[0].scriptPubKey));
+            if (nftBurnSlp.transactionType === SlpTransactionType.GENESIS) {
+                return tx.inputs[0].previousTxHash;
+            }
+            else {
+                return nftBurnSlp.tokenIdHex;
+            }
+        }
+
+        // Loop through utxos to add nftParentId to any NFT1 child UTXO.
+        for(let txo in utxos) {
+            if(utxos[txo].slpTransactionDetails && 
+                utxos[txo].slpTransactionDetails.versionType === SlpVersionType.TokenVersionType1_NFT_Child) {
+                if(utxos[txo].slpTransactionDetails.transactionType !== SlpTransactionType.GENESIS) {
+                    utxos[txo].nftParentId = await getNftParentId(utxos[txo].slpTransactionDetails.tokenIdHex);
+                } else {
+                    utxos[txo].nftParentId = await getNftParentId(utxos[txo].txid);
+                }
+            }
+        }
     }
 }
