@@ -10,7 +10,8 @@
     },
     "include": [
         "./lib",
-        "./test"
+        "./test", 
+        "./examples"
     ], 
     "files": [ 
         "index.ts" 

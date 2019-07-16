@@ -7,11 +7,10 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
-            "program": "${workspaceFolder}/index.js",
-            "outFiles": [
-                "${workspaceFolder}/**/*.js"
-            ]
+            "name": "Launch Current File",
+            "program": "${file}",
+            "outFiles": ["${workspaceFolder}/**/*.js"], 
+            "console": "integratedTerminal"
         },
         {
             "type": "node",
