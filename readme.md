@@ -104,6 +104,7 @@ let balances;
 //   invalidTokenUtxos: [ ... ],
 //   invalidBatonUtxos: [ ... ],
 //   nonSlpUtxos: [ ... ]
+//   unknownTokenTypeUtxos: [ ... ]
 // }
 ```
 
@@ -825,6 +826,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.20.5 
+- Fix accounting for unknown token type UTXOs in `SlpBalancesResult` by adding `satoshis_in_unknown_token_type` and `unknownTokenTypeUtxos` objects.
+
 ### 0.20.4
 - Now NFT Parents/Children are readily visible when using `getAllSlpBalancesAndUtxos(<address>)`
   - Add `nftParentChildBalances` dict/map to `SlpBalancesResult`.
@@ -849,7 +853,7 @@ Running the unit tests require node.js v8.15+.
 - Added more descriptive code commenting to localvalidator.ts.
 
 ### 0.19.0
-- Breaking Change: Added initial NFT1 validation support (not yet activated in parser).  Change is breaking due to new parameter in method `isValid
+- Breaking Change: Added initial NFT1 validation support (not yet activated in parser).  Change is breaking due to new `tokenTypeFilter` parameter in method `isValidSlpTxid()`
 
 ### 0.18.4
 - Tweaked type for ScriptSigP2SH.unlockingScriptBufArray

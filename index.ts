@@ -59,6 +59,7 @@ export interface SlpBalancesResult {
     satoshis_in_slp_token: number;
     satoshis_in_invalid_token_dag: number;
     satoshis_in_invalid_baton_dag: number;
+    satoshis_in_unknown_token_type: number;
     slpTokenBalances: {[key: string]: BigNumber};
     nftParentChildBalances: {[key: string]: {[key: string]: BigNumber}};
     slpTokenUtxos: {[key: string]: SlpAddressUtxoResult[]};
@@ -66,6 +67,7 @@ export interface SlpBalancesResult {
     nonSlpUtxos: SlpAddressUtxoResult[];
     invalidTokenUtxos: SlpAddressUtxoResult[];
     invalidBatonUtxos: SlpAddressUtxoResult[];
+    unknownTokenTypeUtxos: SlpAddressUtxoResult[];
 }
 
 export class SlpAddressUtxoResult {

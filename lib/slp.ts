@@ -984,7 +984,7 @@ export class Slp {
         for(let id in result.slpTokenUtxos) tokenTxoCount += result.slpTokenUtxos[id].length;
         let batonTxoCount = 0;
         for(let id in result.slpBatonUtxos) batonTxoCount += result.slpBatonUtxos[id].length;
-        if(utxos.length !== (tokenTxoCount + batonTxoCount + result.nonSlpUtxos.length + result.invalidBatonUtxos.length + result.invalidTokenUtxos.length))
+        if(utxos.length !== (tokenTxoCount + batonTxoCount + result.nonSlpUtxos.length + result.unknownTokenTypeUtxos.length + result.invalidBatonUtxos.length + result.invalidTokenUtxos.length))
             throw Error('Not all UTXOs have been categorized. Unknown Error.');
     
         return result;
@@ -997,13 +997,15 @@ export class Slp {
             satoshis_in_slp_token: 0,
             satoshis_in_invalid_token_dag: 0,
             satoshis_in_invalid_baton_dag: 0,
+            satoshis_in_unknown_token_type: 0,
             slpTokenBalances: {},
             nftParentChildBalances: {},
             slpTokenUtxos: {},
             slpBatonUtxos: {},
             nonSlpUtxos: [],
             invalidTokenUtxos: [],
-            invalidBatonUtxos: []
+            invalidBatonUtxos: [], 
+            unknownTokenTypeUtxos: []
         };
         // 5) Loop through UTXO set and accumulate balances for type of utxo, organize the Utxos into their categories.
         for (const txo of utxos) {
@@ -1053,6 +1055,10 @@ export class Slp {
             else if (txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG) {
                 result.satoshis_in_invalid_baton_dag += txo.satoshis;
                 result.invalidBatonUtxos.push(txo);
+            }
+            else if (txo.slpUtxoJudgement === SlpUtxoJudgement.UNSUPPORTED_TYPE) {
+                result.satoshis_in_unknown_token_type += txo.satoshis;
+                result.unknownTokenTypeUtxos.push(txo);
             }
             else {
                 result.satoshis_available_bch += txo.satoshis;
