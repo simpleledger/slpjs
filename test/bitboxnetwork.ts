@@ -4,7 +4,7 @@ import * as assert from 'assert';
 import { BigNumber } from 'bignumber.js';
 import { BITBOX } from "bitbox-sdk";
 
-describe('BitdbNetwork (mainnet)', function() {
+describe('BitboxNetwork (mainnet)', function() {
     const bitbox = new BITBOX();
     describe('getTokenInformation()', function() {
         //console.log(JSON.stringify(BitdbNetwork));
