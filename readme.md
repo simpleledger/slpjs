@@ -768,6 +768,11 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.21.0
+- Added new code examples for NFT1 Genesis Parent and Child (see examples directory)
+- Updated Genesis/Mint/Send methods for handling new token types appropriately
+- Breaking: Removed old NFT1 methods from v0.15.12, these were likely never used by anyone but bumping the version just in case.
+
 ### 0.20.5 
 - Fix accounting for unknown token type UTXOs in `SlpBalancesResult` by adding `satoshis_in_unknown_token_type` and `unknownTokenTypeUtxos` objects.
 
