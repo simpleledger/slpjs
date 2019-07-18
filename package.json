@@ -51,6 +51,6 @@
     "bignumber.js": "^8.1.1",
     "bitcore-lib-cash": "^0.19.0",
     "lodash": "^4.17.14",
-    "grpc-bchrpc-web": "^0.4.0"
+    "grpc-bchrpc-web": "^0.5.0"
   }
 }

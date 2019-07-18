@@ -266,7 +266,7 @@ export class GrpcWebNetwork implements SlpValidator {
 
     async isValidSlpTxid(txid: string): Promise<boolean> {
         if(this.validator)
-            return await this.validator.isValidSlpTxid(txid, undefined, this.logger);
+            return await this.validator.isValidSlpTxid(txid, undefined, undefined, this.logger);
         // WARNING: the following method is limited to 60 transactions per minute
         let validatorUrl = this.setRemoteValidatorUrl();
         this.logger.log("SLPJS Validating (remote: " + validatorUrl + "): " + txid);
