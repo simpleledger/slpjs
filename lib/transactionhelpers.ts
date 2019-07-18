@@ -1,4 +1,4 @@
-import { Utils, SlpAddressUtxoResult, Slp } from "..";
+import { Utils, SlpAddressUtxoResult, Slp, SlpUtxoJudgement } from "..";
 import BigNumber from "bignumber.js";
 import * as Bitcore from "bitcore-lib-cash";
 import { Primatives } from "./primatives";
@@ -67,13 +67,18 @@ export class TransactionHelpers {
         // 2) Compute the token Change amount.
         let tokenChangeAmount: BigNumber = totalTokenInputAmount.minus((sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
         
+        // Get token_type
+        let token_type: number = 
+            inputUtxos.filter(i => i.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN &&
+                                    i.slpTransactionDetails.tokenIdHex === tokenId)[0].slpTransactionDetails.versionType;
+
         let txHex;
         if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
             // 3) Create the Send OP_RETURN message
             let sendOpReturn = Slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
-                outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ],
-            });
+                outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ]
+            }, token_type);
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
                 slpSendOpReturn: sendOpReturn,
@@ -161,17 +166,78 @@ export class TransactionHelpers {
         return genesisTxHex;
     }
 
+    simpleNFT1ParentGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[], decimals=0): string {
+        
+        let genesisOpReturn = Slp.buildGenesisOpReturn({ 
+            ticker: tokenTicker,
+            name: tokenName,
+            documentUri: documentUri,
+            hash: documentHash, 
+            decimals: decimals,
+            batonVout: batonReceiverAddress ? 2 : null,
+            initialQuantity: tokenAmount,
+        }, 0x81);
+
+        // Create/sign the raw transaction hex for Genesis
+        let genesisTxHex = this.slp.buildRawGenesisTx({
+            slpGenesisOpReturn: genesisOpReturn, 
+            mintReceiverAddress: tokenReceiverAddress,
+            batonReceiverAddress: batonReceiverAddress,
+            bchChangeReceiverAddress: bchChangeReceiverAddress, 
+            input_utxos: Utils.mapToUtxoArray(inputUtxos)
+        });
+
+        // Return raw hex for this transaction
+        return genesisTxHex;
+    }
+
+    simpleNFT1ChildGenesis(nft1GroupId: string, tokenName: string, tokenTicker: string, documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[], allowBurnAnyAmount = false) {
+        let genesisOpReturn = Slp.buildGenesisOpReturn({ 
+            ticker: tokenTicker,
+            name: tokenName,
+            documentUri: documentUri,
+            hash: documentHash, 
+            decimals: 0,
+            batonVout: null,
+            initialQuantity: new BigNumber(1),
+        }, 0x41);
+
+        // make sure that the first input item is a a token from the parent nft1GroupId
+        if(inputUtxos[0].slpUtxoJudgement !== SlpUtxoJudgement.SLP_TOKEN) {
+            throw Error("First input does not include a valid SLP NFT1 parent token.");
+        } else if(inputUtxos[0].slpTransactionDetails.tokenIdHex !== nft1GroupId) {
+            throw Error("First input does not include a valid parent token with the specified group id.");
+        } else if(!allowBurnAnyAmount && !inputUtxos[0].slpUtxoJudgementAmount.isEqualTo(1)) {
+            throw Error("NFT1 parent token burn amount is not 1. If you would like to allow burning quanity != 1 you can set the 'allowBurnAnyAmount' parameter.");
+        }
+
+        // Create/sign the raw transaction hex for Genesis
+        let genesisTxHex = this.slp.buildRawGenesisTx({
+            slpGenesisOpReturn: genesisOpReturn, 
+            mintReceiverAddress: tokenReceiverAddress,
+            batonReceiverAddress: null,
+            bchChangeReceiverAddress: bchChangeReceiverAddress, 
+            input_utxos: Utils.mapToUtxoArray(inputUtxos), 
+            allowed_token_burning: [nft1GroupId]
+        });
+
+        // Return raw hex for this transaction
+        return genesisTxHex;
+    }
+
     // Create raw transaction hex to: Mint new tokens or move the minting baton
     simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string): string {  
         // // convert address to cashAddr from SLP format.
         // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
+
+        let token_type = inputUtxos.filter(i => i.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)[0].slpTransactionDetails.versionType;
 
         // 1) Create the Send OP_RETURN message
         let mintOpReturn = Slp.buildMintOpReturn({
             tokenIdHex: tokenId,
             mintQuantity: mintAmount,
             batonVout: 2
-        });
+        }, token_type);
 
         // 2) Create the raw Mint transaction hex
         let txHex = this.slp.buildRawMintTx({

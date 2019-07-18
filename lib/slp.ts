@@ -136,7 +136,8 @@ export class Slp {
             hash,
             config.decimals,
             config.batonVout,
-            config.initialQuantity
+            config.initialQuantity, 
+            type
         )
     }
 
@@ -144,14 +145,16 @@ export class Slp {
         return SlpTokenType1.buildMintOpReturn(
             config.tokenIdHex,
             config.batonVout,
-            config.mintQuantity
+            config.mintQuantity, 
+            type
         )
     }
 
     static buildSendOpReturn(config: configBuildSendOpReturn, type = 0x01) {
         return SlpTokenType1.buildSendOpReturn(
             config.tokenIdHex,
-            config.outputQtyArray
+            config.outputQtyArray,
+            type
         )
     }
 
@@ -183,9 +186,8 @@ export class Slp {
                 return
             if(config.allowed_token_burning && 
                 txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN && 
-                !config.allowed_token_burning!.includes(txo.slpTransactionDetails.tokenIdHex)) 
-            {
-                throw Error("Input UTXOs included a token for another tokenId.")
+                config.allowed_token_burning!.includes(txo.slpTransactionDetails.tokenIdHex)) {
+                    return
             }
             else if(txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
                 throw Error("Input UTXOs included a token for another tokenId.")

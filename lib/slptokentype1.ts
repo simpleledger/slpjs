@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 export class SlpTokenType1 {
     static get lokadIdHex() { return "534c5000" }
 
-    static buildGenesisOpReturn(ticker: string|null, name: string|null, documentUri:string|null, documentHashHex: string|null, decimals: number, batonVout:number|null, initialQuantity:BigNumber) {
+    static buildGenesisOpReturn(ticker: string|null, name: string|null, documentUri:string|null, documentHashHex: string|null, decimals: number, batonVout:number|null, initialQuantity:BigNumber, type=0x01) {
         let script: (number|number[])[] = [];
 
         // OP Return Prefix
@@ -16,7 +16,9 @@ export class SlpTokenType1 {
         lokadId.forEach((item) => script.push(item))
 
         // Token Version/Type
-        let tokenVersionType = 0x01
+        if(![0x01, 0x41, 0x81].includes(type))
+            throw Error("Unable to create Genesis for this token type.")
+        let tokenVersionType = type;
         script.push(Utils.getPushDataOpcode([tokenVersionType]))
         script.push(tokenVersionType)
 
@@ -120,7 +122,7 @@ export class SlpTokenType1 {
         return encodedScript
     }
 
-    static buildSendOpReturn(tokenIdHex: string, outputQtyArray: BigNumber[]) {
+    static buildSendOpReturn(tokenIdHex: string, outputQtyArray: BigNumber[], type=0x01) {
         let script: (number|number[])[] = [];
 
         // OP Return Prefix
@@ -132,7 +134,9 @@ export class SlpTokenType1 {
         lokadId.forEach((item) => script.push(item))
 
         // Token Version/Type
-        let tokenVersionType = 0x01
+        if(![0x01, 0x41, 0x81].includes(type))
+            throw Error("Unable to create Genesis for this token type.")
+        let tokenVersionType = type
         script.push(Utils.getPushDataOpcode([tokenVersionType]))
         script.push(tokenVersionType)
 
@@ -188,7 +192,7 @@ export class SlpTokenType1 {
         return encodedScript
     }
 
-    static buildMintOpReturn(tokenIdHex: string, batonVout: number|null, mintQuantity: BigNumber) {
+    static buildMintOpReturn(tokenIdHex: string, batonVout: number|null, mintQuantity: BigNumber, type=0x01) {
         let script: (number|number[])[] = [];
 
         // OP Return Prefix
@@ -200,7 +204,9 @@ export class SlpTokenType1 {
         lokadId.forEach((item) => script.push(item))
 
         // Token Version/Type
-        let tokenVersionType = 0x01
+        if(![0x01, 0x81].includes(type))
+            throw Error("Unable to create Genesis for this token type.")
+        let tokenVersionType = type
         script.push(Utils.getPushDataOpcode([tokenVersionType]))
         script.push(tokenVersionType)
 

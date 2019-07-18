@@ -137,6 +137,16 @@ export class BitboxNetwork implements SlpValidator {
         return await this.sendTx(genesisTxHex);
     }
 
+    async simpleNFT1ParentGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string, batonReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[], decimals=0) {
+        let genesisTxHex = this.txnHelpers.simpleNFT1ParentGenesis(tokenName, tokenTicker, tokenAmount, documentUri, documentHash, tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos, decimals);
+        return await this.sendTx(genesisTxHex);
+    }
+
+    async simpleNFT1ChildGenesis(nft1GroupId: string, tokenName: string, tokenTicker: string, documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[], allowBurnAnyAmount=false) {
+        let genesisTxHex = this.txnHelpers.simpleNFT1ChildGenesis(nft1GroupId, tokenName, tokenTicker, documentUri, documentHash, tokenReceiverAddress, bchChangeReceiverAddress, inputUtxos, allowBurnAnyAmount);
+        return await this.sendTx(genesisTxHex);
+    }
+
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string) {  
         let txHex = this.txnHelpers.simpleTokenMint(tokenId, mintAmount, inputUtxos, tokenReceiverAddress, batonReceiverAddress, changeReceiverAddress);
