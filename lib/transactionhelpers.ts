@@ -136,7 +136,7 @@ export class TransactionHelpers {
     }
 
     // Create raw transaction hex to: Create a token Genesis issuance
-    simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]): string {
+    simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string|null, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string|null, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]): string {
         
         let genesisOpReturn = Slp.buildGenesisOpReturn({ 
             ticker: tokenTicker,
@@ -155,30 +155,6 @@ export class TransactionHelpers {
             batonReceiverAddress: batonReceiverAddress,
             bchChangeReceiverAddress: bchChangeReceiverAddress, 
             input_utxos: Utils.mapToUtxoArray(inputUtxos)
-        });
-
-        // Return raw hex for this transaction
-        return genesisTxHex;
-    }
-
-    // Create raw transaction hex to: Create a NFT1 token Genesis issuance
-    simpleNFT1Genesis(tokenName: string, tokenTicker: string, parentTokenIdHex: string, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]): string {
-        let index = inputUtxos.findIndex(i => i.slpTransactionDetails.tokenIdHex === parentTokenIdHex);
-        
-        let genesisOpReturn = Slp.buildNFT1GenesisOpReturn({ 
-            ticker: tokenTicker,
-            name: tokenName,
-            parentTokenIdHex: parentTokenIdHex,
-            parentInputIndex: index
-        });
-
-        // 4) Create/sign the raw transaction hex for Genesis
-        let genesisTxHex = this.slp.buildRawNFT1GenesisTx({
-            slpNFT1GenesisOpReturn: genesisOpReturn, 
-            mintReceiverAddress: tokenReceiverAddress,
-            bchChangeReceiverAddress: bchChangeReceiverAddress, 
-            input_utxos: Utils.mapToUtxoArray(inputUtxos),
-            parentTokenIdHex: parentTokenIdHex
         });
 
         // Return raw hex for this transaction

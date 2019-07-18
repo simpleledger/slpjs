@@ -185,64 +185,6 @@ let genesisTxid;
 
 ```
 
-## GENESIS - Create a new token ([non-fungible](https://github.com/simpleledger/slp-specifications/blob/master/NFT.md))
-
-Non-fungible tokens can be created with the `simpleNFT1Genesis` method with these parameters:
-
-```js
-// Install BITBOX-SDK v8.1+ for blockchain access
-// For more information visit: https://www.npmjs.com/package/bitbox-sdk
-const BITBOXSDK = require('bitbox-sdk')
-const BigNumber = require('bignumber.js');
-const slpjs = require('slpjs');
-
-const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
-const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
-const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- cashAddr or slpAddr format
-
-const parentTokenIdHex = "<32-byte token id of parent token>";
-
-const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
-
-// 1) Get all balances at the funding address.
-let balances;
-(async function() {
-  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
-  console.log('BCH balance:', balances.satoshis_available_bch);
-})();
-
-// WAIT FOR NETWORK RESPONSE...
-
-// 2) Select decimal precision for this new NFT1 token
-let name = "I'm a unique token";
-let ticker = "NFT1";
-
-// 3) Set private keys for BCH & Tokens
-balances.nonSlpUtxos.forEach(txo => txo.wif = fundingWif)
-balances.slpTokenUtxos[parentTokenId][0].wif = fundingWif;
-let inputs = balances.nonSlpUtxos.concat(balances.slpTokenUtxos[parentTokenId][0])
-
-// 4) Use "simpleTokenGenesis()" helper method
-let genesisTxid;
-(async function(){
-  //tokenName: string, tokenTicker: string, parentTokenIdHex: string, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]
-    genesisTxid = await bitboxNetwork.simpleNFT1Genesis(
-        name, 
-        ticker, 
-        parentTokenIdHex,
-        tokenReceiverAddress,
-        bchChangeReceiverAddress,
-        inputs
-        )
-    console.log("NFT1 GENESIS txn complete:",genesisTxid)
-})();
-
-```
-
-
 ## MINT - Create additional tokens
 
 Adding additional tokens for a token that already exists is possible if you are in control of the minting "baton".  This minting baton is a special UTXO that gives authority to add to the token's circulating supply.  

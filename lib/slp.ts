@@ -123,15 +123,6 @@ export class Slp {
 
     get lokadIdHex() { return "534c5000" }
 
-    static buildNFT1GenesisOpReturn(config: configBuildNFT1GenesisOpReturn, type = 0x01) {
-        return SlpTokenType1.buildNFT1GenesisOpReturn(
-            config.ticker,
-            config.name,
-            config.parentTokenIdHex,
-            config.parentInputIndex
-        )
-    }
-
     static buildGenesisOpReturn(config: configBuildGenesisOpReturn, type = 0x01) {
         let hash;
         try { 
