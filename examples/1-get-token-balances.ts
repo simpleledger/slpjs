@@ -17,7 +17,8 @@ import * as BITBOXSDK from 'bitbox-sdk';
 import { BitboxNetwork, LocalValidator } from '../index';
 import { GetRawTransactionsAsync } from '../lib/localvalidator';
 
-function main() {
+(async function() {
+    
     // NETWORK: FOR TESTNET COMMENT/UNCOMMENT
     let addr = "slptest:qrzp09cnyysvsjc0s63kflmdmewuuwvs4gc8h7uh86";
     const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
@@ -37,11 +38,6 @@ function main() {
     const slpValidator = new LocalValidator(BITBOX, getRawTransactions, logger);
     const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
 
-    let balances;
-    (async function() {
-        balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(addr);
-        console.log("balances: ", balances);
-    })();
-}
-
-main();
+    let balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(addr);
+    console.log("balances: ", balances);
+})();

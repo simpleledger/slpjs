@@ -17,7 +17,8 @@ import * as BITBOXSDK from 'bitbox-sdk';
 import { BitboxNetwork, LocalValidator } from '../index';
 import { GetRawTransactionsAsync } from '../lib/localvalidator';
 
-function main() {
+(async function() {   
+     
     // NETWORK: FOR TESTNET COMMENT/UNCOMMENT
     let txid = "0c681b2df346ffde3d856de12216a974a123ff593c410244b650b67a7ea606c4";
     const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
@@ -37,11 +38,6 @@ function main() {
     const slpValidator = new LocalValidator(BITBOX, getRawTransactions, logger);
     const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
 
-    let details;
-    (async function() {
-        details = await bitboxNetwork.getTransactionDetails(txid, true);
-        console.log("Transaction details: ", details);
-    })();
-}
-
-main();
+    let details = await bitboxNetwork.getTransactionDetails(txid, true);
+    console.log("Transaction details: ", details);
+})();

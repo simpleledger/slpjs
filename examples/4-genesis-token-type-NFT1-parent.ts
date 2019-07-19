@@ -24,6 +24,7 @@ let documentHash: Buffer|null = null;
 let initialTokenQty = 1000000;
 
 (async function() {
+    
     // // NETWORK: FOR MAINNET UNCOMMENT
     const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
     const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
@@ -68,4 +69,4 @@ let initialTokenQty = 1000000;
             balances!.nonSlpUtxos
             )
     console.log("NFT1 Parent GENESIS txn complete:", genesisTxid)
-})()
+})();

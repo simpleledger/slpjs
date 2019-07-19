@@ -16,6 +16,7 @@
 import * as BITBOXSDK from 'bitbox-sdk';
 import { BigNumber } from 'bignumber.js';
 import { BitboxNetwork, SlpBalancesResult, SlpAddressUtxoResult, GetRawTransactionsAsync, LocalValidator } from '../index';
+import { GrpcClient } from 'grpc-bchrpc-node';
 
 let name = "My NFT1 Child";
 let ticker = "NFT1 Child";
@@ -24,6 +25,7 @@ let documentHash: Buffer|null = null;
 let NFT1ParentGroupID = "112f967519e18083c8e4bd7ba67ebc04d72aaaa941826d38655c53d677e6a5be";
 
 (async function() {
+    
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
     // // NETWORK: FOR MAINNET UNCOMMENT
@@ -48,9 +50,13 @@ let NFT1ParentGroupID = "112f967519e18083c8e4bd7ba67ebc04d72aaaa941826d38655c53d
     //const bitboxNetwork = new BitboxNetwork(BITBOX);
 
     // VALIDATOR: FOR LOCAL VALIDATOR / REMOTE JSON RPC
-    const getRawTransactions: GetRawTransactionsAsync = 
-    async function(txids: string[]) { 
-        return <string[]>await BITBOX.RawTransactions.getRawTransaction(txids) }
+    let grpc = new GrpcClient();
+    const getRawTransactions: GetRawTransactionsAsync = async function(txids: string[]) { 
+        let txid = txids[0];
+        let res = await grpc.getRawTransaction({ hash: txid, reverseOrder: true });
+        return [Buffer.from(res.getTransaction_asU8()).toString('hex')];
+        //return <string[]>await BITBOX.RawTransactions.getRawTransaction(txids)  // <--- alternative to gRPC
+    }
     const logger = console;
     const slpValidator = new LocalValidator(BITBOX, getRawTransactions, logger);
     const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
@@ -80,6 +86,8 @@ let NFT1ParentGroupID = "112f967519e18083c8e4bd7ba67ebc04d72aaaa941826d38655c53d
         let sendTxid = await bitboxNetwork.simpleTokenSend(NFT1ParentGroupID, new BigNumber(1), inputs, tokenReceiverAddress, tokenReceiverAddress);
         
         // wait for transaction to hit the full node.
+        console.log("Created new parent UTXO to burn:", sendTxid);
+        console.log("Waiting for the Full Node to sync with transaction...");
         await sleep(3000);
         
         // update balances and set the newly created parent TXO.
@@ -107,4 +115,4 @@ let NFT1ParentGroupID = "112f967519e18083c8e4bd7ba67ebc04d72aaaa941826d38655c53d
             inputs
             );
     console.log("NFT1 Child GENESIS txn complete:", genesisTxid);
-})()
+})();
