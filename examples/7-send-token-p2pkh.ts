@@ -5,11 +5,17 @@
  *  Instructions:
  *      (1) - Select Network and Address by commenting/uncommenting the desired
  *              NETWORK section and providing valid BCH address.
+ * 
  *      (2) - Select a Validation method by commenting/uncommenting the desired
  *              VALIDATOR section. Chose from remote validator or local validator.
  *              Both options rely on remote JSON RPC calls to rest.bitcoin.com.
- *      (3) - Run `tsc && node <file-name.js>` just before script execution 
- *      (4) - Optional: Use vscode debugger w/ launch.json settings
+ *                  - Option 1: REMOTE VALIDATION (rest.bitcoin.com/v2/slp/isTxidValid/)
+ *                  - Option 2: LOCAL VALIDATOR / REST JSON RPC
+ *                  - Option 3: LOCAL VALIDATOR / LOCAL FULL NODE
+ * 
+ *      (3) - Run `tsc && node <file-name.js>` just before script execution, or for
+ *              debugger just run `tsc` in the console and then use vscode debugger 
+ *              with "Launch Current File" mode.
  * 
  * ************************************************************************************/
 
@@ -37,15 +43,23 @@ import { BitboxNetwork, SlpBalancesResult, GetRawTransactionsAsync, LocalValidat
     // let tokenId = "78d57a82a0dd9930cc17843d9d06677f267777dd6b25055bad0ae43f1b884091";
     // let sendAmounts = [ 10 ];
 
-    // VALIDATOR: FOR REMOTE VALIDATION
+    // VALIDATOR: Option 1: FOR REMOTE VALIDATION
     //const bitboxNetwork = new BitboxNetwork(BITBOX);
 
-    // VALIDATOR: FOR LOCAL VALIDATOR / REMOTE JSON RPC
-    const getRawTransactions: GetRawTransactionsAsync = async function(txids: string[]) { 
-        return <string[]>await BITBOX.RawTransactions.getRawTransaction(txids) 
-    }
+    // VALIDATOR: Option 2: FOR LOCAL VALIDATOR / REMOTE JSON RPC
+    // const getRawTransactions: GetRawTransactionsAsync = async function(txids: string[]) { 
+    //     return <string[]>await BITBOX.RawTransactions.getRawTransaction(txids) 
+    // }
+    // const logger = console;
+    // const slpValidator = new LocalValidator(BITBOX, getRawTransactions, logger);
+    // const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
+
+    // VALIDATOR: Option 3: LOCAL VALIDATOR / LOCAL FULL NODE JSON RPC
     const logger = console;
-    const slpValidator = new LocalValidator(BITBOX, getRawTransactions, logger);
+    const RpcClient = require('bitcoin-rpc-promise');
+    const connectionString = 'http://bitcoin:password@localhost:8332'
+    const rpc = new RpcClient(connectionString);
+    const slpValidator = new LocalValidator(BITBOX, async (txids) => [ await rpc.getRawTransaction(txids[0]) ], logger)
     const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
     
     // 1) Fetch critical token information
