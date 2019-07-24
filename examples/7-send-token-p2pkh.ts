@@ -15,7 +15,7 @@
 
 import * as BITBOXSDK from 'bitbox-sdk';
 import { BigNumber } from 'bignumber.js';
-import { BitboxNetwork, SlpBalancesResult } from '../index';
+import { BitboxNetwork, SlpBalancesResult, GetRawTransactionsAsync, LocalValidator } from '../index';
 
 (async function() {
     
@@ -37,8 +37,17 @@ import { BitboxNetwork, SlpBalancesResult } from '../index';
     // let tokenId = "78d57a82a0dd9930cc17843d9d06677f267777dd6b25055bad0ae43f1b884091";
     // let sendAmounts = [ 10 ];
 
-    const bitboxNetwork = new BitboxNetwork(BITBOX);
+    // VALIDATOR: FOR REMOTE VALIDATION
+    //const bitboxNetwork = new BitboxNetwork(BITBOX);
 
+    // VALIDATOR: FOR LOCAL VALIDATOR / REMOTE JSON RPC
+    const getRawTransactions: GetRawTransactionsAsync = async function(txids: string[]) { 
+        return <string[]>await BITBOX.RawTransactions.getRawTransaction(txids) 
+    }
+    const logger = console;
+    const slpValidator = new LocalValidator(BITBOX, getRawTransactions, logger);
+    const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
+    
     // 1) Fetch critical token information
     const tokenInfo = await bitboxNetwork.getTokenInformation(tokenId);
     let tokenDecimals = tokenInfo.decimals; 
