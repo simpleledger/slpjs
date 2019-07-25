@@ -773,6 +773,10 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.21.1
+- Fix local validator cache for SLPDB (bug should have only impacted SLPDB application performance)
+- Updated examples with more validation options
+
 ### 0.21.0
 - Added new code examples for NFT1 Genesis Parent and Child (see examples directory)
 - Updated Genesis/Mint/Send methods for handling new token types appropriately

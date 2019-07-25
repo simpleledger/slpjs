@@ -120,7 +120,7 @@ export class LocalValidator implements SlpValidator {
             await this.retrieveRawTransaction(txid);
         }
         // Otherwise, we can use the cached result as long as a special filter isn't being applied.
-        else if(typeof this.cachedValidations[txid].validity === 'boolean' && !tokenIdFilter && !tokenTypeFilter) {
+        else if(typeof this.cachedValidations[txid].validity === 'boolean') {
             return this.cachedValidations[txid].validity!;
         }
 
@@ -142,7 +142,7 @@ export class LocalValidator implements SlpValidator {
         // Handle case where txid is already in the process of being validated from a previous call
         if(this.cachedValidations[txid].waiting) {
             await this.waitForCurrentValidationProcessing(txid);
-            if(typeof this.cachedValidations[txid].validity === 'boolean' && !tokenIdFilter && !tokenTypeFilter) {
+            if(typeof this.cachedValidations[txid].validity === 'boolean') {
                 return this.cachedValidations[txid].validity!;
             }
         }
