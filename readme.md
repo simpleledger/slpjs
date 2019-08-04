@@ -12,8 +12,7 @@ Table of Contents
    * [Installation](#installation)
    * [Transaction Examples](#transaction-examples)
       * [Get Balances](#get-balances)
-      * [GENESIS - Create a new token (fungible)](#genesis---create-a-new-token-fungible)
-      * [GENESIS - Create a new token (non-fungible)](#genesis---create-a-new-token-non-fungible)
+      * [GENESIS - Create a new token](#genesis---create-a-new-token)
       * [MINT - Create additional tokens](#mint---create-additional-tokens)
       * [SEND - Send tokens](#send---send-tokens)
       * [SEND - Send tokens from a frozen address](#send---send-tokens-from-a-frozen-address)
@@ -112,9 +111,9 @@ let balances;
 
 
 
-## GENESIS - Create a new token (fungible)
+## GENESIS - Create a new token
 
-GENESIS is the most simple type of SLP transaction since no special inputs are required.  Also see the TypeScript examples for: 
+GENESIS is the most simple type of SLP transaction since no special inputs are required.  The following example shows how to create a fungible token.  Also see the TypeScript examples for: 
 * [Type 1 Genesis](examples/3-genesis-token-type-1.ts).
 * [NFT1 Parent Genesis](examples/4-genesis-token-type-NFT1-parent.ts).
 * [NFT1 Child Genesis](examples/5-genesis-token-type-NFT1-child.ts).
