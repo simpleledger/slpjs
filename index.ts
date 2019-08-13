@@ -7,6 +7,8 @@ export * from './lib/bitdbnetwork';
 export * from './lib/localvalidator';
 export * from './lib/bitboxnetwork';
 export * from './lib/transactionhelpers';
+import * as bitcore from "bitcore-lib-cash";
+export {bitcore};
 
 import BigNumber from 'bignumber.js';
 
