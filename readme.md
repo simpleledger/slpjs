@@ -772,6 +772,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.21.2
+- Export bitcore
+
 ### 0.21.1
 - Fix local validator cache for SLPDB (bug should have only impacted SLPDB application performance)
 - Updated examples with more validation options
