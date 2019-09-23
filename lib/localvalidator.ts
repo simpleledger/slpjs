@@ -211,9 +211,9 @@ export class LocalValidator implements SlpValidator {
                     this.cachedValidations[txid].waiting = false;
                     this.cachedValidations[txid].invalidReason = "NFT1 child's parent has SLP output that is not greater than zero.";
                     return this.cachedValidations[txid].validity!;
-                } else if(input_slpmsg.transactionType === SlpTransactionType.GENESIS ||
-                            input_slpmsg.transactionType === SlpTransactionType.MINT &&
-                            (!input_slpmsg.genesisOrMintQuantity!.isGreaterThan(0))) 
+                } else if((input_slpmsg.transactionType === SlpTransactionType.GENESIS ||
+                            input_slpmsg.transactionType === SlpTransactionType.MINT) &&
+                            !input_slpmsg.genesisOrMintQuantity!.isGreaterThan(0)) 
                 {
                     this.cachedValidations[txid].validity = false;
                     this.cachedValidations[txid].waiting = false;

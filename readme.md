@@ -772,6 +772,10 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.21.3
+- Judge NFT1 child created directly from valid NFT1 Parent Genesis as valid
+- Removed map files from npm package module
+
 ### 0.21.2
 - Export bitcore
 
