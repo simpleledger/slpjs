@@ -1,0 +1,8 @@
+// You can modify the configuration here with your own.
+// Make sure that your json is valid, and if you run into
+// other issues, try checking the console for errors.
+
+{
+    "extends": ["tslint:recommended"],
+    "rules": {} // add additional rules and their configuration
+}
