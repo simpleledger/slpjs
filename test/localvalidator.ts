@@ -35,7 +35,18 @@ describe('Slp', function() {
 
                 let txid = (<Buffer>bitbox.Crypto.sha256(bitbox.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).reverse()).toString('hex');
                 let shouldBeValid = test.should[0].valid;
-                let isValid = await slpValidator.isValidSlpTxid(txid);
+                let isValid;
+                try {
+                    isValid = await slpValidator.isValidSlpTxid(txid);
+                } catch(error) {
+                    if (error.message.includes("Transaction data for the provided txid not found") &&
+                    test.allow_inconclusive && test.inconclusive_reason === "missing-txn") {
+                        isValid = false;
+                } else {
+                    throw error;
+                }
+                }
+                
                 if(isValid === false)
                     console.log('invalid reason:', slpValidator.cachedValidations[txid].invalidReason);
                 assert.equal(isValid, shouldBeValid);
