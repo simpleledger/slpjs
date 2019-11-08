@@ -462,8 +462,7 @@ export class Slp {
                 const paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
                 transactionBuilder.sign(i, paymentKeyPair, undefined,
                     transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-            }
-            else {
+            } else {
                 isComplete = false;
             }
             i++;
@@ -836,7 +835,7 @@ export class Slp {
             slpMsg.documentSha256 = chunks[6] ? chunks[6] : null;
             if (slpMsg.documentSha256) {
                 if (slpMsg.documentSha256.length !== 0 && slpMsg.documentSha256.length !== 32) {
-                    throw Error('Token document hash is incorrect length');
+                    throw Error("Token document hash is incorrect length");
                 }
             }
             if (!chunks[7]) {
@@ -957,7 +956,7 @@ export class Slp {
         }
 
         if (ops[0].opcode !== this.BITBOX.Script.opcodes.OP_RETURN) {
-            throw Error('No OP_RETURN');
+            throw Error("No OP_RETURN");
         }
         const chunks: Array<Buffer|null> = [];
         ops.slice(1).forEach((opitem) => {
@@ -966,15 +965,14 @@ export class Slp {
             }
             if (opitem.opcode > this.BITBOX.Script.opcodes.OP_PUSHDATA4) {
                 if (opitem.opcode === 80) {
-                    throw Error('Non-push opcode');
+                    throw Error("Non-push opcode");
                 }
                 if (!allow_op_number) {
-                    throw Error('OP_1NEGATE to OP_16 not allowed');
+                    throw Error("OP_1NEGATE to OP_16 not allowed");
                 }
                 if (opitem.opcode === this.BITBOX.Script.opcodes.OP_1NEGATE) {
                     opitem.data = Buffer.from([0x81]);
-                }
-                else { // OP_1 - OP_16
+                } else { // OP_1 - OP_16
                     opitem.data = Buffer.from([opitem.opcode - 80]);
                 }
             }
@@ -999,8 +997,7 @@ export class Slp {
                 if (op.opcode <= this.BITBOX.Script.opcodes.OP_PUSHDATA4) {
                     if (op.opcode < this.BITBOX.Script.opcodes.OP_PUSHDATA1) {
                         dlen = op.opcode;
-                    }
-                    else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA1) {
+                    } else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA1) {
                         dlen = script[n];
                         n += 1;
                     } else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA2) {
@@ -1207,7 +1204,7 @@ export class Slp {
                 txo.slpTransactionDetails.tokenIdHex = txo.txid;
             }
 
-            // apply initial SLP judgement to the UTXO (based on OP_RETURN 
+            // apply initial SLP judgement to the UTXO (based on OP_RETURN
             // parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
             if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS ||
                 txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
@@ -1218,7 +1215,7 @@ export class Slp {
                     txo.slpUtxoJudgementAmount = ( txo.slpTransactionDetails.genesisOrMintQuantity as BigNumber);
                 } else {
                     txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
- }
+                }
             } else if (txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND &&
                 txo.slpTransactionDetails.sendOutputs) {
                 if (txo.vout > 0 && txo.vout < txo.slpTransactionDetails.sendOutputs.length) {

@@ -1,42 +1,42 @@
 /// <reference path="./lib/vendors.d.ts"/>
 
-export * from './lib/slp';
-export * from './lib/utils';
-export * from './lib/primatives';
-export * from './lib/bitdbnetwork';
-export * from './lib/localvalidator';
-export * from './lib/bitboxnetwork';
-export * from './lib/transactionhelpers';
+export * from "./lib/slp";
+export * from "./lib/utils";
+export * from "./lib/primatives";
+export * from "./lib/bitdbnetwork";
+export * from "./lib/localvalidator";
+export * from "./lib/bitboxnetwork";
+export * from "./lib/transactionhelpers";
 import * as bitcore from "bitcore-lib-cash";
 export {bitcore};
 
-import BigNumber from 'bignumber.js';
+import BigNumber from "bignumber.js";
 
 export interface logger {
     log: (s: string)=>any;
 }
 
 export enum SlpTransactionType {
-    "GENESIS" = "GENESIS", 
-    "MINT" = "MINT", 
-    "SEND" = "SEND"
+    "GENESIS" = "GENESIS",
+    "MINT" = "MINT",
+    "SEND" = "SEND",
 }
 
 export enum SlpVersionType {
     "TokenVersionType1" = 1,
     "TokenVersionType1_NFT_Child" = 65,
-    "TokenVersionType1_NFT_Parent" = 129
+    "TokenVersionType1_NFT_Parent" = 129,
 }
 
 // negative values are bad, 0 = NOT_SLP, positive values are a SLP (token or baton)
 export enum SlpUtxoJudgement {
-    "UNKNOWN" = "UNKNOWN", 
-    "INVALID_BATON_DAG" = "INVALID_BATON_DAG", 
-    "INVALID_TOKEN_DAG" = "INVALID_TOKEN_DAG", 
-    "NOT_SLP" = "NOT_SLP", 
-    "SLP_TOKEN" = "SLP_TOKEN", 
+    "UNKNOWN" = "UNKNOWN",
+    "INVALID_BATON_DAG" = "INVALID_BATON_DAG",
+    "INVALID_TOKEN_DAG" = "INVALID_TOKEN_DAG",
+    "NOT_SLP" = "NOT_SLP",
+    "SLP_TOKEN" = "SLP_TOKEN",
     "SLP_BATON" = "SLP_BATON",
-    "UNSUPPORTED_TYPE" = "UNSUPPORTED_TYPE"
+    "UNSUPPORTED_TYPE" = "UNSUPPORTED_TYPE",
 }
 
 export interface SlpTransactionDetails {
@@ -46,7 +46,7 @@ export interface SlpTransactionDetails {
     timestamp?: string;
     symbol: string;
     name: string;
-    documentUri: string; 
+    documentUri: string;
     documentSha256: Buffer|null;
     decimals: number;
     containsBaton: boolean;
@@ -83,7 +83,7 @@ export class SlpAddressUtxoResult {
     legacyAddress!: string;
     cashAddress!: string;
     wif!: string;
-    tx!: TxnDetailsDeep;
+    tx?: TxnDetailsDeep;
     slpTransactionDetails!: SlpTransactionDetails;
     slpUtxoJudgement: SlpUtxoJudgement = SlpUtxoJudgement.UNKNOWN;
     slpUtxoJudgementAmount!: BigNumber;
@@ -100,7 +100,7 @@ export interface utxo {
     slpUtxoJudgementAmount: BigNumber;
 }
 
-export interface ScriptPubKey{
+export interface ScriptPubKey {
     hex: string;
     asm: string;
     addresses: string[];
@@ -143,4 +143,5 @@ export interface TxnDetailsDeep {
     isCoinBase: boolean;
     valueOut: number;
     size: number;
+    raw?: string|Buffer;
 }

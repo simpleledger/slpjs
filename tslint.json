@@ -3,6 +3,6 @@
 // other issues, try checking the console for errors.
 
 {
-    "extends": ["tslint:recommended"],
-    "rules": {} // add additional rules and their configuration
+  "extends": ["tslint:recommended"],
+  "rules": {} // add additional rules and their configuration
 }

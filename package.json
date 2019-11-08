@@ -26,8 +26,8 @@
     "ledger",
     "simpleledger"
   ],
-  "author": "Simple Ledger Protocol",
-  "license": "MIT",
+  "author": "James Cramer",
+  "license": "ISC",
   "unpkg": "dist/slpjs.min.js",
   "bugs": {
     "url": "https://github.com/simpleledger/slpjs/issues"
