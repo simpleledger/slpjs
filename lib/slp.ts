@@ -1091,7 +1091,29 @@ export class Slp {
 
         // 1) parse SLP OP_RETURN and cast initial SLP judgement, based on OP_RETURN only.
         for (const txo of utxos) {
-            this.applyInitialSlpJudgement(txo);
+            // first check if the .tx property is being used (this is how BITBOX returns results via REST API)
+            let slpMsgBuf: Buffer;
+            if (!txo.tx || !txo.tx.vout || !txo.tx.vout[0].n) {
+                const txn: string|Buffer = (await asyncSlpValidator.getRawTransactions([txo.txid]))[0];
+                let txnBuf;
+                if (typeof txn === "string") {
+                    txnBuf = Buffer.from(txn, "hex");
+                } else if (typeof txn === "object" && (txn as Buffer).buffer) {
+                    txnBuf = txn;
+                } else {
+                    throw Error("Unknown transaction type");
+                }
+                const t = Primatives.Transaction.parseFromBuffer(txnBuf);
+                slpMsgBuf = Buffer.from(t.outputs[0].scriptPubKey);
+            } else {
+                const vout = txo.tx.vout.find(vout => vout.n === 0);
+                if (!vout) {
+                    throw Error("Utxo contains no Vout!");
+                }
+                slpMsgBuf = Buffer.from(vout.scriptPubKey.hex, "hex");
+            }
+
+            await this.applyInitialSlpJudgement(txo, slpMsgBuf);
             if (txo.slpUtxoJudgement === SlpUtxoJudgement.UNKNOWN || txo.slpUtxoJudgement === undefined) {
                 throw Error("Utxo SLP judgement has not been set, unknown error.");
             }
@@ -1196,15 +1218,9 @@ export class Slp {
         return result;
     }
 
-    private applyInitialSlpJudgement(txo: SlpAddressUtxoResult) {
+    public applyInitialSlpJudgement(txo: SlpAddressUtxoResult, slpMsgBuf: Buffer) {
         try {
-            const vout = txo.tx.vout.find(vout => vout.n === 0);
-            if (!vout) {
-                throw 'Utxo contains no Vout!';
-            }
-            const vout0script = Buffer.from(vout.scriptPubKey.hex, "hex");
-            txo.slpTransactionDetails = this.parseSlpOutputScript(vout0script);
-
+            txo.slpTransactionDetails = this.parseSlpOutputScript(slpMsgBuf);
             // populate txid for GENESIS
             if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS) {
                 txo.slpTransactionDetails.tokenIdHex = txo.txid;
