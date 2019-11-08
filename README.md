@@ -772,7 +772,15 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.22.0
+- Update bchaddr-slp package (adds "regtest:" compatibility)
+- Add TransactionOutput interface to primatives.ts
+- Updated unit tests with "allow_inconclusive" on missing tranasaction
+- More linting
+- (breaking change) Update applyInitialSlpJudgement (to be able to work with non-BITBOX sources of utxo data)
+
 ### 0.21.4
+- Fixed a critical security vulnerability in the validation message parser
 - Add ts linting / allow json comments
 
 ### 0.21.3
