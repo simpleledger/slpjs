@@ -1,33 +1,36 @@
 /***************************************************************************************
- * 
+ *
  *  Example 3: Genesis for SLP Token Type 1
- * 
+ *
  *  Instructions:
- *      (1) - Select Network and Address by commenting/uncommenting the desired
+ *      (1) - Send some BCH to simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu
+ *            or tBCH to slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l
+*             to fund the example.
+ *      (2) - Select Network and Address by commenting/uncommenting the desired
  *              NETWORK section and providing valid BCH address.
- *      (2) - Select a Validation method by commenting/uncommenting the desired
+ *      (3) - Select a Validation method by commenting/uncommenting the desired
  *              VALIDATOR section. Chose from remote validator or local validator.
  *              Both options rely on remote JSON RPC calls to rest.bitcoin.com.
- *      (3) - Run `tsc && node <file-name.js>` just before script execution 
- *      (4) - Optional: Use vscode debugger w/ launch.json settings
- * 
+ *      (4) - Run `tsc && node <file-name.js>` just before script execution
+ *      (5) - Optional: Use vscode debugger w/ launch.json settings
+ *
  * ************************************************************************************/
 
-import * as BITBOXSDK from 'bitbox-sdk';
-import { BigNumber } from 'bignumber.js';
-import { BitboxNetwork, SlpBalancesResult } from '../index';
+import { BigNumber } from "bignumber.js";
+import * as BITBOXSDK from "bitbox-sdk";
+import { BitboxNetwork, SlpBalancesResult } from "../index";
 
-let decimals = 2;
-let name = "Awesome SLPJS README Token";
-let ticker = "SLPJS";
-let documentUri = "info@simpleledger.io";
-let documentHash: Buffer|null = null;
-let initialTokenQty = 1000000;
+const decimals = 2;
+const name = "Awesome SLPJS README Token";
+const ticker = "SLPJS";
+const documentUri = "info@simpleledger.io";
+const documentHash: Buffer|null = null;
+const initialTokenQty = 1000000;
 
-(async function() {
-    
+(async () => {
+
     // NETWORK: FOR MAINNET UNCOMMENT
-    const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+    const BITBOX = new BITBOXSDK.BITBOX({ restURL: "https://rest.bitcoin.com/v2/" });
     const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
     const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
     const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
@@ -47,20 +50,20 @@ let initialTokenQty = 1000000;
     const bitboxNetwork = new BitboxNetwork(BITBOX);
 
     // 1) Get all balances at the funding address.
-    let balances = <SlpBalancesResult>await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+    const balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress) as SlpBalancesResult;
     console.log("'balances' variable is set.");
-    console.log('BCH balance:', balances.satoshis_available_bch);
+    console.log("BCH balance:", balances.satoshis_available_bch);
 
     // 2) Calculate the token quantity with decimal precision included
-    let initialTokenQtyBN = (new BigNumber(initialTokenQty)).times(10**decimals);
+    const initialTokenQtyBN = (new BigNumber(initialTokenQty)).times(10 ** decimals);
 
     // 3) Set private keys
-    balances!.nonSlpUtxos.forEach(txo => txo.wif = fundingWif)
+    balances!.nonSlpUtxos.forEach(txo => txo.wif = fundingWif);
 
     // 4) Use "simpleTokenGenesis()" helper method
-    let genesisTxid = await bitboxNetwork.simpleTokenGenesis(
-            name, 
-            ticker, 
+    const genesisTxid = await bitboxNetwork.simpleTokenGenesis(
+            name,
+            ticker,
             initialTokenQtyBN,
             documentUri,
             documentHash,
@@ -68,7 +71,7 @@ let initialTokenQty = 1000000;
             tokenReceiverAddress,
             batonReceiverAddress,
             bchChangeReceiverAddress,
-            balances!.nonSlpUtxos
-            )
-    console.log("GENESIS txn complete:",genesisTxid)
+            balances!.nonSlpUtxos,
+            );
+    console.log("GENESIS txn complete:", genesisTxid);
 })();
