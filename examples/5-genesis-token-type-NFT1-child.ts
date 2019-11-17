@@ -56,7 +56,7 @@ const NFT1ParentGroupID = "112f967519e18083c8e4bd7ba67ebc04d72aaaa941826d38655c5
     const grpc = new GrpcClient();
     const getRawTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
         const txid = txids[0];
-        const res = await grpc.getRawTransaction({ hash: txid, reverseOrder: true });
+        const res = await grpc.getRawTransaction({ hash: txid, reversedHashOrder: true });
         return [Buffer.from(res.getTransaction_asU8()).toString("hex")];
         //return <string[]>await BITBOX.RawTransactions.getRawTransaction(txids)  // <--- alternative to gRPC
     };

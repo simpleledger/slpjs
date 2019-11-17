@@ -39,7 +39,7 @@
     "bitbox-sdk": "8.2.1",
     "bitcoin-rpc-promise": "^2.1.6",
     "browserify": "^16.2.2",
-    "grpc-bchrpc-node": "0.5.2",
+    "grpc-bchrpc-node": "0.7.1",
     "mkdirp": "^0.5.1",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
