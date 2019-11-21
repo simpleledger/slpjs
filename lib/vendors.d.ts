@@ -1,3 +1,9 @@
+declare module 'bip39';
+declare module 'randombytes';
+declare module 'wif';
+declare module 'bigi';
+type BigInteger = any;
+
 declare module "bchaddrjs-slp" {
     export function isCashAddress(address: string): boolean;
     export function toCashAddress(address: string): string;
@@ -5,6 +11,7 @@ declare module "bchaddrjs-slp" {
     export function toLegacyAddress(address: string): string;
     export function isSlpAddress(address: string): boolean;
     export function toSlpAddress(address: string): string;
+    export function toRegtestAddress(address: string): string;
     export function decodeAddress(address: string): AddressDetails;
     export function encodeAsSlpaddr(decoded: AddressDetails): string;
 

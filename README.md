@@ -772,6 +772,12 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.22.1
+- Update bitbox-sdk to latest version
+- Add toRegtestAddress method in Utils
+- Added bitbox-sdk to peerDependency list in package.json
+- Added missing typings modules to vendors.d.ts (for bitbox)
+
 ### 0.22.0
 - Update bchaddr-slp package (adds "regtest:" compatibility)
 - Add TransactionOutput interface to primatives.ts

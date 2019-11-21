@@ -37,7 +37,11 @@ export class Utils {
         return Bchaddr.toSlpAddress(address);
     }
 
-    static isLegacyAddress(address: string){
+    static toRegtestAddress(address: string) {
+        return Bchaddr.toRegtestAddress(address);
+    }
+
+    static isLegacyAddress(address: string) {
         try {
             return Bchaddr.isLegacyAddress(address);
         } catch(_) {
