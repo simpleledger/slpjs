@@ -1,8 +1,3 @@
-declare module 'bip39';
-declare module 'randombytes';
-declare module 'wif';
-declare module 'bigi';
-type BigInteger = any;
 
 declare module "bchaddrjs-slp" {
     export function isCashAddress(address: string): boolean;

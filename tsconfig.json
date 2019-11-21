@@ -6,7 +6,7 @@
     "downlevelIteration": true,
     "moduleResolution": "node",
     "lib":[ "es2017" ],
-    "declaration": false,
+    "declaration": true,
     "sourceMap": true,
     "plugins": [
       { "name": "typescript-tslint-plugin" }

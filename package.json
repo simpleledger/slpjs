@@ -1,12 +1,12 @@
 {
   "name": "slpjs",
-  "version": "0.22.1",
+  "version": "0.22.2",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
-    "index.ts",
+    "index.d.ts",
     "lib/*.js",
-    "lib/*.ts",
+    "lib/*.d.ts",
     "dist/"
   ],
   "scripts": {
@@ -52,6 +52,12 @@
     "bitbox-sdk": "^8.10.1"
   },
   "dependencies": {
+    "@types/bigi": "^1.4.2",
+    "@types/bip39": "^2.4.2",
+    "@types/randombytes": "^2.0.0",
+    "@types/socket.io": "^2.1.2",
+    "@types/socket.io-client": "^1.4.32",
+    "@types/wif": "^2.0.1",
     "@types/lodash": "^4.14.120",
     "axios": "^0.18.1",
     "bchaddrjs-slp": "0.2.8",

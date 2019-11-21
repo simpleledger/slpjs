@@ -772,6 +772,10 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.22.2
+- Publish *.d.ts files instead of *.ts files
+- Update types for bitbox-sdk
+
 ### 0.22.1
 - Update bitbox-sdk to latest version
 - Add toRegtestAddress method in Utils
