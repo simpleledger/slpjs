@@ -96,6 +96,8 @@ export interface configBuildRawMintTx {
     batonReceiverSatoshis?: BigNumber;
     bchChangeReceiverAddress: string;
     input_baton_utxos: utxo[];
+    extraFee?: number;
+    disableBchChangeOutput?: boolean;
 }
 
 export interface configBuildRawBurnTx {
@@ -414,15 +416,16 @@ export class Slp {
                             config.slpSendOpReturn.length,
                             config.input_token_utxos.length,
                             config.tokenReceiverAddressArray.length + bchOnlyCount,
-                            config.bchChangeReceiverAddress);
+                            config.bchChangeReceiverAddress)
+                            +
+                            (config.extraFee ? config.extraFee : 0);
 
         // Compute BCH change amount
 
         const bchChangeAfterFeeSatoshis =
             inputSatoshis
                 .minus(sendCost)
-                .minus(bcOnlyOutputSatoshis)
-                .minus(config.extraFee ? config.extraFee : 0);
+                .minus(bcOnlyOutputSatoshis);
 
         // Start adding outputs to transaction
         // Add SLP SEND OP_RETURN message
@@ -495,6 +498,11 @@ export class Slp {
     public buildRawMintTx(config: configBuildRawMintTx, type = 0x01) {
 
         const mintMsg = this.parseSlpOutputScript(config.slpMintOpReturn);
+        if (type !== mintMsg.versionType) {
+            throw Error("The passed 'type' parameter does not match version/type in 'config.slpMintOpReturn'");
+        } else if (type === SlpVersionType.TokenVersionType1_NFT_Child) {
+            throw Error("Cannot MINT with this verstion/type of token.");
+        }
 
         if (config.mintReceiverSatoshis === undefined) {
             config.mintReceiverSatoshis = new BigNumber(546);
@@ -550,8 +558,17 @@ export class Slp {
             satoshis = satoshis.plus(baton_utxo.satoshis);
         });
 
-        const mintCost = this.calculateGenesisCost(config.slpMintOpReturn.length, config.input_baton_utxos.length,
-            config.batonReceiverAddress, config.bchChangeReceiverAddress);
+        const mintCost = this.calculateGenesisCost
+                                        (
+                                        config.slpMintOpReturn.length,
+                                        config.input_baton_utxos.length,
+                                        config.batonReceiverAddress,
+                                        config.bchChangeReceiverAddress,
+                                        )
+                                        +
+                                        (config.extraFee ? config.extraFee : 0);
+
+        // BCH change
         const bchChangeAfterFeeSatoshis = satoshis.minus(mintCost);
 
         // Mint OpReturn
@@ -572,32 +589,50 @@ export class Slp {
         }
 
         // Change (optional)
-        if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        if (!config.disableBchChangeOutput && config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
 
-        // sign inputs
+        // Sign txn and add sig to p2pkh input for convenience if wif is provided,
+        // otherwise skip signing.
+
         let i = 0;
+        let isComplete = true;
         for (const txo of config.input_baton_utxos) {
-            const paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-            transactionBuilder.sign(i, paymentKeyPair, undefined,
-                transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            if (txo.wif) {
+                const paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined,
+                    transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            } else {
+                isComplete = false;
+            }
             i++;
         }
 
-        const tx = transactionBuilder.build().toHex();
+        // Build the transaction to hex and return
+        // warn user if the transaction was not fully signed
+
+        let hex: string;
+        if (!isComplete) {
+            console.log("WARNING: Transaction signing is not complete.");
+            const tx = transactionBuilder.transaction.buildIncomplete();
+        //  tx.locktime = locktime;
+            hex = tx.toHex();
+        } else {
+            hex = transactionBuilder.build().toHex();
+        }
 
         // Check For Low Fee
         const outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number, o: any)  => v += o.value, 0);
         const inValue: BigNumber = config.input_baton_utxos.reduce((v, i) => v = v.plus(i.satoshis), new BigNumber(0));
-        if (inValue.minus(outValue).isLessThanOrEqualTo(tx.length / 2)) {
+        if (inValue.minus(outValue).isLessThanOrEqualTo(hex.length / 2)) {
             throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.");
         }
 
         // TODO: Check for fee too large or send leftover to target address
 
-        return tx;
+        return hex;
     }
 
     public buildRawBurnTx(burnAmount: BigNumber, config: configBuildRawBurnTx, type = 0x01) {
@@ -1157,6 +1192,12 @@ export class Slp {
         };
         // 5) Loop through UTXO set and accumulate balances for type of utxo, organize the Utxos into their categories.
         for (const txo of utxos) {
+            if (!txo.satoshis && txo.value && typeof txo.value === "number") {
+                txo.satoshis = txo.value * 10 ** 8;
+            } else if (!txo.satoshis) {
+                throw Error("Txo is missing 'satoshis' and 'value' property");
+            }
+
             if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
                 if (!(txo.slpTransactionDetails.tokenIdHex in result.slpTokenBalances)) {
                     result.slpTokenBalances[txo.slpTransactionDetails.tokenIdHex] = new BigNumber(0);

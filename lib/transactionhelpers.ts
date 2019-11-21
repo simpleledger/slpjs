@@ -226,7 +226,7 @@ export class TransactionHelpers {
     }
 
     // Create raw transaction hex to: Mint new tokens or move the minting baton
-    simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string): string {  
+    simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string, extraFee = 0, disableBchChangeOutput = false): string {  
         // // convert address to cashAddr from SLP format.
         // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
 
@@ -244,10 +244,12 @@ export class TransactionHelpers {
             input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
             slpMintOpReturn: mintOpReturn,
             mintReceiverAddress: tokenReceiverAddress,
-            batonReceiverAddress: batonReceiverAddress,
-            bchChangeReceiverAddress: changeReceiverAddress
+            batonReceiverAddress,
+            bchChangeReceiverAddress: changeReceiverAddress,
+            extraFee,
+            disableBchChangeOutput,
         });
-        
+
         //console.log(txHex);
 
         // Return raw hex for this transaction
@@ -340,8 +342,8 @@ export class TransactionHelpers {
 
         return {
             index: input_index, 
-            pubKeyBuf: ecpair.getPublicKeyBuffer(), 
-            signatureBuf: sigBuf  
+            pubKeyBuf: ecpair.getPublicKeyBuffer(),
+            signatureBuf: sigBuf
         }
     }
 
@@ -379,9 +381,9 @@ export class TransactionHelpers {
         // we can return a object conforming to InputSigData<P2pkhSig> interface
 
         return {
-            index: input_index, 
-            pubKeyBuf: ecpair.getPublicKeyBuffer(), 
-            signatureBuf: sigBuf  
+            index: input_index,
+            pubKeyBuf: ecpair.getPublicKeyBuffer(),
+            signatureBuf: sigBuf
         }
     }
 

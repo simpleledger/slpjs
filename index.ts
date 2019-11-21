@@ -78,6 +78,7 @@ export class SlpAddressUtxoResult {
     scriptPubKey!: string;
     amount!: number;
     satoshis!: number;
+    value?: number;
     height!: number;
     confirmations!: number;
     legacyAddress!: string;
