@@ -772,6 +772,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.22.3
+- Upgrade TransactionHelpers.simpleTokenMint and Slp.buildRawMintTx for p2sh compatibility
+
 ### 0.22.2
 - Publish *.d.ts files instead of *.ts files
 - Update types for bitbox-sdk
