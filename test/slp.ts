@@ -1,5 +1,5 @@
 import { Slp } from '../lib/slp';
-import * as assert from 'assert';
+import assert from 'assert';
 import { BITBOX } from 'bitbox-sdk';
 
 const bitbox = new BITBOX({ restURL: "https://trest.bitcoin.com/v2/" });

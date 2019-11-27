@@ -772,6 +772,10 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.23.0
+- (breaking change) Enable "esModuleInterop" in tsconfig.json to align with default `tsc --init` settings
+- Update bitbox-sdk to 8.11.1
+
 ### 0.22.3
 - Upgrade TransactionHelpers.simpleTokenMint and Slp.buildRawMintTx for p2sh compatibility
 
