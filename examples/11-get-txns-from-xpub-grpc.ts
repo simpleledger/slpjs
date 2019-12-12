@@ -35,6 +35,5 @@ let transactionHistory: Transaction[] = [];
             console.log("Has transactions!");
         }
         console.log(transactionHistory.length);
-        i++;
     }
 })();
