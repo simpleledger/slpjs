@@ -772,6 +772,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.22.4
+- Update retrieveRawTransaction method in slp validator
+
 ### 0.22.3
 - Upgrade TransactionHelpers.simpleTokenMint and Slp.buildRawMintTx for p2sh compatibility
 

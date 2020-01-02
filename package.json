@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.22.3",
+  "version": "0.22.4",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [

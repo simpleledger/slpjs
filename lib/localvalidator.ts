@@ -70,17 +70,25 @@ export class LocalValidator implements SlpValidator {
     }
 
     async retrieveRawTransaction(txid: string) {
-        if(this.cachedRawTransactions[txid])
-            return this.cachedRawTransactions[txid];
-        this.cachedRawTransactions[txid] = "waiting";
-        this.cachedRawTransactions[txid] = (await this.getRawTransactions([txid]))[0]
-        if(this.cachedRawTransactions[txid]) {
-            let re = /^([A-Fa-f0-9]{2}){60,}$/;  // assume minimum 60 byte transaction size.
-            if(!re.test(this.cachedRawTransactions[txid]))
-                throw Error("Transaction data not provided (regex failed).")
+        const checkTxnRegex = (txn: string) => {
+            const re = /^([A-Fa-f0-9]{2}){61,}$/;
+            if (!re.test(txn)) {
+                throw Error(`Regex failed for retrieved transaction, got: ${txn}`);
+            }
+        };
+        if (!this.cachedRawTransactions[txid]) {
+            this.cachedRawTransactions[txid] = "waiting";
+            const txns = await this.getRawTransactions([txid]);
+            if (!txns || txns.length === 0 || typeof txns[0] !== "string") {
+                throw Error(`Response error in getRawTransactions, got: ${txns}`);
+            }
+            checkTxnRegex(txns[0]);
+            this.cachedRawTransactions[txid] = txns[0];
+            return txns[0];
+        } else {
+            checkTxnRegex(this.cachedRawTransactions[txid]);
             return this.cachedRawTransactions[txid];
         }
-        throw Error("Transaction data not provided (null or undefined).")
     }
 
     async isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
