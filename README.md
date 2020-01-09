@@ -772,6 +772,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.22.5
+- Use bitcore-cash-lib 0.19.0
+
 ### 0.22.4
 - Update retrieveRawTransaction method in slp validator
 

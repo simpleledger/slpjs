@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.22.4",
+  "version": "0.22.5",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -62,7 +62,7 @@
     "axios": "^0.18.1",
     "bchaddrjs-slp": "0.2.8",
     "bignumber.js": "^8.1.1",
-    "bitcore-lib-cash": "^9.0.0",
+    "bitcore-lib-cash": "^0.19.0",
     "lodash": "^4.17.14"
   }
 }
