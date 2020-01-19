@@ -95,10 +95,12 @@ export class LocalValidator implements SlpValidator {
         this.logger.log("SLPJS Validating: " + txid);
         let valid = await this._isValidSlpTxid(txid, tokenIdFilter, tokenTypeFilter);
         this.logger.log("SLPJS Result: " + valid + " (" + txid + ")");
-        if(!valid && this.cachedValidations[txid].invalidReason)
+        if (!valid && this.cachedValidations[txid].invalidReason) {
             this.logger.log("SLPJS Invalid Reason: " + this.cachedValidations[txid].invalidReason);
-        else if(!valid)
-            this.logger.log("SLPJS Invalid Reason: unknown (result is user supplied)")
+            delete this.cachedRawTransactions[txid];
+        } else if (!valid) {
+            this.logger.log("SLPJS Invalid Reason: unknown (result is user supplied)");
+        }
         return valid;
     }
 
