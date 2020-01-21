@@ -7,6 +7,7 @@ export * from "./lib/bitdbnetwork";
 export * from "./lib/localvalidator";
 export * from "./lib/bitboxnetwork";
 export * from "./lib/transactionhelpers";
+export * from "./lib/trademanager";
 import * as bitcore from "bitcore-lib-cash";
 export {bitcore};
 
@@ -96,6 +97,7 @@ export interface utxo {
     vout: number;
     satoshis: BigNumber;
     wif?: string;
+    scriptSig: Buffer;
     slpTransactionDetails: SlpTransactionDetails;
     slpUtxoJudgement: SlpUtxoJudgement;
     slpUtxoJudgementAmount: BigNumber;

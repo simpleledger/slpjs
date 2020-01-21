@@ -79,6 +79,8 @@ export interface configBuildRawSendTx {
     bchChangeReceiverAddress: string;
     requiredNonTokenOutputs?: Array<{ satoshis: number, receiverAddress: string }>;
     extraFee?: number;
+    explicitBchChange?: { amount: number; address: string; }[];
+    allowTokenBurning?: any[];
 }
 
 export interface configBuildBchSendTx {
@@ -333,6 +335,10 @@ export class Slp {
 
     public buildRawSendTx(config: configBuildRawSendTx, type = 0x01) {
 
+        if (!config.allowTokenBurning) {
+            config.allowTokenBurning = [];
+        }
+
         // Check proper address formats are given
 
         config.tokenReceiverAddressArray.forEach((outputAddress) => {
@@ -357,7 +363,8 @@ export class Slp {
                 return;
             }
             if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
-                if (txo.slpTransactionDetails.tokenIdHex !== sendMsg.tokenIdHex) {
+                if (txo.slpTransactionDetails.tokenIdHex !== sendMsg.tokenIdHex &&
+                    !config.allowTokenBurning!.includes(txo.slpTransactionDetails.tokenIdHex)) {
                     throw Error("Input UTXOs included a token for another tokenId.");
                 }
                 tokenInputQty = tokenInputQty.plus(txo.slpUtxoJudgementAmount);
@@ -385,10 +392,11 @@ export class Slp {
         }
 
         // Make sure token inputs == token outputs
-
-        const outputTokenQty = sendMsg.sendOutputs.reduce((v, o) => v = v.plus(o), new BigNumber(0));
-        if (!tokenInputQty.isEqualTo(outputTokenQty)) {
-            throw Error("Token input quantity does not match token outputs.");
+        if (!config.explicitBchChange) {
+            const outputTokenQty = sendMsg.sendOutputs.reduce((v, o) => v = v.plus(o), new BigNumber(0));
+            if (!tokenInputQty.isEqualTo(outputTokenQty)) {
+                throw Error("Token input quantity does not match token outputs.");
+            }
         }
 
         // Create a transaction builder
@@ -448,51 +456,58 @@ export class Slp {
             });
         }
 
-        // Add change, if any
-
-        if (bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
+        // Change
+        if(config.explicitBchChange) {
+            config.explicitBchChange.forEach(change => {
+                transactionBuilder.addOutput(Utils.toCashAddress(change.address), Math.round(change.amount));
+            })
+        }
+        else if (config.bchChangeReceiverAddress && bchChangeAfterFeeSatoshis.isGreaterThan(new BigNumber(546))) {
             config.bchChangeReceiverAddress = bchaddr.toCashAddress(config.bchChangeReceiverAddress);
             transactionBuilder.addOutput(config.bchChangeReceiverAddress, bchChangeAfterFeeSatoshis.toNumber());
         }
 
-        // Sign txn and add sig to p2pkh input for convenience if wif is provided,
-        // otherwise skip signing.
-
+        // sign inputs
         let i = 0;
-        let isComplete = true;
+        let providedScriptSigs = new Map<number, Buffer>();
         for (const txo of config.input_token_utxos) {
+            console.log("TXO:", txo);
             if (txo.wif) {
-                const paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
-                transactionBuilder.sign(i, paymentKeyPair, undefined,
-                    transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+                let paymentKeyPair = this.BITBOX.ECPair.fromWIF(txo.wif);
+                transactionBuilder.sign(i, paymentKeyPair, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
             } else {
-                isComplete = false;
+                console.log(txo);
+                if (txo.scriptSig) {
+                    providedScriptSigs.set(i, txo.scriptSig);
+                }
+                else {
+                    throw Error("Missing wif and script sig for input " + i.toString());
+                }
             }
             i++;
         }
 
-        // Build the transaction to hex and return
-        // warn user if the transaction was not fully signed
-
-        let hex: string;
-        if (!isComplete) {
-            console.log("WARNING: Transaction signing is not complete.");
-            const tx = transactionBuilder.transaction.buildIncomplete();
-        //  tx.locktime = locktime;
-            hex = tx.toHex();
+        // Build the transaction.
+        var tx: any;
+        if (providedScriptSigs.size > 0) {
+            tx = transactionBuilder.transaction.buildIncomplete();
+            providedScriptSigs.forEach((scriptSig, idx) => {
+                tx.setInputScript(idx, scriptSig);
+            });
+            tx = tx.toHex();
         } else {
-            hex = transactionBuilder.build().toHex();
+            tx = transactionBuilder.build().toHex();
         }
 
         // Check For Low Fee
 
         const outValue: number = transactionBuilder.transaction.tx.outs.reduce((v: number, o: any) => v += o.value, 0);
         const inValue: BigNumber = config.input_token_utxos.reduce((v, i) => v = v.plus(i.satoshis), new BigNumber(0));
-        if (inValue.minus(outValue).isLessThanOrEqualTo(hex.length / 2)) {
+        if (inValue.minus(outValue).isLessThanOrEqualTo(tx.length / 2)) {
             throw Error("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.");
         }
 
-        return hex;
+        return tx;
     }
 
     public buildRawMintTx(config: configBuildRawMintTx, type = 0x01) {

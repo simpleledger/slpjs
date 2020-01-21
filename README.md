@@ -53,6 +53,85 @@ NOTES:
 * For the fastest validation performance all of the following transaction examples show how to use SLPJS using default SLP validation via `rest.bitcoin.com`.  See the [Local Validation](#local-validation) section for instructions on how to validate SLP locally with your own full node.
 * All SLPJS methods require token quantities to be expressed in the smallest possible unit of account for the token (i.e., token satoshis).  This requires the token's precision to be used to calculate the quantity. For example, token having a decimal precision of 9 sending an amount of 1.01 tokens would need to first calculate the sending amount using `1.01 x 10^9 => 1010000000`.
 
+
+
+## A Token Sale - Part 1: Solicit your tokens
+
+The following code shows how SLP tokens can be easily put up for sale in a trustless fashion using Bitcoin Cash.
+
+```js
+
+const BITBOXSDK = require('bitbox-sdk')
+const slpjs = require('slpjs');
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+
+const getRawTransactions = async function(txids) { return await BITBOX.RawTransactions.getRawTransaction(txids) }
+const slpValidator = new slpjs.LocalValidator(BITBOX, getRawTransactions);
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX, slpValidator);
+
+const sellerAddress = "simpleledger:qzryymfkylqf8n8x55fqxeflmzm2ln9ecsltg5nyl9";
+const wif = "L2JnQLyUMoAV6Nb56mGN7oQgg2JP6zpSQ4CoY5rJB4aftRMjvpDv";
+
+// seller balances.
+let sBalances; 
+(async function() {
+  sBalances = await bitboxNetwork.getAllSlpBalancesAndUtxos(sellerAddress);
+  console.log("sBalances: ", sBalances);
+})();
+
+// WAIT FOR NETWORK RESPONSE.
+
+// Use Electron Cash SLP Create a token to sell:
+let tokenId = "c37bbc78739fb18b0cf8e2779f344fb735f49cf50420290a7f6fb6cda84eb55b";
+let utxo = sBalances.slpTokenUtxos[tokenId][0];
+utxo.wif = wif;
+
+let bchPriceSatoshis = 100000;
+let paymentAddress = "simpleledger:qzhc9pd84flqf2qw4vma9gk7496tym8yku76p2h943";
+
+const tm = new slpjs.SlpTradeManager(BITBOX);
+let tradeOffer = tm.createSlpForBchOffer(utxo, bchPriceSatoshis, paymentAddress);
+
+// Post this partially signed transaction anywhere for someone else to complete!
+console.log(tradeOffer);
+
+```
+
+## A Token Sale - Part 2: Buy the offered token
+
+Continuing from the code above, we will now purchase the token from the seller. 
+
+Completing the trade requires that we provide the proper input UTXOs to allow the SLPJS library complete the partially signed transaction that was created by the seller.  To do this, we will use what we refer to as a "Filler Token" to easily manage our 546 satoshi UTXOs which we will use to "fill" the final trade's first 2 inputs which are empty.  This is not required, but it certainly makes the trading process more simple.  Alternatively, you can presplit your coins to act as filler.  Lastly the 
+
+```js
+
+const purchaserAddress = "simpleledger:qrhg8w9syhv0rv8l3qatqly3egdyelh06s74cp6hg6";
+const purchaserWif = "KyQFMCRXPpJYs2qMr489SYCCM4S98BXSnYcc4Zkq2Jkm9MtKftQS";
+
+let pBalances;
+(async function() {
+  pBalances = await bitboxNetwork.getAllSlpBalancesAndUtxos(purchaserAddress);
+  console.log("pBalances: ", pBalances);
+})();
+
+// WAIT FOR NETWORK RESPONSE.
+
+// Input fillers (i.e., input index 0 and 1)
+let fillerTokenId = "e504b06f6c71c3d310abce93d0f1b96b6112ca7f5e035f4721bd75e07a9cd6b2";
+let fillers = pBalances.slpTokenUtxos[fillerTokenId].slice(0,2);
+fillers.map(f => f.wif = purchaserWif);
+
+// Set WIF for BCH payment
+pBalances.nonSlpUtxos.map(o => o.wif = purchaserWif);
+
+let inputs = pBalances.nonSlpUtxos.concat(fillers);
+
+let txn = tm.createSlpForBchPurchase(tradeOffer, inputs, purchaserAddress) 
+
+// Broadcast this hex to BCH network...
+console.log(txn);
+```
+
 ## Get Balances
 
 Get all balances for a given example.  See also the [TypeScript example](examples/1-get-token-balances.ts).

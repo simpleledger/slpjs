@@ -36,7 +36,7 @@
   "devDependencies": {
     "@types/mocha": "^5.1.1",
     "@types/node": "^10.12.18",
-    "bitbox-sdk": "^8.10.1",
+    "bitbox-sdk": "^8.11.2",
     "bitcoin-rpc-promise": "^2.1.6",
     "browserify": "^16.2.2",
     "grpc-bchrpc-node": "0.8.0",
