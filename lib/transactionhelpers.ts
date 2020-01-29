@@ -537,7 +537,7 @@ export class TransactionHelpers {
         let stream = new Primatives.ByteStream(source)
         let txn = Primatives.Transaction.parse(stream);
         txn.inputs.forEach(input => {
-            input.sequenceNo = 'ffffffef';
+            input.sequenceNo = 'fffffffe';
         });
         return txn.toHex();
     }
