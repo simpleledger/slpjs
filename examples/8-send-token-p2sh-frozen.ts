@@ -90,7 +90,7 @@ import { BitboxNetwork, SlpBalancesResult, Slp, TransactionHelpers, Utils } from
                     inputUtxos.length  // this many times since we swept inputs from p2sh address
     
     // Build an unsigned transaction
-    let unsignedTxnHex = helpers.simpleTokenSend(tokenId, sendAmountsBN, inputUtxos, tokenReceiverAddress, bchChangeReceiverAddress, [], extraFee);
+    let unsignedTxnHex = helpers.simpleTokenSend({ tokenId, sendAmounts: sendAmountsBN, inputUtxos, tokenReceiverAddresses: tokenReceiverAddress, changeReceiverAddress: bchChangeReceiverAddress, extraFee });
     unsignedTxnHex = helpers.enableInputsCLTV(unsignedTxnHex);
     unsignedTxnHex = helpers.setTxnLocktime(unsignedTxnHex, locktime);
     

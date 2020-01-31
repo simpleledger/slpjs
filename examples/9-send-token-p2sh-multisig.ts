@@ -71,7 +71,7 @@ import { BitboxNetwork, SlpBalancesResult, Slp, TransactionHelpers } from '../in
                     inputUtxos.length   // this many times since we swept inputs from p2sh address
 
     // 7) Build an unsigned transaction
-    let unsignedTxnHex = helpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddress, bchChangeReceiverAddress, [], extraFee);
+    let unsignedTxnHex = helpers.simpleTokenSend({ tokenId, sendAmounts, inputUtxos, tokenReceiverAddresses: tokenReceiverAddress, changeReceiverAddress: bchChangeReceiverAddress, extraFee });
 
     // 8) Build scriptSigs for all intputs
     let redeemData = helpers.build_P2SH_multisig_redeem_data(2, [pubkey_signer_1, pubkey_signer_2]);

@@ -119,7 +119,7 @@ export class BitboxNetwork implements SlpValidator {
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenSend(tokenId: string, sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddresses: string|string[], changeReceiverAddress: string, requiredNonTokenOutputs: { satoshis: number, receiverAddress: string }[] = []) {  
-        let txHex = this.txnHelpers.simpleTokenSend(tokenId, sendAmounts, inputUtxos, tokenReceiverAddresses, changeReceiverAddress, requiredNonTokenOutputs);
+        let txHex = this.txnHelpers.simpleTokenSend({tokenId, sendAmounts, inputUtxos, tokenReceiverAddresses, changeReceiverAddress, requiredNonTokenOutputs});
 
         if(!inputUtxos.every(i => typeof i.wif === "string"))
             throw Error("The BitboxNetwork version of this method requires a private key WIF be provided with each input.  If you want more control over the signing process use Slp.simpleTokenSend() to get the unsigned transaction, then after the transaction is signed you can use BitboxNetwork.sendTx()")
@@ -128,34 +128,34 @@ export class BitboxNetwork implements SlpValidator {
     }
 
     async simpleBchSend(sendAmounts: BigNumber|BigNumber[], inputUtxos: SlpAddressUtxoResult[], bchReceiverAddresses: string|string[], changeReceiverAddress: string) {
-        let genesisTxHex = this.txnHelpers.simpleBchSend(sendAmounts, inputUtxos, bchReceiverAddresses, changeReceiverAddress);
+        let genesisTxHex = this.txnHelpers.simpleBchSend({sendAmounts, inputUtxos, bchReceiverAddresses, changeReceiverAddress});
         return await this.sendTx(genesisTxHex);
     }
 
     async simpleTokenGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string|null, documentHash: Buffer|null, decimals: number, tokenReceiverAddress: string, batonReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[]) {
-        let genesisTxHex = this.txnHelpers.simpleTokenGenesis(tokenName, tokenTicker, tokenAmount, documentUri, documentHash, decimals, tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos);
+        let genesisTxHex = this.txnHelpers.simpleTokenGenesis({tokenName, tokenTicker, tokenAmount, documentUri, documentHash, decimals, tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos});
         return await this.sendTx(genesisTxHex);
     }
 
     async simpleNFT1ParentGenesis(tokenName: string, tokenTicker: string, tokenAmount: BigNumber, documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string, batonReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[], decimals=0) {
-        let genesisTxHex = this.txnHelpers.simpleNFT1ParentGenesis(tokenName, tokenTicker, tokenAmount, documentUri, documentHash, tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos, decimals);
+        let genesisTxHex = this.txnHelpers.simpleNFT1ParentGenesis({tokenName, tokenTicker, tokenAmount, documentUri, documentHash, tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos, decimals});
         return await this.sendTx(genesisTxHex);
     }
 
     async simpleNFT1ChildGenesis(nft1GroupId: string, tokenName: string, tokenTicker: string, documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string, bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[], allowBurnAnyAmount=false) {
-        let genesisTxHex = this.txnHelpers.simpleNFT1ChildGenesis(nft1GroupId, tokenName, tokenTicker, documentUri, documentHash, tokenReceiverAddress, bchChangeReceiverAddress, inputUtxos, allowBurnAnyAmount);
+        let genesisTxHex = this.txnHelpers.simpleNFT1ChildGenesis({nft1GroupId, tokenName, tokenTicker, documentUri, documentHash, tokenReceiverAddress, bchChangeReceiverAddress, inputUtxos, allowBurnAnyAmount});
         return await this.sendTx(genesisTxHex);
     }
 
     // Sent SLP tokens to a single output address with change handled (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenMint(tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string) {  
-        let txHex = this.txnHelpers.simpleTokenMint(tokenId, mintAmount, inputUtxos, tokenReceiverAddress, batonReceiverAddress, changeReceiverAddress);
+        let txHex = this.txnHelpers.simpleTokenMint({tokenId, mintAmount, inputUtxos, tokenReceiverAddress, batonReceiverAddress, changeReceiverAddress});
         return await this.sendTx(txHex);
     }
 
     // Burn a precise quantity of SLP tokens with remaining tokens (change) sent to a single output address (Warning: Sweeps all BCH/SLP UTXOs for the funding address)
     async simpleTokenBurn(tokenId: string, burnAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[], changeReceiverAddress: string) {      
-        let txHex = this.txnHelpers.simpleTokenBurn(tokenId, burnAmount, inputUtxos, changeReceiverAddress);
+        let txHex = this.txnHelpers.simpleTokenBurn({tokenId, burnAmount, inputUtxos, changeReceiverAddress});
         return await this.sendTx(txHex);
     }
 
