@@ -78,7 +78,7 @@ import { BitboxNetwork, SlpBalancesResult, Slp, TransactionHelpers } from '../in
     let scriptSigs = inputUtxos.map((txo, i) => {
         let sigData = redeemData.pubKeys.map((pk, j) => {
             if(wifs[j]) {
-                return helpers.get_transaction_sig_p2sh(unsignedTxnHex, wifs[j]!, i, txo.satoshis, redeemData.lockingScript)
+                return helpers.get_transaction_sig_p2sh(unsignedTxnHex, wifs[j]!, i, txo.satoshis, redeemData.lockingScript, redeemData.lockingScript)
             }
             else {
                 return helpers.get_transaction_sig_filler(i, pk)

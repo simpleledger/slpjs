@@ -96,7 +96,7 @@ import { BitboxNetwork, SlpBalancesResult, Slp, TransactionHelpers, Utils } from
     
     // Build scriptSigs 
     let scriptSigs = inputUtxos.map((txo, i) => {
-        let sigObj = helpers.get_transaction_sig_p2sh(unsignedTxnHex, wif, i, txo.satoshis, redeemScript)
+        let sigObj = helpers.get_transaction_sig_p2sh(unsignedTxnHex, wif, i, txo.satoshis, redeemScript, redeemScript)
         return {
           index: i,
           lockingScriptBuf: redeemScript,

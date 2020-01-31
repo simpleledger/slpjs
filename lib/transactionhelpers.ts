@@ -347,7 +347,7 @@ export class TransactionHelpers {
         }
     }
 
-    get_transaction_sig_p2sh(txHex: string, wif: string, input_index: number, input_satoshis: number, redeemScript: Buffer, sigHashType=0x41): InputSigData {
+    get_transaction_sig_p2sh(txHex: string, wif: string, input_index: number, input_satoshis: number, redeemScript: Buffer, scriptCode: Buffer, sigHashType=0x41): InputSigData {
         
         // deserialize the unsigned transaction
 
@@ -371,12 +371,12 @@ export class TransactionHelpers {
         // NOTE: currently only uses ecdsa
 
         let privateKey = new Bitcore.PrivateKey(wif);
-        var sig = Bitcore.Transaction.Sighash.sign(txn, privateKey, sigHashType, input_index, redeemScript, Bitcore.crypto.BN.fromNumber(input_satoshis));
+        var sig = Bitcore.Transaction.Sighash.sign(txn, privateKey, sigHashType, input_index, scriptCode, Bitcore.crypto.BN.fromNumber(input_satoshis));
         
         // add have to add the sighash type manually.. :(
         // NOTE: signature is in DER format and is specific to ecdsa & sigHash 0x41
 
-        let sigBuf = Buffer.concat([ sig.toDER(), Buffer.alloc(1, sigHashType) ]);  
+        let sigBuf = Buffer.concat([ sig.toDER(), Buffer.alloc(1, sigHashType) ]);
 
         // we can return a object conforming to InputSigData<P2pkhSig> interface
 
