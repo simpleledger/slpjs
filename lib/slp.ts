@@ -1193,7 +1193,7 @@ export class Slp {
         // 5) Loop through UTXO set and accumulate balances for type of utxo, organize the Utxos into their categories.
         for (const txo of utxos) {
             if (!txo.satoshis && txo.value && typeof txo.value === "number") {
-                txo.satoshis = txo.value * 10 ** 8;
+                txo.satoshis = Math.floor(txo.value * 10 ** 8);
             } else if (!txo.satoshis) {
                 throw Error("Txo is missing 'satoshis' and 'value' property");
             }
