@@ -23,7 +23,7 @@ export interface ScriptSigP2PKH {
 export interface ScriptSigP2SH {
     index: number;
     lockingScriptBuf: Buffer;  //   <-- aka "redeem" script
-    unlockingScriptBufArray: (number|Buffer)[]; 
+    unlockingScriptBufArray: (number|Buffer)[];
 }
 
 export interface MultisigRedeemData {
@@ -71,19 +71,21 @@ export class TransactionHelpers {
                 }, new BigNumber(0));
 
         // 2) Compute the token Change amount.
-        const tokenChangeAmount: BigNumber = totalTokenInputAmount.minus((sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
-        
+        const tokenChangeAmount: BigNumber = totalTokenInputAmount.minus(
+                                    (sendAmounts as BigNumber[]).reduce((t, v) => t = t.plus(v), new BigNumber(0)));
+
         // Get token_type
-        let token_type: number = 
-            inputUtxos.filter(i => i.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN &&
-                                    i.slpTransactionDetails.tokenIdHex === tokenId)[0].slpTransactionDetails.versionType;
+        let token_type: number =
+            inputUtxos.filter(i =>
+                    i.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN &&
+                    i.slpTransactionDetails.tokenIdHex === tokenId)[0].slpTransactionDetails.versionType;
 
         let txHex;
-        if(tokenChangeAmount.isGreaterThan(new BigNumber(0))){
+        if (tokenChangeAmount.isGreaterThan(new BigNumber(0))) {
             // 3) Create the Send OP_RETURN message
             const sendOpReturn = Slp.buildSendOpReturn({
                 tokenIdHex: tokenId,
-                outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ]
+                outputQtyArray: [ ...(sendAmounts as BigNumber[]), tokenChangeAmount ],
             }, token_type);
             // 4) Create the raw Send transaction hex
             txHex = this.slp.buildRawSendTx({
@@ -109,8 +111,9 @@ export class TransactionHelpers {
                 requiredNonTokenOutputs: requiredNonTokenOutputs,
                 extraFee: extraFee
             });
-        } else
+        } else {
             throw Error('Token inputs less than the token outputs');
+        }
 
         // Return raw hex for this transaction
         return txHex;
@@ -188,7 +191,8 @@ export class TransactionHelpers {
                                      tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress,
                                      inputUtxos, decimals = 0 }:
                                      { tokenName: string, tokenTicker: string, tokenAmount: BigNumber,
-                                        documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string,
+                                        documentUri: string|null, documentHash: Buffer|null,
+                                        tokenReceiverAddress: string,
                                         batonReceiverAddress: string|null, bchChangeReceiverAddress: string,
                                         inputUtxos: SlpAddressUtxoResult[], decimals?: number }
                                 ): string {
@@ -205,10 +209,10 @@ export class TransactionHelpers {
 
         // Create/sign the raw transaction hex for Genesis
         const genesisTxHex = this.slp.buildRawGenesisTx({
-            slpGenesisOpReturn: genesisOpReturn, 
+            slpGenesisOpReturn: genesisOpReturn,
             mintReceiverAddress: tokenReceiverAddress,
             batonReceiverAddress: batonReceiverAddress,
-            bchChangeReceiverAddress: bchChangeReceiverAddress, 
+            bchChangeReceiverAddress: bchChangeReceiverAddress,
             input_utxos: Utils.mapToUtxoArray(inputUtxos)
         });
 
@@ -220,7 +224,8 @@ export class TransactionHelpers {
                                     documentHash, tokenReceiverAddress, bchChangeReceiverAddress,
                                     inputUtxos, allowBurnAnyAmount = false }:
                                     { nft1GroupId: string, tokenName: string, tokenTicker: string,
-                                        documentUri: string|null, documentHash: Buffer|null, tokenReceiverAddress: string,
+                                        documentUri: string|null, documentHash: Buffer|null,
+                                        tokenReceiverAddress: string,
                                         bchChangeReceiverAddress: string, inputUtxos: SlpAddressUtxoResult[],
                                         allowBurnAnyAmount?: boolean }
                                 ) {
@@ -245,11 +250,11 @@ export class TransactionHelpers {
 
         // Create/sign the raw transaction hex for Genesis
         const genesisTxHex = this.slp.buildRawGenesisTx({
-            slpGenesisOpReturn: genesisOpReturn, 
+            slpGenesisOpReturn: genesisOpReturn,
             mintReceiverAddress: tokenReceiverAddress,
             batonReceiverAddress: null,
-            bchChangeReceiverAddress: bchChangeReceiverAddress, 
-            input_utxos: Utils.mapToUtxoArray(inputUtxos), 
+            bchChangeReceiverAddress: bchChangeReceiverAddress,
+            input_utxos: Utils.mapToUtxoArray(inputUtxos),
             allowed_token_burning: [nft1GroupId]
         });
 
@@ -258,22 +263,25 @@ export class TransactionHelpers {
     }
 
     // Create raw transaction hex to: Mint new tokens or move the minting baton
-    public simpleTokenMint({ tokenId, mintAmount, inputUtxos, tokenReceiverAddress,
+    public simpleTokenMint({ tokenId, mintAmount, inputUtxos, tokenReceiverAddress, tokenReceiverSatoshis,
                             batonReceiverAddress, changeReceiverAddress,
                             extraFee = 0, disableBchChangeOutput = false, batonReceiverSatoshis }:
                             { tokenId: string, mintAmount: BigNumber, inputUtxos: SlpAddressUtxoResult[],
-                                tokenReceiverAddress: string, batonReceiverAddress: string, changeReceiverAddress: string,
-                                extraFee?: number, disableBchChangeOutput?: boolean, batonReceiverSatoshis?: BigNumber }): string {
+                                tokenReceiverAddress: string, batonReceiverAddress: string,
+                                changeReceiverAddress: string, extraFee?: number,
+                                disableBchChangeOutput?: boolean, tokenReceiverSatoshis?: BigNumber,
+                                batonReceiverSatoshis?: BigNumber }): string {
         // // convert address to cashAddr from SLP format.
         // let fundingAddress_cashfmt = bchaddr.toCashAddress(fundingAddress);
 
-        let token_type = inputUtxos.filter(i => i.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)[0].slpTransactionDetails.versionType;
+        let token_type = inputUtxos.filter(i =>
+            i.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON)[0].slpTransactionDetails.versionType;
 
         // 1) Create the Send OP_RETURN message
         const mintOpReturn = Slp.buildMintOpReturn({
-            tokenIdHex: tokenId,
+            batonVout: 2,
             mintQuantity: mintAmount,
-            batonVout: 2
+            tokenIdHex: tokenId,
         }, token_type);
 
         // 2) Create the raw Mint transaction hex
@@ -281,6 +289,7 @@ export class TransactionHelpers {
             input_baton_utxos: Utils.mapToUtxoArray(inputUtxos),
             slpMintOpReturn: mintOpReturn,
             mintReceiverAddress: tokenReceiverAddress,
+            mintReceiverSatoshis: tokenReceiverSatoshis,
             batonReceiverAddress,
             batonReceiverSatoshis,
             bchChangeReceiverAddress: changeReceiverAddress,
@@ -288,13 +297,12 @@ export class TransactionHelpers {
             disableBchChangeOutput,
         });
 
-        //console.log(txHex);
-
         // Return raw hex for this transaction
         return txHex;
     }
 
-    // Create raw transaction hex to: Burn a precise quantity of SLP tokens with remaining tokens (change) sent to a single output address
+    // Create raw transaction hex to: Burn a precise quantity of SLP tokens
+    //  with remaining tokens (change) sent to a single output address
     simpleTokenBurn({ tokenId, burnAmount, inputUtxos, changeReceiverAddress }:
                     { tokenId: string, burnAmount: BigNumber,
                         inputUtxos: SlpAddressUtxoResult[], changeReceiverAddress: string }
