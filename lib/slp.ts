@@ -230,7 +230,7 @@ export class Slp {
 
         if (config.batonReceiverSatoshis === undefined) {
             config.batonReceiverSatoshis = new BigNumber(546);
-        } 
+        }
 
         // Make sure we're not spending any token or baton UTXOs
         config.input_utxos.forEach((txo) => {
@@ -276,7 +276,10 @@ export class Slp {
             config.slpGenesisOpReturn.length,
             config.input_utxos.length,
             config.batonReceiverAddress,
-            config.bchChangeReceiverAddress);
+            config.bchChangeReceiverAddress) +
+            (config.mintReceiverSatoshis.gt(546) ? config.mintReceiverSatoshis.toNumber() - 546 : 0) +
+            (config.batonReceiverSatoshis.gt(546) ? config.batonReceiverSatoshis.toNumber() - 546 : 0);
+
         const bchChangeAfterFeeSatoshis: BigNumber = satoshis.minus(genesisCost);
 
         // Genesis OpReturn
@@ -558,15 +561,17 @@ export class Slp {
             satoshis = satoshis.plus(baton_utxo.satoshis);
         });
 
-        const mintCost = this.calculateGenesisCost
-                                        (
-                                        config.slpMintOpReturn.length,
-                                        config.input_baton_utxos.length,
-                                        config.batonReceiverAddress,
-                                        config.bchChangeReceiverAddress,
-                                        )
-                                        +
-                                        (config.extraFee ? config.extraFee : 0);
+        const mintCost = this.calculateGenesisCost(
+                            config.slpMintOpReturn.length,
+                            config.input_baton_utxos.length,
+                            config.batonReceiverAddress,
+                            config.bchChangeReceiverAddress)
+                            +
+                            (config.extraFee ? config.extraFee : 0)
+                            +
+                            (config.batonReceiverSatoshis.gt(546) ? config.batonReceiverSatoshis.toNumber() - 546 : 0)
+                            +
+                            (config.mintReceiverSatoshis.gt(546) ? config.mintReceiverSatoshis.toNumber() - 546 : 0);
 
         // BCH change
         const bchChangeAfterFeeSatoshis = satoshis.minus(mintCost);
