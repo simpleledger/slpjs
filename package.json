@@ -42,7 +42,7 @@
     "grpc-bchrpc-node": "0.8.0",
     "mkdirp": "^0.5.1",
     "mocha": "^5.1.1",
-    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
+    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git#b8f55f7d0c93ce2a51eea1eab3f8f201ca0f6187",
     "ts-node": "^7.0.1",
     "typescript": "^3.7.5",
     "typescript-tslint-plugin": "^0.5.5",
