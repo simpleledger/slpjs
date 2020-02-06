@@ -34,18 +34,18 @@
   },
   "homepage": "https://github.com/simpleledger/slpjs#readme",
   "devDependencies": {
-    "@types/mocha": "^5.1.1",
-    "@types/node": "^10.12.18",
-    "bitbox-sdk": "^8.11.1",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^10.17.14",
+    "bitbox-sdk": "^8.11.2",
     "bitcoin-rpc-promise": "^2.1.6",
-    "browserify": "^16.2.2",
+    "browserify": "^16.5.0",
     "grpc-bchrpc-node": "0.8.0",
     "mkdirp": "^0.5.1",
     "mocha": "^5.1.1",
     "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git",
     "ts-node": "^7.0.1",
-    "typescript": "^3.6.4",
-    "typescript-tslint-plugin": "^0.5.4",
+    "typescript": "^3.7.5",
+    "typescript-tslint-plugin": "^0.5.5",
     "uglify-es": "^3.3.9"
   },
   "peerDependencies": {
@@ -54,15 +54,15 @@
   "dependencies": {
     "@types/bigi": "^1.4.2",
     "@types/bip39": "^2.4.2",
+    "@types/lodash": "^4.14.149",
     "@types/randombytes": "^2.0.0",
     "@types/socket.io": "^2.1.2",
     "@types/socket.io-client": "^1.4.32",
     "@types/wif": "^2.0.1",
-    "@types/lodash": "^4.14.120",
     "axios": "^0.18.1",
     "bchaddrjs-slp": "0.2.8",
     "bignumber.js": "^8.1.1",
     "bitcore-lib-cash": "^9.0.0",
-    "lodash": "^4.17.14"
+    "lodash": "^4.17.15"
   }
 }
