@@ -8,7 +8,7 @@ import BigNumber from 'bignumber.js';
 import * as _ from 'lodash';
 import * as bchaddr from 'bchaddrjs-slp';
 import * as Bitcore from 'bitcore-lib-cash';
-import Axios from 'axios';
+import Axios from "axios";
 import { TransactionHelpers } from './transactionhelpers';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))

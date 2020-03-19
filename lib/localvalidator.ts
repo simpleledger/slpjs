@@ -5,6 +5,8 @@ import { BITBOX } from 'bitbox-sdk';
 import * as Bitcore from 'bitcore-lib-cash';
 import BigNumber from 'bignumber.js';
 
+import { Crypto } from './crypto';
+
 export interface Validation { validity: boolean|null; parents: Parent[], details: SlpTransactionDetails|null, invalidReason: string|null, waiting: boolean } 
 export type GetRawTransactionsAsync = (txid: string[]) => Promise<string[]>;
 
@@ -41,7 +43,7 @@ export class LocalValidator implements SlpValidator {
     }
 
     addValidationFromStore(hex: string, isValid: boolean) {
-        let id = (<Buffer>this.BITBOX.Crypto.sha256(this.BITBOX.Crypto.sha256(Buffer.from(hex, 'hex'))).reverse()).toString('hex');
+        const id = Crypto.txid(Buffer.from(hex, "hex")).toString("hex");
         if(!this.cachedValidations[id])
             this.cachedValidations[id] = { validity: isValid, parents: [], details: null, invalidReason: null, waiting: false }
         if(!this.cachedRawTransactions[id])

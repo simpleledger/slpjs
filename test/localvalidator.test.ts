@@ -1,5 +1,6 @@
 import { LocalValidator, GetRawTransactionsAsync } from '../lib/localvalidator';
-import { SlpValidityUnitTest, SlpTestTxn } from './global';
+import { SlpValidityUnitTest, SlpTestTxn } from "./global";
+import { Crypto } from '../lib/crypto';
 
 import * as assert from 'assert';
 import "mocha";
@@ -17,12 +18,12 @@ describe('Slp', function() {
                 let getRawUnitTestTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
                     let allTxns: SlpTestTxn[] = test.when.concat(test.should);
                     let txn = allTxns.find(i => {
-                        let hash = (<Buffer>bitbox.Crypto.sha256(bitbox.Crypto.sha256(Buffer.from(i.tx, 'hex'))).reverse()).toString('hex');
-                        return hash === txids[0] 
+                        const hash = Crypto.txid(Buffer.from(i.tx, "hex")).toString("hex");
+                        return hash === txids[0];
                     });
                     if(txn)
                         return [txn.tx];
-                    throw Error("Transaction data for the provided txid not found (txid: " + txids[0] + ")")
+                    throw Error("Transaction data for the provided txid not found (txid: " + txids[0] + ")");
                 }
     
                 // Create instance of Local Validator
@@ -33,7 +34,7 @@ describe('Slp', function() {
                     slpValidator.addValidationFromStore(w.tx, w.valid)
                 });
 
-                let txid = (<Buffer>bitbox.Crypto.sha256(bitbox.Crypto.sha256(Buffer.from(test.should[0].tx, 'hex'))).reverse()).toString('hex');
+                const txid = Crypto.txid(Buffer.from(test.should[0].tx, "hex")).toString("hex");
                 let shouldBeValid = test.should[0].valid;
                 let isValid;
                 try {
