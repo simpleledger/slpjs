@@ -354,6 +354,69 @@ let sendTxid;
 })();
 ```
 
+## SEND - Send BCH
+
+This example demonstrates how to send BCH from a SLP enabled wallet. This API ensures the BCH transaction does not use SLP UTXOs which can cause token loss for the wallet.
+
+```js
+// Install BITBOX-SDK v8.1+ for blockchain access
+// For more information visit: https://www.npmjs.com/package/bitbox-sdk
+const BITBOXSDK = require('bitbox-sdk');
+const BigNumber = require('bignumber.js');
+const slpjs = require('slpjs');
+
+// FOR MAINNET
+const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+const fundingAddress           = "bitcoincash:qzq6g2dzadew2ctt6cfhthwcc2q9m60mj56ld2hj5l";     // <-- must be CashAddr format
+
+// can use BITBOX.HDNode.toWIF() to generate this
+const fundingWif               = "KzzMBS6twjSLAjH3a1wkd7rWs3PpiHq4eQzqSEfHuxbXfxYFUBiL";        // <-- compressed WIF format
+const bchReceiverAddress       = [ "bitcoincash:qz42xz5y2hfltsa94mwm36pnl3ew8u72cc9l038x8m" ]; // <-- must be CashAddr format
+const bchChangeReceiverAddress = "bitcoincash:qzd5hqnlu2gprdxphqt6jvft33s3m2hegcqtu6mktg";     // <-- must be CashAddr format
+
+let sendAmountsInSatoshi       = 1000;
+
+
+const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
+
+
+// 1) Check that token balance is greater than our desired sendAmount
+let balances; 
+(async function() {
+  balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+  console.log("'balances' variable is set.", balances);
+  
+  if (balances.satoshis_available_bch < sendAmountsInSatoshi) {
+    throw new Error("You need to fund the addresses provided in this example with BCH.");
+  }
+  console.log("BCH balance in sats:", balances.satoshis_available_bch);
+})();
+
+// Wait for network responses...
+
+// 2) construct sendAmounts as an array of BigInt
+let sendAmounts = [ new BigInt(sendAmountsInSatoshi) ];
+
+// 3) Get all of non-SLP UTXOs
+let inputUtxos = balances.nonSlpUtxos;
+
+// 4) Set the proper private key for each Utxo
+inputUtxos = inputUtxos.map(utxo => ({ ...utxo, wif: fundingWif }));
+
+// 5) Send token
+let sendTxId;
+(async () => {
+  sendTxId = await bitboxNetwork.simpleBchSend(
+    sendAmounts, 
+    inputUtxos, 
+    bchReceiverAddress, 
+    bchChangeReceiverAddress
+  );
+  console.log("SEND txn complete:", sendTxId);
+})();
+```
+
+
 ## SEND - Send tokens from a frozen address
 
 This example shows how to freeze funds until a future time using OP_CLTV.  Also see the [TypeScript example](examples/8-send-token-p2sh-frozen.ts).  First, the address is calculated based on a user-defined public key and locktime. After the locktime has elapsed the user can proceed to spend those funds as demonstrated in this example:
