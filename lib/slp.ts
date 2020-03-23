@@ -8,6 +8,8 @@ import * as bchaddr from "bchaddrjs-slp";
 import BigNumber from "bignumber.js";
 import { BITBOX } from "bitbox-sdk";
 
+import { Script } from "./script";
+
 export interface SlpPaymentRequest {
     address: string;
     amountBch?: number;
@@ -952,13 +954,13 @@ export class Slp {
             if (slpMsg.versionType === 0x41) {
                 throw Error("NFT1 Child cannot have MINT transaction type.");
             }
-            if (chunks.length != 6) {
+            if (chunks.length !== 6) {
                 throw Error("MINT with incorrect number of parameters");
             }
             if (!chunks[3]) {
                 throw Error("Bad token_id buffer");
             }
-            if (chunks[3]!.length != 32) {
+            if (chunks[3]!.length !== 32) {
                 throw Error("token_id is wrong length");
             }
             slpMsg.tokenIdHex = chunks[3]!.toString("hex");
@@ -1001,28 +1003,28 @@ export class Slp {
             throw Error("Script error");
         }
 
-        if (ops[0].opcode !== this.BITBOX.Script.opcodes.OP_RETURN) {
+        if (ops[0].opcode !== Script.opcodes.OP_RETURN) {
             throw Error("No OP_RETURN");
         }
         const chunks: Array<Buffer|null> = [];
         ops.slice(1).forEach((opitem) => {
-            if (opitem.opcode > this.BITBOX.Script.opcodes.OP_16) {
+            if (opitem.opcode > Script.opcodes.OP_16) {
                 throw Error("Non-push opcode");
             }
-            if (opitem.opcode > this.BITBOX.Script.opcodes.OP_PUSHDATA4) {
+            if (opitem.opcode > Script.opcodes.OP_PUSHDATA4) {
                 if (opitem.opcode === 80) {
                     throw Error("Non-push opcode");
                 }
                 if (!allow_op_number) {
                     throw Error("OP_1NEGATE to OP_16 not allowed");
                 }
-                if (opitem.opcode === this.BITBOX.Script.opcodes.OP_1NEGATE) {
+                if (opitem.opcode === Script.opcodes.OP_1NEGATE) {
                     opitem.data = Buffer.from([0x81]);
                 } else { // OP_1 - OP_16
                     opitem.data = Buffer.from([opitem.opcode - 80]);
                 }
             }
-            if (opitem.opcode === this.BITBOX.Script.opcodes.OP_0 && !allow_op_0) {
+            if (opitem.opcode === Script.opcodes.OP_0 && !allow_op_0) {
                 throw Error("OP_0 not allowed");
             }
             chunks.push(opitem.data);
@@ -1040,13 +1042,13 @@ export class Slp {
             while (n < script.length) {
                 const op: PushDataOperation = { opcode: script[n], data: null };
                 n += 1;
-                if (op.opcode <= this.BITBOX.Script.opcodes.OP_PUSHDATA4) {
-                    if (op.opcode < this.BITBOX.Script.opcodes.OP_PUSHDATA1) {
+                if (op.opcode <= Script.opcodes.OP_PUSHDATA4) {
+                    if (op.opcode < Script.opcodes.OP_PUSHDATA1) {
                         dlen = op.opcode;
-                    } else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA1) {
+                    } else if (op.opcode === Script.opcodes.OP_PUSHDATA1) {
                         dlen = script[n];
                         n += 1;
-                    } else if (op.opcode === this.BITBOX.Script.opcodes.OP_PUSHDATA2) {
+                    } else if (op.opcode === Script.opcodes.OP_PUSHDATA2) {
                         dlen = script.slice(n, n + 2).readUIntLE(0, 2);
                         n += 2;
                     } else {
