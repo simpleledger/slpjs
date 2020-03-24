@@ -1,35 +1,35 @@
-import { Slp } from '../lib/slp';
-import assert from 'assert';
-import { BITBOX } from 'bitbox-sdk';
+import { Slp } from "../lib/slp";
+import assert from "assert";
+import { BITBOX } from "bitbox-sdk";
 
 const bitbox = new BITBOX({ restURL: "https://trest.bitcoin.com/v2/" });
-const scriptUnitTestData = require('slp-unit-test-data/script_tests.json');
+const scriptUnitTestData = require("slp-unit-test-data/script_tests.json");
 
 let slp = new Slp(bitbox);
 
-describe('Slp', function() {
+describe("Slp", () => {
 
-    describe('parseSlpOutputScript() -- SLP OP_RETURN Unit Tests', function() {
+    describe("parseSlpOutputScript() -- SLP OP_RETURN Unit Tests", () => {
         scriptUnitTestData.forEach((test: any)=> {
             it(test.msg, () => {
-                let script = Buffer.from(test.script, 'hex');
+                let script = Buffer.from(test.script, "hex");
                 let eCode = test.code;
                 if(eCode) {
-                    assert.throws(function() { slp.parseSlpOutputScript(script) });
+                    assert.throws(() => { slp.parseSlpOutputScript(script) });
                 } else {
                     let parsedOutput = slp.parseSlpOutputScript(script);
-                    assert(typeof parsedOutput, 'object');
+                    assert(typeof parsedOutput, "object");
                 }
             });
         });
     });
-    // describe('buildGenesisTransaction()', function() {
+    // describe('buildGenesisTransaction()', () => {
 
     // })
-    // describe('buildMintTransaction()', function() {
+    // describe('buildMintTransaction()', () => {
         
     // })
-    // describe('buildSendTransaction()', function() {
+    // describe('buildSendTransaction()', () => {
         
     // })
 
@@ -37,7 +37,7 @@ describe('Slp', function() {
     // let batonTxid;
     // let sendTxid;
 
-    // describe('buildRawGenesisTx()', function() {
+    // describe('buildRawGenesisTx()', () => {
     //     const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
     //     const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
     //     const tokenReceiverAddress     = "slptest:qr0mkh2lf6w4cz79n8rwjtf65e0swqqleu3eyzn6s4";
@@ -79,12 +79,12 @@ describe('Slp', function() {
     //         assert.equal(true, false);
     //     });
     // });
-    // describe('buildRawSendTx()', function() {
+    // describe('buildRawSendTx()', () => {
     //     it('works', () => {
     //         assert.equal(true, false);
     //     });
     // });
-    // describe('buildRawMintTx()', function() {
+    // describe('buildRawMintTx()', () => {
     //     it('works', () => {
     //         assert.equal(true, false);
     //     });
