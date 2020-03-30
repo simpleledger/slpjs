@@ -1,9 +1,9 @@
-import { SlpTransactionType, SlpTransactionDetails, logger } from "../index";
-import { SlpValidator, Slp } from "./slp";
+import { logger, SlpTransactionDetails, SlpTransactionType } from "../index";
+import { Slp, SlpValidator } from "./slp";
 
+import BigNumber from "bignumber.js";
 import { BITBOX } from "bitbox-sdk";
 import * as Bitcore from "bitcore-lib-cash";
-import BigNumber from "bignumber.js";
 
 import { Crypto } from "./crypto";
 
@@ -21,12 +21,12 @@ interface Parent {
 }
 
 export class LocalValidator implements SlpValidator {
-    BITBOX: BITBOX;
-    cachedRawTransactions: { [txid: string]: string };
-    cachedValidations: { [txid: string]: Validation };
-    getRawTransactions: GetRawTransactionsAsync;
-    slp: Slp;
-    logger: logger = { log: (s: string) => null };
+    public BITBOX: BITBOX;
+    public cachedRawTransactions: { [txid: string]: string };
+    public cachedValidations: { [txid: string]: Validation };
+    public getRawTransactions: GetRawTransactionsAsync;
+    public slp: Slp;
+    public logger: logger = { log: (s: string) => null };
 
     constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync, logger?: logger) {
         if (!BITBOX) {
@@ -45,7 +45,7 @@ export class LocalValidator implements SlpValidator {
         this.cachedRawTransactions = {};
     }
 
-    addValidationFromStore(hex: string, isValid: boolean) {
+    public addValidationFromStore(hex: string, isValid: boolean) {
         const id = Crypto.txid(Buffer.from(hex, "hex")).toString("hex");
         if (!this.cachedValidations[id]) {
             this.cachedValidations[id] = { validity: isValid, parents: [], details: null, invalidReason: null, waiting: false };
@@ -55,7 +55,7 @@ export class LocalValidator implements SlpValidator {
         }
     }
 
-    async waitForCurrentValidationProcessing(txid: string) {
+    public async waitForCurrentValidationProcessing(txid: string) {
         const cached: Validation = this.cachedValidations[txid];
 
         while (true) {
@@ -67,7 +67,7 @@ export class LocalValidator implements SlpValidator {
         }
     }
 
-    async waitForTransactionDownloadToComplete(txid: string){
+    public async waitForTransactionDownloadToComplete(txid: string){
         while (true) {
             if (this.cachedRawTransactions[txid] && this.cachedRawTransactions[txid] !== "waiting") {
                 break;
@@ -76,7 +76,7 @@ export class LocalValidator implements SlpValidator {
         }
     }
 
-    async retrieveRawTransaction(txid: string) {
+    public async retrieveRawTransaction(txid: string) {
         const checkTxnRegex = (txn: string) => {
             const re = /^([A-Fa-f0-9]{2}){61,}$/;
             if (!re.test(txn)) {
@@ -98,7 +98,7 @@ export class LocalValidator implements SlpValidator {
         }
     }
 
-    async isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
+    public async isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
         this.logger.log("SLPJS Validating: " + txid);
         const valid = await this._isValidSlpTxid(txid, tokenIdFilter, tokenTypeFilter);
         this.logger.log("SLPJS Result: " + valid + " (" + txid + ")");
@@ -123,7 +123,7 @@ export class LocalValidator implements SlpValidator {
     // In the case of NFT1 the search continues to the group/parent NFT DAG after the Genesis
     // of the NFT child is discovered.
     //
-    async _isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
+    public async _isValidSlpTxid(txid: string, tokenIdFilter?: string, tokenTypeFilter?: number): Promise<boolean> {
         // Check to see if this txn has been processed by looking at shared cache, if doesn't exist then download txn.
         if (!this.cachedValidations[txid]) {
             this.cachedValidations[txid] = {
@@ -381,7 +381,7 @@ export class LocalValidator implements SlpValidator {
         return this.cachedValidations[txid].validity!;
     }
 
-    async validateSlpTransactions(txids: string[]): Promise<string[]> {
+    public async validateSlpTransactions(txids: string[]): Promise<string[]> {
         const res = [];
         for (let i = 0; i < txids.length; i++) {
             res.push((await this.isValidSlpTxid(txids[i])) ? txids[i] : "");

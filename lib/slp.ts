@@ -1,14 +1,13 @@
-import {
-    logger, Primatives, SlpAddressUtxoResult, SlpBalancesResult,
-    SlpTransactionDetails, SlpTransactionType, SlpUtxoJudgement, SlpVersionType, utxo } from "../index";
-import { SlpTokenType1 } from "./slptokentype1";
-import { Utils } from "./utils";
-
 import * as bchaddr from "bchaddrjs-slp";
 import BigNumber from "bignumber.js";
 import { BITBOX } from "bitbox-sdk";
-
+import {
+    INetwork, logger, Primatives, SlpAddressUtxoResult,
+    SlpBalancesResult, SlpTransactionDetails, SlpTransactionType,
+    SlpUtxoJudgement, SlpVersionType, utxo } from "../index";
 import { Script } from "./script";
+import { SlpTokenType1 } from "./slptokentype1";
+import { Utils } from "./utils";
 
 export interface SlpPaymentRequest {
     address: string;
@@ -110,14 +109,10 @@ export interface configBuildRawBurnTx {
 }
 
 export interface SlpValidator {
-    getRawTransactions: (txid: string[]) => Promise<string[]>;
+    getRawTransactions?: (txid: string[]) => Promise<string[]>;
     isValidSlpTxid(txid: string, tokenIdFilter?: string|null,
                    tokenTypeFilter?: number|null, logger?: logger): Promise<boolean>;
     validateSlpTransactions(txids: string[]): Promise<string[]>;
-}
-
-export interface SlpProxyValidator extends SlpValidator {
-    validatorUrl: string;
 }
 
 export class Slp {
@@ -166,7 +161,7 @@ export class Slp {
         // #      raise_on_Null == False and minByteLen > 0: return None
         // #      raise_on_Null == True and minByteLen > 0:  raise SlpInvalidOutputMessage
         if (intBytes.length >= minByteLen && intBytes.length <= maxByteLen) {
-            return intBytes.readUIntBE(0, intBytes.length)
+            return intBytes.readUIntBE(0, intBytes.length);
         }
         if (intBytes.length === 0 && !raise_on_Null) {
             return null;
@@ -205,7 +200,7 @@ export class Slp {
     public BITBOX: BITBOX;
     constructor(bitbox: BITBOX) {
         if (!bitbox) {
-            throw Error("Must provide BITBOX instance to class constructor.")
+            throw Error("Must provide BITBOX instance to class constructor.");
         }
         this.BITBOX = bitbox;
     }
@@ -247,7 +242,7 @@ export class Slp {
                 throw Error("Input UTXOs included a token for another tokenId.");
             }
             if (txo.slpUtxoJudgement === SlpUtxoJudgement.SLP_BATON) {
-                throw Error("Cannot spend a minting baton.")
+                throw Error("Cannot spend a minting baton.");
             }
             if (txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_TOKEN_DAG ||
                 txo.slpUtxoJudgement === SlpUtxoJudgement.INVALID_BATON_DAG) {
@@ -663,7 +658,7 @@ export class Slp {
                 throw new Error("Token/BCH change receiver address is not in SLP format.");
             }
         } else if (!config.tokenIdHex) {
-            console.log("[WARNING!] Include 'config.tokenIdHex' in order to accidental token burning.  To supress this log message set 'config.tokenIdHex' to an empty string.")
+            console.log("[WARNING!] Include 'config.tokenIdHex' in order to accidental token burning.  To supress this log message set 'config.tokenIdHex' to an empty string.");
  }
 
         // Make sure not spending any other tokens or baton UTXOs
@@ -1107,7 +1102,7 @@ export class Slp {
         return fee;
     }
 
-    public calculateSendCost(sendOpReturnLength: number, inputUtxoSize: number, 
+    public calculateSendCost(sendOpReturnLength: number, inputUtxoSize: number,
                              outputAddressArraySize: number, bchChangeAddress?: string, feeRate = 1, forTokens= true) {
         let outputs = outputAddressArraySize;
         let nonfeeoutputs = 0;
@@ -1129,14 +1124,17 @@ export class Slp {
         return fee;
     }
 
-    public async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], asyncSlpValidator: SlpValidator) {
+    public async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], network: INetwork): Promise<SlpBalancesResult> {
 
         // 1) parse SLP OP_RETURN and cast initial SLP judgement, based on OP_RETURN only.
         for (const txo of utxos) {
             // first check if the .tx property is being used (this is how BITBOX returns results via REST API)
             let slpMsgBuf: Buffer;
-            if (!txo.tx || !txo.tx.vout || !txo.tx.vout[0].n) {
-                const txn: string|Buffer = (await asyncSlpValidator.getRawTransactions([txo.txid]))[0];
+            if (txo.txBuf) {
+                const txn = Primatives.Transaction.parseFromBuffer(txo.txBuf);
+                slpMsgBuf = Buffer.from(txn.outputs[0].scriptPubKey);
+            } else if (!txo.tx || !txo.tx.vout || !txo.tx.vout[0].n) {
+                const txn: string|Buffer = (await network.getRawTransactions([txo.txid]))[0];
                 let txnBuf;
                 if (typeof txn === "string") {
                     txnBuf = Buffer.from(txn, "hex");
@@ -1147,12 +1145,14 @@ export class Slp {
                 }
                 const t = Primatives.Transaction.parseFromBuffer(txnBuf);
                 slpMsgBuf = Buffer.from(t.outputs[0].scriptPubKey);
-            } else {
+            } else if (txo.tx) {
                 const vout = txo.tx.vout.find(vout => vout.n === 0);
                 if (!vout) {
                     throw Error("Utxo contains no Vout!");
                 }
                 slpMsgBuf = Buffer.from(vout.scriptPubKey.hex, "hex");
+            } else {
+                throw Error("SlpAddressUtxoResult does not provide enough information ");
             }
 
             await this.applyInitialSlpJudgement(txo, slpMsgBuf);
@@ -1162,22 +1162,66 @@ export class Slp {
         }
 
         // 2) Cast final SLP judgement using the supplied async validator
-        await this.applyFinalSlpJudgement(asyncSlpValidator, utxos);
+        await this.applyFinalSlpJudgement(utxos, network);
 
         // 3) Prepare results object
         const result: SlpBalancesResult = this.computeSlpBalances(utxos);
 
         // 4) Check that all UTXOs have been categorized
         let tokenTxoCount = 0;
-        for (const id in result.slpTokenUtxos) { tokenTxoCount += result.slpTokenUtxos[id].length; }
+        for (const id in result.slpTokenUtxos) {
+            tokenTxoCount += result.slpTokenUtxos[id].length;
+        }
         let batonTxoCount = 0;
-        for (const id in result.slpBatonUtxos) { batonTxoCount += result.slpBatonUtxos[id].length; }
+        for (const id in result.slpBatonUtxos) {
+            batonTxoCount += result.slpBatonUtxos[id].length;
+        }
         if (utxos.length !== (tokenTxoCount + batonTxoCount + result.nonSlpUtxos.length +
             result.unknownTokenTypeUtxos.length + result.invalidBatonUtxos.length + result.invalidTokenUtxos.length)) {
             throw Error("Not all UTXOs have been categorized. Unknown Error.");
         }
 
         return result;
+    }
+
+    public applyInitialSlpJudgement(txo: SlpAddressUtxoResult, slpMsgBuf: Buffer) {
+        try {
+            txo.slpTransactionDetails = this.parseSlpOutputScript(slpMsgBuf);
+            // populate txid for GENESIS
+            if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS) {
+                txo.slpTransactionDetails.tokenIdHex = txo.txid;
+            }
+
+            // apply initial SLP judgement to the UTXO (based on OP_RETURN
+            // parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
+            if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS ||
+                txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
+                if (txo.slpTransactionDetails.containsBaton && txo.slpTransactionDetails.batonVout === txo.vout) {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_BATON;
+                } else if (txo.vout === 1 && txo.slpTransactionDetails.genesisOrMintQuantity!.isGreaterThan(0)) {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
+                    txo.slpUtxoJudgementAmount = ( txo.slpTransactionDetails.genesisOrMintQuantity as BigNumber);
+                } else {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+                }
+            } else if (txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND &&
+                txo.slpTransactionDetails.sendOutputs) {
+                if (txo.vout > 0 && txo.vout < txo.slpTransactionDetails.sendOutputs.length) {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
+                    txo.slpUtxoJudgementAmount = txo.slpTransactionDetails.sendOutputs[txo.vout];
+                } else {
+                    txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+                }
+            } else {
+                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+            }
+        } catch (e) {
+            if (e.message.includes("Unsupported token type")) {
+                txo.slpUtxoJudgement = SlpUtxoJudgement.UNSUPPORTED_TYPE;
+            } else {
+                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
+            }
+        }
     }
 
     private computeSlpBalances(utxos: SlpAddressUtxoResult[]) {
@@ -1266,49 +1310,8 @@ export class Slp {
         return result;
     }
 
-    public applyInitialSlpJudgement(txo: SlpAddressUtxoResult, slpMsgBuf: Buffer) {
-        try {
-            txo.slpTransactionDetails = this.parseSlpOutputScript(slpMsgBuf);
-            // populate txid for GENESIS
-            if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS) {
-                txo.slpTransactionDetails.tokenIdHex = txo.txid;
-            }
-
-            // apply initial SLP judgement to the UTXO (based on OP_RETURN
-            // parsing ONLY! Still need to validate the DAG for possible tokens and batons!)
-            if (txo.slpTransactionDetails.transactionType === SlpTransactionType.GENESIS ||
-                txo.slpTransactionDetails.transactionType === SlpTransactionType.MINT) {
-                if (txo.slpTransactionDetails.containsBaton && txo.slpTransactionDetails.batonVout === txo.vout) {
-                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_BATON;
-                } else if (txo.vout === 1 && txo.slpTransactionDetails.genesisOrMintQuantity!.isGreaterThan(0)) {
-                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
-                    txo.slpUtxoJudgementAmount = ( txo.slpTransactionDetails.genesisOrMintQuantity as BigNumber);
-                } else {
-                    txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-                }
-            } else if (txo.slpTransactionDetails.transactionType === SlpTransactionType.SEND &&
-                txo.slpTransactionDetails.sendOutputs) {
-                if (txo.vout > 0 && txo.vout < txo.slpTransactionDetails.sendOutputs.length) {
-                    txo.slpUtxoJudgement = SlpUtxoJudgement.SLP_TOKEN;
-                    txo.slpUtxoJudgementAmount = txo.slpTransactionDetails.sendOutputs[txo.vout];
-                } else {
-                    txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-                }
-            } else {
-                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-            }
-        } catch (e) {
-            if (e.message.includes("Unsupported token type")) {
-                txo.slpUtxoJudgement = SlpUtxoJudgement.UNSUPPORTED_TYPE;
-            } else {
-                txo.slpUtxoJudgement = SlpUtxoJudgement.NOT_SLP;
-            }
-        }
-    }
-
-    private async applyFinalSlpJudgement(asyncSlpValidator: SlpValidator, utxos: SlpAddressUtxoResult[]) {
-
-        const validSLPTx: string[] = await asyncSlpValidator.validateSlpTransactions([
+    private async applyFinalSlpJudgement(utxos: SlpAddressUtxoResult[], network: INetwork) {
+        const validSLPTx: string[] = await network.validateSlpTransactions([
             ...new Set(utxos.filter((txOut) => {
                 if (txOut.slpTransactionDetails &&
                     txOut.slpUtxoJudgement !== SlpUtxoJudgement.UNKNOWN &&
@@ -1332,9 +1335,9 @@ export class Slp {
 
         // function for determination of NFT1 parent ID
         const getNftParentId = async (tokenIdHex: string) => {
-            const txnhex = (await asyncSlpValidator.getRawTransactions([tokenIdHex]))[0];
+            const txnhex = (await network.getRawTransactions([tokenIdHex]))[0];
             const tx = Primatives.Transaction.parseFromBuffer(Buffer.from(txnhex, "hex"));
-            const nftBurnTxnHex = (await asyncSlpValidator.getRawTransactions([tx.inputs[0].previousTxHash]))[0];
+            const nftBurnTxnHex = (await network.getRawTransactions([tx.inputs[0].previousTxHash]))[0];
             const nftBurnTxn = Primatives.Transaction.parseFromBuffer(Buffer.from(nftBurnTxnHex, "hex"));
             const slp = new Slp(this.BITBOX);
             const nftBurnSlp = slp.parseSlpOutputScript(Buffer.from(nftBurnTxn.outputs[0].scriptPubKey));

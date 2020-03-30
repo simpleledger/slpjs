@@ -3,51 +3,48 @@ import * as bchaddr from "bchaddrjs-slp";
 import BigNumber from "bignumber.js";
 import { BITBOX } from "bitbox-sdk";
 import { AddressDetailsResult, AddressUtxoResult,
-    TxnDetailsResult } from "bitcoin-com-rest";
+    TxnDetailsResult, utxo } from "bitcoin-com-rest";
 import * as Bitcore from "bitcore-lib-cash";
+import { GrpcClient, Transaction } from "grpc-bchrpc-web";
 import * as _ from "lodash";
 import { INetwork, logger, Primatives,
-    SlpAddressUtxoResult, SlpBalancesResult, SlpTransactionDetails,
-    SlpTransactionType, SlpVersionType } from "../index";
+    SlpAddressUtxoResult, SlpBalancesResult,
+    SlpTransactionDetails, SlpTransactionType } from "../index";
 import { Slp, SlpValidator } from "./slp";
 import { TransactionHelpers } from "./transactionhelpers";
 import { Utils } from "./utils";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export class BitboxNetwork implements INetwork {
+export class BchdNetwork implements INetwork {
     public BITBOX: BITBOX;
     public slp: Slp;
-    public validator?: SlpValidator;
+    public validator: SlpValidator;
     public txnHelpers: TransactionHelpers;
     public logger: logger = { log: (s: string) => null };
+    public client: GrpcClient;
 
-    constructor(BITBOX: BITBOX, validator?: SlpValidator, logger?: logger) {
+    constructor({ BITBOX, validator, logger, client }:
+        { BITBOX: BITBOX, client: GrpcClient, validator: SlpValidator, logger?: logger }) {
         if (!BITBOX) {
             throw Error("Must provide BITBOX instance to class constructor.");
+        }
+        if (!client || !(client instanceof GrpcClient)) {
+            throw Error("Must provide instance of GrpClient to class constructor.");
         }
         if (logger) {
             this.logger = logger;
         }
-        if (validator) {
-            this.validator = validator;
-        }
+        this.validator = validator;
         this.BITBOX = BITBOX;
+        this.client = client;
         this.slp = new Slp(BITBOX);
         this.txnHelpers = new TransactionHelpers(this.slp);
     }
 
-    public async getTokenInformation(txid: string, decimalConversion= false): Promise<SlpTransactionDetails|any> {
-        let res: string[];
-        try {
-            res = (await this.BITBOX.RawTransactions.getRawTransaction([txid]) as string[]|any);
-        } catch (e) {
-            throw Error(e.error);
-        }
-        if (!Array.isArray(res) || res.length !== 1) {
-            throw Error("BITBOX response error for 'RawTransactions.getRawTransaction'");
-        }
-        const txhex = res[0];
+    public async getTokenInformation(txid: string, decimalConversion = false): Promise<SlpTransactionDetails> {
+        let txhex: Buffer;
+        txhex = Buffer.from((await this.client.getRawTransaction({hash: txid, reversedHashOrder: true })).getTransaction_asU8());
         const txn: Bitcore.Transaction = new Bitcore.Transaction(txhex);
         const slpMsg = this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
         if (decimalConversion) {
@@ -60,44 +57,41 @@ export class BitboxNetwork implements INetwork {
         return slpMsg;
     }
 
-    // WARNING: this method is limited to 60 transactions per minute
-    public async getTransactionDetails(txid: string, decimalConversion = false) {
-        const txn: any = (await this.BITBOX.Transaction.details([ txid ]) as TxnDetailsResult[])[0];
-        // add slp address format to transaction details
-        txn.vin.forEach((input: any) => {
-            try { input.slpAddress = Utils.toSlpAddress(input.legacyAddress); } catch (_) {}
-        });
-        txn.vout.forEach((output: any) => {
-            try { output.scriptPubKey.slpAddrs = [ Utils.toSlpAddress(output.scriptPubKey.cashAddrs[0]) ]; } catch (_) {}
-        });
-        // add token information to transaction details
-        txn.tokenInfo = await this.getTokenInformation(txid, decimalConversion);
-        txn.tokenIsValid = this.validator ?
-            await this.validator.isValidSlpTxid(txid, null, null, this.logger) :
-            await this.isValidSlpTxid(txid);
-
-        // add tokenNftParentId if token is a NFT child
-        if (txn.tokenIsValid && txn.tokenInfo.versionType === SlpVersionType.TokenVersionType1_NFT_Child) {
-            txn.tokenNftParentId = await this.getNftParentId(txn.tokenInfo.tokenIdHex);
-        }
-
-        return txn;
+    public getTransactionDetails(txid: string, decimalConversion?: boolean | undefined): Promise<any> {
+        throw new Error("Method not implemented.");
     }
 
-    public async getUtxos(address: string) {
+    public async getUtxos(address: string): Promise<AddressUtxoResult> {
         // must be a cash or legacy addr
-        let res: AddressUtxoResult;
         if (!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) {
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         }
-        res = (await this.BITBOX.Address.utxo([address]) as AddressUtxoResult[])[0];
-        return res;
+        const res = (await this.client.getAddressUtxos({address, includeMempool: true})).getOutputsList();
+        const scriptPubKey = Buffer.from(res[0].getPubkeyScript_asU8()).toString("hex");
+        const cashAddress = bchaddr.toCashAddress(address);
+        const legacyAddress = bchaddr.toLegacyAddress(address);
+        let utxos: utxo[] = [];
+        if (res.length > 0) {
+            utxos = res.map((txo) => {
+                return {
+                    satoshis: txo.getValue(),
+                    height: txo.getBlockHeight(),
+                    confirmations: null,
+                    txid: Buffer.from(txo.getOutpoint()!.getHash_asU8().reverse()).toString("hex"),
+                    vout: txo.getOutpoint()!.getIndex(),
+                    amount: txo.getValue() / 10 ** 8,
+                } as any as utxo;
+            });
+        }
+        return {
+            cashAddress,
+            legacyAddress,
+            scriptPubKey,
+            utxos,
+        };
     }
 
-    public async getAllSlpBalancesAndUtxos(address: string|string[]): Promise<SlpBalancesResult | Array<{
-        address: string;
-        result: SlpBalancesResult;
-    }>> {
+    public async getAllSlpBalancesAndUtxos(address: string | string[]): Promise<SlpBalancesResult | Array<{ address: string; result: SlpBalancesResult; }>> {
         if (typeof address === "string") {
             address = bchaddr.toCashAddress(address);
             const result = await this.getUtxoWithTxDetails(address);
@@ -105,9 +99,9 @@ export class BitboxNetwork implements INetwork {
         }
         address = address.map((a) => bchaddr.toCashAddress(a));
         const results: Array<{ address: string, result: SlpBalancesResult }> = [];
-        for (let i = 0; i < address.length; i++) {
-            const utxos = await this.getUtxoWithTxDetails(address[i]);
-            results.push({ address: Utils.toSlpAddress(address[i]), result: await this.processUtxosForSlp(utxos) });
+        for (const addr of address) {
+            const utxos = await this.getUtxoWithTxDetails(addr);
+            results.push({ address: Utils.toSlpAddress(addr), result: await this.processUtxosForSlp(utxos) });
         }
         return results;
     }
@@ -196,21 +190,21 @@ export class BitboxNetwork implements INetwork {
         return await this.sendTx(txHex);
     }
 
-    public async getUtxoWithRetry(address: string, retries = 40) {
+    public async getUtxoWithRetry(address: string, retries = 40): Promise<AddressUtxoResult> {
         let result: AddressUtxoResult | undefined;
         let count = 0;
         while (result === undefined) {
             result = await this.getUtxos(address);
             count++;
             if (count > retries) {
-                throw new Error("this.BITBOX.Address.utxo endpoint experienced a problem");
+                throw new Error("BCHD endpoint experienced a problem");
             }
             await sleep(250);
         }
         return result;
     }
 
-    public async getUtxoWithTxDetails(address: string) {
+    public async getUtxoWithTxDetails(address: string): Promise<SlpAddressUtxoResult[]> {
         let utxos = Utils.mapToSlpAddressUtxoResultArray(await this.getUtxoWithRetry(address));
         const txIds = utxos.map((i: { txid: string; }) => i.txid);
         if (txIds.length === 0) {
@@ -226,17 +220,65 @@ export class BitboxNetwork implements INetwork {
         return utxos;
     }
 
-    public async getTransactionDetailsWithRetry(txids: string[], retries = 40) {
-        let result!: TxnDetailsResult[];
+//   export interface TxnDetailsResult {
+//     txid: string
+//     version: number
+//     locktime: number
+//     vin: object[]
+//     vout: object[]
+//     blockhash: string
+//     blockheight: number
+//     confirmations: number
+//     time: number
+//     blocktime: number
+//     isCoinBase: boolean
+//     valueOut: number
+//     size: number
+//   }
+
+    public async getTransactionDetailsWithRetry(txids: string[], retries = 40): Promise<TxnDetailsResult[]|undefined> {
+        const results: Transaction[] = []; // TxnDetailsResult[] = [];
         let count = 0;
-        while (result === undefined) {
-            result = (await this.BITBOX.Transaction.details(txids) as TxnDetailsResult[]);
-            if (result) {
-                return result;
+        while (results.length !== txids.length) {
+            // result = (await this.BITBOX.Transaction.details(txids) as TxnDetailsResult[]);
+            for (const txid of txids) {
+                const res = (await this.client.getTransaction({hash: txid, reversedHashOrder: true})).getTransaction();
+                if (res) {
+                    results.push(res);
+                }
+            }
+            if (results.length === txids.length) {
+                return results.map(res => { return {
+                        txid: Buffer.from(res.getHash_asU8().reverse()).toString("hex"),
+                        version: res.getVersion(),
+                        locktime: res.getLockTime(),
+                        vin: res.getInputsList().map(i => {
+                            return {
+                                n: i.getIndex(),
+                                sequence: i.getSequence(),
+                                coinbase: null,
+                            }}),
+                        vout: res.getOutputsList().map(o => {
+                            return {
+                                value: o.getValue(),
+                                n: o.getIndex(),
+                                scriptPubKey: {
+                                    hex: Buffer.from(o.getPubkeyScript_asU8()).toString("hex"),
+                                    asm: o.getDisassembledScript(),
+                                }
+                            }}),
+                        time: res.getTimestamp(),
+                        blockhash: Buffer.from(res.getBlockHash_asU8().reverse()).toString("hex"),
+                        blockheight: res.getBlockHeight(),
+                        isCoinBase: false,
+                        valueOut: res.getOutputsList().reduce((p, o) => p += o.getValue(), 0),
+                        size: res.getSize(),
+                    } as TxnDetailsResult
+                });
             }
             count++;
             if (count > retries) {
-                throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
+                throw new Error("gRPC client.getTransaction endpoint experienced a problem");
             }
             await sleep(250);
         }
@@ -247,31 +289,34 @@ export class BitboxNetwork implements INetwork {
         if (!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) {
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         }
-        let result: AddressDetailsResult[] | undefined;
-        let count = 0;
-        while (result === undefined) {
-            result = (await this.BITBOX.Address.details([address]) as AddressDetailsResult[]);
-            if (result) {
-                return result[0];
-            }
-            count++;
-            if (count > retries) {
-                throw new Error("this.BITBOX.Address.details endpoint experienced a problem");
-            }
-            await sleep(250);
-        }
+        const utxos = (await this.client.getAddressUtxos({ address: address, includeMempool: false })).getOutputsList();
+        const balance = utxos.reduce((p, o) => o.getValue(), 0);
+        const utxosMempool = (await this.client.getAddressUtxos({ address: address, includeMempool: true })).getOutputsList();
+        const mempoolBalance = utxosMempool.reduce((p, o) => o.getValue(), 0);
+        return {
+            balance,
+            balanceSat: balance * 10 ^ 8,
+            totalReceived: null,
+            totalReceivedSat: null,
+            totalSent: null,
+            totalSentSat: null,
+            unconfirmedBalance: mempoolBalance - balance,
+            unconfirmedBalanceSat: mempoolBalance * 10 ^ 8 - balance * 10 ^ 8,
+            unconfirmedTxApperances: null,
+            txApperances: null,
+            transactions: null,
+            legacyAddress: bchaddr.toLegacyAddress(address),
+            cashAddress: bchaddr.toCashAddress(address),
+            slpAddress: bchaddr.toSlpAddress(address),
+        } as any as AddressDetailsResult;
     }
 
     public async sendTx(hex: string): Promise<string> {
-        const res = await this.BITBOX.RawTransactions.sendRawTransaction([ hex ]as any);
-        // console.log(res);
-        if (typeof res === "object") {
-            return (res as string[])[0];
-        }
-        return res;
+        const res = await this.client.submitTransaction({ txnHex: hex });
+        return Buffer.from(res.getHash_asU8().reverse()).toString("hex");
     }
 
-    public async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function) {
+    public async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function): Promise<void> {
         let utxo: AddressUtxoResult | undefined;
         // must be a cash or legacy addr
         if (!bchaddr.isCashAddress(paymentAddress) && !bchaddr.isLegacyAddress(paymentAddress)) {
@@ -291,64 +336,28 @@ export class BitboxNetwork implements INetwork {
         onPaymentCB();
     }
 
-    public async getRawTransactions(txids: string[]): Promise<string[]> {
-        if (this.validator && this.validator.getRawTransactions) {
-            return await this.validator.getRawTransactions(txids);
-        }
-        return await this.BITBOX.RawTransactions.getRawTransaction(txids) as any[];
-    }
-
     public async processUtxosForSlp(utxos: SlpAddressUtxoResult[]): Promise<SlpBalancesResult> {
         return await this.slp.processUtxosForSlpAbstract(utxos, this);
     }
 
+    public async getRawTransactions(txids: string[]): Promise<string[]> {
+        // if (this.validator && this.validator.getRawTransactions) {
+        //     return await this.validator.getRawTransactions(txids);
+        // }
+        const getTxnHex = async (txid: string) => {
+            return Buffer.from((await this.client
+                                .getRawTransaction({ hash: txid, reversedHashOrder: true }))
+                                .getTransaction_asU8()).toString("hex");
+        };
+        return await Promise.all(txids.map((txid) => getTxnHex(txid)));
+    }
+
     public async isValidSlpTxid(txid: string): Promise<boolean> {
-        if (this.validator) {
-            return await this.validator.isValidSlpTxid(txid, null, null, this.logger);
-        }
-        // WARNING: the following method is limited to 60 transactions per minute
-        const validatorUrl = this.setRemoteValidatorUrl();
-        this.logger.log("SLPJS Validating (remote: " + validatorUrl + "): " + txid);
-        const result = await Axios({
-            method: "post",
-            url: validatorUrl,
-            data: {
-                txids: [ txid ],
-            },
-        });
-        let res = false;
-        if (result && result.data) {
-           res = (result.data as Array<{ txid: string, valid: boolean }>).filter((i) => i.valid).length > 0 ? true : false;
-        }
-        this.logger.log("SLPJS Validator Result: " + res + " (remote: " + validatorUrl + "): " + txid);
-        return res;
+        return await this.validator.isValidSlpTxid(txid, null, null, this.logger);
     }
 
     public async validateSlpTransactions(txids: string[]): Promise<string[]> {
-        if (this.validator) {
-            return await this.validator.validateSlpTransactions(txids);
-        }
-        const validatorUrl = this.setRemoteValidatorUrl();
-
-        const promises = _.chunk(txids, 20).map((ids) => Axios({
-            method: "post",
-            url: validatorUrl,
-            data: {
-                txids: ids,
-            },
-        }));
-        const results = await Axios.all(promises);
-        const result = { data: [] };
-        results.forEach((res) => {
-            if (res.data) {
-                result.data = result.data.concat(res.data);
-            }
-        });
-        if (result && result.data) {
-            return (result.data as Array<{ txid: string, valid: boolean }>)
-                    .filter((i) => i.valid).map((i) => i.txid);
-        }
-        return [];
+        return await this.validator.validateSlpTransactions(txids);
     }
 
     public async getNftParentId(tokenIdHex: string) {
@@ -363,12 +372,5 @@ export class BitboxNetwork implements INetwork {
         } else {
             return nftBurnSlp.tokenIdHex;
         }
-    }
-
-    private setRemoteValidatorUrl() {
-        let validatorUrl = this.BITBOX.restURL.replace("v1", "v2");
-        validatorUrl = validatorUrl.concat("/slp/validateTxid");
-        validatorUrl = validatorUrl.replace("//slp", "/slp");
-        return validatorUrl;
     }
 }

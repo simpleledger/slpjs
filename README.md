@@ -835,6 +835,18 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.25.0
+- Make bitcore-lib-cash a peer dependency
+- Breaking change: processUtxosForSlpAbstract now has getRawTransaction method parameter
+- Add TrustedValidator class for remote validation
+- Add BchdNetwork class, as an alternative to BitboxNetwork class
+
+### 0.24.3
+- Include extra baton/receiver sats in mint/genesis change calculation
+
+### 0.24.0
+- breaking change: use destructured parameters in txn helpers
+- Truncate all decimals in satoshis value
 
 ### 0.23.1
 - Update retrieveRawTransaction method in slp validator
