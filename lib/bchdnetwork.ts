@@ -66,17 +66,27 @@ export class BchdNetwork implements INetwork {
         if (!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) {
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         }
-        const res = (await this.client.getAddressUtxos({address, includeMempool: true})).getOutputsList();
-        const scriptPubKey = Buffer.from(res[0].getPubkeyScript_asU8()).toString("hex");
         const cashAddress = bchaddr.toCashAddress(address);
         const legacyAddress = bchaddr.toLegacyAddress(address);
+        const res = (await this.client.getAddressUtxos({address, includeMempool: true})).getOutputsList();
+        if (res.length === 0) {
+            return {
+                cashAddress,
+                legacyAddress,
+                scriptPubKey: null,
+                utxos: [],
+            } as any as AddressUtxoResult;
+        }
+        const scriptPubKey = Buffer.from(res[0].getPubkeyScript_asU8()).toString("hex");
+
+        const bestHeight = (await this.client.getBlockchainInfo()).getBestHeight();
         let utxos: utxo[] = [];
         if (res.length > 0) {
             utxos = res.map((txo) => {
                 return {
                     satoshis: txo.getValue(),
-                    height: txo.getBlockHeight(),
-                    confirmations: null,
+                    height: txo.getBlockHeight() < 2147483647 ? txo.getBlockHeight() : -1,
+                    confirmations: txo.getBlockHeight() < 2147483647 ? bestHeight - txo.getBlockHeight() + 1 : null,
                     txid: Buffer.from(txo.getOutpoint()!.getHash_asU8().reverse()).toString("hex"),
                     vout: txo.getOutpoint()!.getIndex(),
                     amount: txo.getValue() / 10 ** 8,
@@ -91,7 +101,8 @@ export class BchdNetwork implements INetwork {
         };
     }
 
-    public async getAllSlpBalancesAndUtxos(address: string | string[]): Promise<SlpBalancesResult | Array<{ address: string; result: SlpBalancesResult; }>> {
+    public async getAllSlpBalancesAndUtxos(address: string | string[])
+    : Promise<SlpBalancesResult | Array<{ address: string; result: SlpBalancesResult; }>> {
         if (typeof address === "string") {
             address = bchaddr.toCashAddress(address);
             const result = await this.getUtxoWithTxDetails(address);
@@ -191,21 +202,12 @@ export class BchdNetwork implements INetwork {
     }
 
     public async getUtxoWithRetry(address: string, retries = 40): Promise<AddressUtxoResult> {
-        let result: AddressUtxoResult | undefined;
-        let count = 0;
-        while (result === undefined) {
-            result = await this.getUtxos(address);
-            count++;
-            if (count > retries) {
-                throw new Error("BCHD endpoint experienced a problem");
-            }
-            await sleep(250);
-        }
-        return result;
+        return await this.getUtxos(address);
     }
 
     public async getUtxoWithTxDetails(address: string): Promise<SlpAddressUtxoResult[]> {
-        let utxos = Utils.mapToSlpAddressUtxoResultArray(await this.getUtxoWithRetry(address));
+        const res = await this.getUtxos(address);
+        let utxos = Utils.mapToSlpAddressUtxoResultArray(res);
         const txIds = utxos.map((i: { txid: string; }) => i.txid);
         if (txIds.length === 0) {
             return [];
@@ -295,13 +297,13 @@ export class BchdNetwork implements INetwork {
         const mempoolBalance = utxosMempool.reduce((p, o) => o.getValue(), 0);
         return {
             balance,
-            balanceSat: balance * 10 ^ 8,
+            balanceSat: balance * 10 ** 8,
             totalReceived: null,
             totalReceivedSat: null,
             totalSent: null,
             totalSentSat: null,
             unconfirmedBalance: mempoolBalance - balance,
-            unconfirmedBalanceSat: mempoolBalance * 10 ^ 8 - balance * 10 ^ 8,
+            unconfirmedBalanceSat: mempoolBalance * 10 ** 8 - balance * 10 ** 8,
             unconfirmedTxApperances: null,
             txApperances: null,
             transactions: null,
@@ -341,9 +343,9 @@ export class BchdNetwork implements INetwork {
     }
 
     public async getRawTransactions(txids: string[]): Promise<string[]> {
-        // if (this.validator && this.validator.getRawTransactions) {
-        //     return await this.validator.getRawTransactions(txids);
-        // }
+        if (this.validator && this.validator.getRawTransactions) {
+            return await this.validator.getRawTransactions(txids);
+        }
         const getTxnHex = async (txid: string) => {
             return Buffer.from((await this.client
                                 .getRawTransaction({ hash: txid, reversedHashOrder: true }))
