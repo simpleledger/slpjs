@@ -835,6 +835,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.25.2
+- Update typings for bitcore-cash-lib
+
 ### 0.25.1
 - Update typings for BchdNetwork
 

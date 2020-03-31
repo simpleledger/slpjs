@@ -55,6 +55,7 @@ declare module "bitcore-lib-cash" {
     export class Transaction {
         inputs: Input[];
         outputs: Output[];
+        toObject(): any;
         readonly id: string;
         readonly hash: string;
         nid: string;
@@ -119,6 +120,7 @@ declare module "bitcore-lib-cash" {
     }
 
     export interface Output {
+        satoshis: number;
         _scriptBuffer: Buffer;
         readonly script: any;
     }
@@ -131,8 +133,22 @@ declare module "bitcore-lib-cash" {
     }
 
     export class Script {
-        static fromAddress(arg0: string): any;
-        constructor(any: any);
+        fromBuffer(buffer: Buffer): Script;
+        toBuffer(): Buffer;
+        toAddress(network: any): Address;
+        fromAddress(address: Address): Script;
+        fromString(hex: string): Script;
+        fromASM(asm: string): string;
+        toASM(): string;
+        fromHex(hex: string): string
+        toHex(): string;
+        chunks: Chunk[];
+    }
+
+    export interface Chunk {
+        buf: Buffer;
+        len: number;
+        opcodenum: number;
     }
 
     export interface Util {
@@ -161,9 +177,11 @@ declare module "bitcore-lib-cash" {
     export class Input {
         output: any;
         prevTxId: any;
+        script: Script;
         outputIndex: number;
         getSignatures(txn: Transaction, privateKey: PrivateKey, input_index: number, sigHashType: number): any;
         setScript(script: Script): void;
+        _scriptBuffer: Buffer;
     }
 }
 
