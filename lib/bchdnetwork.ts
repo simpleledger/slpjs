@@ -5,7 +5,8 @@ import { BITBOX } from "bitbox-sdk";
 import { AddressDetailsResult, AddressUtxoResult,
     TxnDetailsResult, utxo } from "bitcoin-com-rest";
 import * as Bitcore from "bitcore-lib-cash";
-import { GrpcClient, Transaction } from "grpc-bchrpc-web";
+import { GrpcClient as GrpcClientNode, Transaction } from "grpc-bchrpc-node";
+import { GrpcClient as GrpcClientWeb } from "grpc-bchrpc-web";
 import * as _ from "lodash";
 import { INetwork, logger, Primatives,
     SlpAddressUtxoResult, SlpBalancesResult,
@@ -22,14 +23,14 @@ export class BchdNetwork implements INetwork {
     public validator: SlpValidator;
     public txnHelpers: TransactionHelpers;
     public logger: logger = { log: (s: string) => null };
-    public client: GrpcClient;
+    public client: GrpcClientWeb|GrpcClientNode;
 
     constructor({ BITBOX, validator, logger, client }:
-        { BITBOX: BITBOX, client: GrpcClient, validator: SlpValidator, logger?: logger }) {
+        { BITBOX: BITBOX, client: GrpcClientWeb|GrpcClientNode, validator: SlpValidator, logger?: logger }) {
         if (!BITBOX) {
             throw Error("Must provide BITBOX instance to class constructor.");
         }
-        if (!client || !(client instanceof GrpcClient)) {
+        if (!client || !(client instanceof GrpcClientWeb || client instanceof GrpcClientNode)) {
             throw Error("Must provide instance of GrpClient to class constructor.");
         }
         if (logger) {
@@ -82,7 +83,7 @@ export class BchdNetwork implements INetwork {
         const bestHeight = (await this.client.getBlockchainInfo()).getBestHeight();
         let utxos: utxo[] = [];
         if (res.length > 0) {
-            utxos = res.map((txo) => {
+            utxos = res.map((txo: { getValue: () => number; getBlockHeight: () => number; getOutpoint: () => any; }) => {
                 return {
                     satoshis: txo.getValue(),
                     height: txo.getBlockHeight() < 2147483647 ? txo.getBlockHeight() : -1,
@@ -244,23 +245,25 @@ export class BchdNetwork implements INetwork {
         while (results.length !== txids.length) {
             // result = (await this.BITBOX.Transaction.details(txids) as TxnDetailsResult[]);
             for (const txid of txids) {
-                const res = (await this.client.getTransaction({hash: txid, reversedHashOrder: true})).getTransaction();
+                const res = (await this.client
+                                            .getTransaction({hash: txid, reversedHashOrder: true}))
+                                            .getTransaction();
                 if (res) {
                     results.push(res);
                 }
             }
             if (results.length === txids.length) {
-                return results.map(res => { return {
+                return results.map((res: any) => { return {
                         txid: Buffer.from(res.getHash_asU8().reverse()).toString("hex"),
                         version: res.getVersion(),
                         locktime: res.getLockTime(),
-                        vin: res.getInputsList().map(i => {
+                        vin: res.getInputsList().map((i: { getIndex: () => any; getSequence: () => any; }) => {
                             return {
                                 n: i.getIndex(),
                                 sequence: i.getSequence(),
                                 coinbase: null,
                             }}),
-                        vout: res.getOutputsList().map(o => {
+                        vout: res.getOutputsList().map((o: { getValue: () => any; getIndex: () => any; getPubkeyScript_asU8: () => ArrayBuffer | SharedArrayBuffer; getDisassembledScript: () => any; }) => {
                             return {
                                 value: o.getValue(),
                                 n: o.getIndex(),
@@ -273,7 +276,7 @@ export class BchdNetwork implements INetwork {
                         blockhash: Buffer.from(res.getBlockHash_asU8().reverse()).toString("hex"),
                         blockheight: res.getBlockHeight(),
                         isCoinBase: false,
-                        valueOut: res.getOutputsList().reduce((p, o) => p += o.getValue(), 0),
+                        valueOut: res.getOutputsList().reduce((p: any, o: { getValue: () => any; }) => p += o.getValue(), 0),
                         size: res.getSize(),
                     } as TxnDetailsResult
                 });
@@ -292,9 +295,9 @@ export class BchdNetwork implements INetwork {
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         }
         const utxos = (await this.client.getAddressUtxos({ address: address, includeMempool: false })).getOutputsList();
-        const balance = utxos.reduce((p, o) => o.getValue(), 0);
+        const balance = utxos.reduce((p: any, o: { getValue: () => any; }) => o.getValue(), 0);
         const utxosMempool = (await this.client.getAddressUtxos({ address: address, includeMempool: true })).getOutputsList();
-        const mempoolBalance = utxosMempool.reduce((p, o) => o.getValue(), 0);
+        const mempoolBalance = utxosMempool.reduce((p: any, o: { getValue: () => any; }) => o.getValue(), 0);
         return {
             balance,
             balanceSat: balance * 10 ** 8,

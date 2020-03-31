@@ -835,6 +835,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.25.1
+- Update typings for BchdNetwork
+
 ### 0.25.0
 - Make bitcore-lib-cash a peer dependency to prevent conflicting version issues
 - Breaking change: processUtxosForSlpAbstract now has getRawTransaction method parameter
