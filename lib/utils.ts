@@ -128,30 +128,6 @@ export class Utils {
         return (new BigNumber(amount.readUInt32BE(0).toString())).multipliedBy(2 ** 32).plus(amount.readUInt32BE(4).toString());
     }
 
-    // This is for encoding Script in scriptPubKey OP_RETURN scripts, where BIP62.3 does not apply
-    public static encodeScript(script: (number|number[])[]) {
-        const bufferSize = <number> script.reduce((acc: number, cur) => {
-            if (Array.isArray(cur)) { return acc + cur.length; }
-            else { return acc + 1; }
-        }, 0);
-
-        const buffer = Buffer.allocUnsafe(bufferSize);
-        let offset = 0;
-        script.forEach((scriptItem) => {
-            if (Array.isArray(scriptItem)) {
-                scriptItem.forEach((item) => {
-                    buffer.writeUInt8(item, offset);
-                    offset += 1;
-                });
-            } else {
-                buffer.writeUInt8(scriptItem, offset);
-                offset += 1;
-            }
-        });
-
-        return buffer;
-    }
-
     public static buildSlpUri(address: string, amountBch?: number, amountToken?: number, tokenId?: string): string {
         let uri = "";
         if (!this.isSlpAddress(address)) {
