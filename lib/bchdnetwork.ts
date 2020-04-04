@@ -6,7 +6,6 @@ import { AddressDetailsResult, AddressUtxoResult,
     TxnDetailsResult, utxo } from "bitcoin-com-rest";
 import * as Bitcore from "bitcore-lib-cash";
 import { GrpcClient as GrpcClientNode, Transaction } from "grpc-bchrpc-node";
-import { GrpcClient as GrpcClientWeb } from "grpc-bchrpc-web";
 import * as _ from "lodash";
 import { INetwork, logger, Primatives,
     SlpAddressUtxoResult, SlpBalancesResult,
@@ -23,14 +22,14 @@ export class BchdNetwork implements INetwork {
     public validator: SlpValidator;
     public txnHelpers: TransactionHelpers;
     public logger: logger = { log: (s: string) => null };
-    public client: GrpcClientWeb|GrpcClientNode;
+    public client: GrpcClientNode;
 
     constructor({ BITBOX, validator, logger, client }:
-        { BITBOX: BITBOX, client: GrpcClientWeb|GrpcClientNode, validator: SlpValidator, logger?: logger }) {
+        { BITBOX: BITBOX, client: GrpcClientNode, validator: SlpValidator, logger?: logger }) {
         if (!BITBOX) {
             throw Error("Must provide BITBOX instance to class constructor.");
         }
-        if (!client || !(client instanceof GrpcClientWeb || client instanceof GrpcClientNode)) {
+        if (!client || !(client instanceof GrpcClientNode)) {
             throw Error("Must provide instance of GrpClient to class constructor.");
         }
         if (logger) {
