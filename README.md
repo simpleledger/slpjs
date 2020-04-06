@@ -33,8 +33,10 @@ Table of Contents
 
 # Installation
 
+NOTE: Using SLPJS requires bitbox-sdk and bitcore-lib-cash to also be installed.
+
 #### For node.js
-`npm install slpjs`
+`npm install slpjs bitbox-sdk bitcore-lib-cash`
 
 #### For browser
 ```<script src='https://unpkg.com/slpjs'></script>```
@@ -834,6 +836,10 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.25.3
+- Typings update for bitcore-cash-lib
+- Update mocha version and settings
 
 ### 0.25.2
 - Update typings for bitcore-cash-lib

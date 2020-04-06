@@ -89,6 +89,7 @@ declare module "bitcore-lib-cash" {
             inspect(): string;
             toObject(): this;
             toString(): string;
+            toBuffer(): Buffer;
         }
     }
 
@@ -133,11 +134,13 @@ declare module "bitcore-lib-cash" {
     }
 
     export class Script {
+        static fromAddress(address: Address|string): Script;
+        constructor(script: Buffer);
         fromBuffer(buffer: Buffer): Script;
         toBuffer(): Buffer;
         toAddress(network: any): Address;
-        fromAddress(address: Address): Script;
         fromString(hex: string): Script;
+        toString(fmt?: string): string;
         fromASM(asm: string): string;
         toASM(): string;
         fromHex(hex: string): string

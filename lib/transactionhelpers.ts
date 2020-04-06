@@ -369,8 +369,8 @@ export class TransactionHelpers {
         // again, this is for bitcore-lib input sig generation
 
         txn.inputs[input_index].output = new Bitcore.Transaction.Output({
-            satoshis: input_satoshis, 
-            script: Bitcore.Script.fromAddress(Utils.toCashAddress(ecpair.getAddress())) 
+            satoshis: input_satoshis,
+            script: Bitcore.Script.fromAddress(Utils.toCashAddress(ecpair.getAddress())),
         });
 
         // Update input to be non-abstract type so we can get the p2pkh sign method
