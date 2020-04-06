@@ -837,6 +837,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.25.4/5
+- Typings fixes
+
 ### 0.25.3
 - Typings update for bitcore-cash-lib
 - Update mocha version and settings

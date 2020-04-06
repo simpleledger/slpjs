@@ -56,6 +56,7 @@ declare module "bitcore-lib-cash" {
         inputs: Input[];
         outputs: Output[];
         toObject(): any;
+        toBuffer(): Buffer;
         readonly id: string;
         readonly hash: string;
         nid: string;
@@ -140,7 +141,6 @@ declare module "bitcore-lib-cash" {
         toBuffer(): Buffer;
         toAddress(network: any): Address;
         fromString(hex: string): Script;
-        toString(fmt?: string): string;
         fromASM(asm: string): string;
         toASM(): string;
         fromHex(hex: string): string
@@ -175,7 +175,9 @@ declare module "bitcore-lib-cash" {
         function get(args: string | number | Network, keys: string | string[]): Network;
     }
 
-    export class Address {}
+    export class Address {
+        toString(fmt?: string): string;
+    }
 
     export class Input {
         output: any;

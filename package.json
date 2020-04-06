@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.25.3",
+  "version": "0.25.5",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -41,7 +41,6 @@
     "bitcoin-rpc-promise": "^2.1.6",
     "bitcore-lib-cash": "^9.0.0",
     "browserify": "^16.5.0",
-    "grpc-bchrpc-node": "0.10.0",
     "mkdirp": "^0.5.1",
     "mocha": "^7.1.1",
     "nyc": "^15.0.1",
@@ -68,7 +67,6 @@
     "bignumber.js": "^8.1.1",
     "crypto-js": "^4.0.0",
     "grpc-bchrpc-node": "0.10.0",
-    "grpc-bchrpc-web": "^0.10.5",
     "lodash": "^4.17.15"
   }
 }
