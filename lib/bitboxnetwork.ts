@@ -57,6 +57,9 @@ export class BitboxNetwork implements INetwork {
                 slpMsg.sendOutputs!.map((o) => o.dividedBy(10 ** slpMsg.decimals));
             }
         }
+        if (SlpTransactionType.GENESIS === slpMsg.transactionType) {
+            slpMsg.tokenIdHex = txid;
+        }
         return slpMsg;
     }
 

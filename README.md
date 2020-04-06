@@ -837,6 +837,10 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.25.6
+- Update unit tests and examples for bchd based network
+- Patch missing tokenIdHex in getTokenInformation after recent refactoring
+
 ### 0.25.4/5
 - Typings fixes
 

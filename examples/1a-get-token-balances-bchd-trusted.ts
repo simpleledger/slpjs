@@ -11,14 +11,9 @@
  *
  * ************************************************************************************/
 
-import { grpc } from "@improbable-eng/grpc-web";
-import { NodeHttpTransport } from "@improbable-eng/grpc-web-node-http-transport";
-// Do this first, so that we can call this library from node.js evironment.
-grpc.setDefaultTransport(NodeHttpTransport());
-
 import * as BITBOXSDK from "bitbox-sdk";
 const BITBOX = new BITBOXSDK.BITBOX();
-import { GrpcClient } from "grpc-bchrpc-web";
+import { GrpcClient } from "grpc-bchrpc-node";
 import { BchdNetwork, SlpBalancesResult, TrustedValidator } from "../index";
 
 // MAINNET NETWORK
