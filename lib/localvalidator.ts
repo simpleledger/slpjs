@@ -170,7 +170,6 @@ export class LocalValidator implements SlpValidator {
         const txn: Bitcore.Transaction = new Bitcore.Transaction(this.cachedRawTransactions[txid]);
         let slpmsg: SlpTransactionDetails;
         try {
-            // @ts-ignore
             slpmsg = this.cachedValidations[txid].details = this.slp.parseSlpOutputScript(txn.outputs[0]._scriptBuffer);
             if (slpmsg.transactionType === SlpTransactionType.GENESIS) {
                 slpmsg.tokenIdHex = txid;

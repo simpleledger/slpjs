@@ -565,7 +565,6 @@ export class TransactionHelpers {
                 throw Error("Was not able to set input script for index="+s.index);
 
             // actually set the input's scriptSig property
-
             const script = new Bitcore.Script(bip62Encoded);
             txn.inputs[s.index].setScript(script);
          // console.log("scriptSig for index", s.input_index, ":", bip62Encoded.toString('hex'))

@@ -837,6 +837,10 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.26.0
+- Utilizing simpleledger/slp-mdm package, update associated unit tests
+- Update BigNumber library
+
 ### 0.25.6
 - Update unit tests and examples for bchd based network
 - Patch missing tokenIdHex in getTokenInformation after recent refactoring
