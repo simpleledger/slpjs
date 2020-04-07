@@ -14,7 +14,7 @@ import * as bitcore from "bitcore-lib-cash";
 export { bitcore };
 
 export interface logger {
-    log: (s: string)=>any;
+    log: (s: string) => any;
 }
 
 export enum SlpTransactionType {
@@ -74,23 +74,23 @@ export interface SlpBalancesResult {
 }
 
 export class SlpAddressUtxoResult {
-    txid!: string;
-    vout!: number;
-    scriptPubKey!: string;
-    amount!: number;
-    satoshis!: number;
-    value?: number;
-    height!: number;
-    confirmations!: number;
-    legacyAddress!: string;
-    cashAddress!: string;
-    wif!: string;
-    tx?: TxnDetailsDeep;
-    txBuf?: Buffer;
-    slpTransactionDetails!: SlpTransactionDetails;
-    slpUtxoJudgement: SlpUtxoJudgement = SlpUtxoJudgement.UNKNOWN;
-    slpUtxoJudgementAmount!: BigNumber;
-    nftParentId?: string;
+    public txid!: string;
+    public vout!: number;
+    public scriptPubKey!: string;
+    public amount!: number;
+    public satoshis!: number;
+    public value?: number;
+    public height!: number;
+    public confirmations!: number;
+    public legacyAddress!: string;
+    public cashAddress!: string;
+    public wif!: string;
+    public tx?: TxnDetailsDeep;
+    public txBuf?: Buffer;
+    public slpTransactionDetails!: SlpTransactionDetails;
+    public slpUtxoJudgement: SlpUtxoJudgement = SlpUtxoJudgement.UNKNOWN;
+    public slpUtxoJudgementAmount!: BigNumber;
+    public nftParentId?: string;
 }
 
 export interface utxo {
@@ -123,7 +123,7 @@ export interface Vin {
     scriptSig: ScriptSig;
     value: number;
     legacyAddress: string;
-    cashAddress: string 
+    cashAddress: string;
 }
 
 export interface ScriptSig {

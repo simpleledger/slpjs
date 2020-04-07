@@ -109,7 +109,7 @@ export interface configBuildRawBurnTx {
 }
 
 export interface SlpValidator {
-    getRawTransactions?: (txid: string[]) => Promise<string[]>;
+    getRawTransactions: (txid: string[]) => Promise<string[]>;
     isValidSlpTxid(txid: string, tokenIdFilter?: string|null,
                    tokenTypeFilter?: number|null, logger?: logger): Promise<boolean>;
     validateSlpTransactions(txids: string[]): Promise<string[]>;
@@ -1124,7 +1124,7 @@ export class Slp {
         return fee;
     }
 
-    public async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], network: INetwork): Promise<SlpBalancesResult> {
+    public async processUtxosForSlpAbstract(utxos: SlpAddressUtxoResult[], validator: SlpValidator): Promise<SlpBalancesResult> {
 
         // 1) parse SLP OP_RETURN and cast initial SLP judgement, based on OP_RETURN only.
         for (const txo of utxos) {
@@ -1134,7 +1134,7 @@ export class Slp {
                 const txn = Primatives.Transaction.parseFromBuffer(txo.txBuf);
                 slpMsgBuf = Buffer.from(txn.outputs[0].scriptPubKey);
             } else if (!txo.tx || !txo.tx.vout || !txo.tx.vout[0].n) {
-                const txn: string|Buffer = (await network.getRawTransactions([txo.txid]))[0];
+                const txn: string = (await validator.getRawTransactions([txo.txid]))[0];
                 let txnBuf;
                 if (typeof txn === "string") {
                     txnBuf = Buffer.from(txn, "hex");
@@ -1162,7 +1162,7 @@ export class Slp {
         }
 
         // 2) Cast final SLP judgement using the supplied async validator
-        await this.applyFinalSlpJudgement(utxos, network);
+        await this.applyFinalSlpJudgement(utxos, validator);
 
         // 3) Prepare results object
         const result: SlpBalancesResult = this.computeSlpBalances(utxos);
@@ -1310,8 +1310,8 @@ export class Slp {
         return result;
     }
 
-    private async applyFinalSlpJudgement(utxos: SlpAddressUtxoResult[], network: INetwork) {
-        const validSLPTx: string[] = await network.validateSlpTransactions([
+    private async applyFinalSlpJudgement(utxos: SlpAddressUtxoResult[], validator: SlpValidator) {
+        const validSLPTx: string[] = await validator.validateSlpTransactions([
             ...new Set(utxos.filter((txOut) => {
                 if (txOut.slpTransactionDetails &&
                     txOut.slpUtxoJudgement !== SlpUtxoJudgement.UNKNOWN &&
@@ -1323,7 +1323,7 @@ export class Slp {
             }).map((txOut) => txOut.txid)),
         ]);
 
-        utxos.forEach(utxo => {
+        utxos.forEach((utxo) => {
             if (!(validSLPTx.includes(utxo.txid))) {
                 if (utxo.slpUtxoJudgement === SlpUtxoJudgement.SLP_TOKEN) {
                     utxo.slpUtxoJudgement = SlpUtxoJudgement.INVALID_TOKEN_DAG;
@@ -1335,9 +1335,9 @@ export class Slp {
 
         // function for determination of NFT1 parent ID
         const getNftParentId = async (tokenIdHex: string) => {
-            const txnhex = (await network.getRawTransactions([tokenIdHex]))[0];
+            const txnhex = (await validator.getRawTransactions([tokenIdHex]))[0];
             const tx = Primatives.Transaction.parseFromBuffer(Buffer.from(txnhex, "hex"));
-            const nftBurnTxnHex = (await network.getRawTransactions([tx.inputs[0].previousTxHash]))[0];
+            const nftBurnTxnHex = (await validator.getRawTransactions([tx.inputs[0].previousTxHash]))[0];
             const nftBurnTxn = Primatives.Transaction.parseFromBuffer(Buffer.from(nftBurnTxnHex, "hex"));
             const slp = new Slp(this.BITBOX);
             const nftBurnSlp = slp.parseSlpOutputScript(Buffer.from(nftBurnTxn.outputs[0].scriptPubKey));

@@ -837,6 +837,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.27.0
+- Update slp.ts internals to accept validator instead of network
+
 ### 0.26.0
 - Utilizing simpleledger/slp-mdm package, update associated unit tests
 - Update BigNumber library

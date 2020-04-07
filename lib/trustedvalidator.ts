@@ -1,20 +1,22 @@
-import { logger } from "../index";
-import { SlpValidator } from "./slp";
-
 import axios, { AxiosRequestConfig } from "axios";
+import { GetRawTransactionsAsync, logger } from "../index";
 import { Crypto } from "./crypto";
+import { SlpValidator } from "./slp";
 
 interface Validation { validity: boolean|null; invalidReason: string|null; tokenIdHex?: string; tokenTypeHex?: number; }
 
 export class TrustedValidator implements SlpValidator {
+    public getRawTransactions: GetRawTransactionsAsync;
     public cachedValidations: { [txid: string]: Validation };
     public logger: logger = { log: (s: string) => null };
     public slpdbUrl: string;
 
-    constructor({slpdbUrl= "https://slpdb.fountainhead.cash", logger}: { slpdbUrl?: string; logger?: logger; }) {
+    constructor({slpdbUrl= "https://slpdb.fountainhead.cash", logger, getRawTransactions}:
+    { slpdbUrl?: string; logger?: logger; getRawTransactions: GetRawTransactionsAsync}) {
         if (logger) {
             this.logger = logger;
         }
+        this.getRawTransactions = getRawTransactions;
         this.slpdbUrl = slpdbUrl;
         this.cachedValidations = {};
     }
