@@ -56,6 +56,12 @@ export interface SlpTransactionDetails {
     sendOutputs?: BigNumber[]|null;
 }
 
+export interface SlpTxnDetailsResult extends TxnDetailsResult {
+    tokenInfo: SlpTransactionDetails;
+    tokenIsValid: boolean;
+    tokenNftParentId: string;
+}
+
 export interface SlpBalancesResult {
     satoshis_available_bch: number;
     satoshis_in_slp_baton: number;

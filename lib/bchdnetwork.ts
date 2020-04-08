@@ -8,7 +8,8 @@ import { GrpcClient, Transaction } from "grpc-bchrpc-node";
 import * as _ from "lodash";
 import { INetwork, logger, Primatives,
     SlpAddressUtxoResult, SlpBalancesResult,
-    SlpTransactionDetails, SlpTransactionType } from "../index";
+    SlpTransactionDetails, SlpTransactionType,
+    SlpTxnDetailsResult, SlpVersionType } from "../index";
 import { Slp, SlpValidator } from "./slp";
 import { TransactionHelpers } from "./transactionhelpers";
 import { Utils } from "./utils";
@@ -59,8 +60,12 @@ export class BchdNetwork implements INetwork {
         return slpMsg;
     }
 
-    public getTransactionDetails(txid: string, decimalConversion?: boolean | undefined): Promise<any> {
-        throw new Error("Method not implemented.");
+    public async getTransactionDetails(txid: string): Promise<SlpTxnDetailsResult|undefined> {
+        const res = await this.getTransactionDetailsWithRetry([txid], 1);
+        if (!res) {
+            return res;
+        }
+        return res[0];
     }
 
     public async getUtxos(address: string): Promise<AddressUtxoResult> {
@@ -240,21 +245,23 @@ export class BchdNetwork implements INetwork {
 //     size: number
 //   }
 
-    public async getTransactionDetailsWithRetry(txids: string[], retries = 40): Promise<TxnDetailsResult[]|undefined> {
-        const results: Transaction[] = []; // TxnDetailsResult[] = [];
+    public async getTransactionDetailsWithRetry(txids: string[], retries = 40):
+    Promise<SlpTxnDetailsResult[]|undefined> {
+        const results: Transaction[] = [];
         let count = 0;
         while (results.length !== txids.length) {
-            // result = (await this.BITBOX.Transaction.details(txids) as TxnDetailsResult[]);
             for (const txid of txids) {
                 const res = (await this.client
-                                            .getTransaction({hash: txid, reversedHashOrder: true}))
-                                            .getTransaction();
+                                        .getTransaction({hash: txid, reversedHashOrder: true}))
+                                        .getTransaction();
                 if (res) {
                     results.push(res);
                 }
             }
             if (results.length === txids.length) {
-                return results.map((res: any) => { return {
+                let txns: TxnDetailsResult[];
+                txns = results.map((res: Transaction) => {
+                    return {
                         txid: Buffer.from(res.getHash_asU8().reverse()).toString("hex"),
                         version: res.getVersion(),
                         locktime: res.getLockTime(),
@@ -263,7 +270,7 @@ export class BchdNetwork implements INetwork {
                                 n: i.getIndex(),
                                 sequence: i.getSequence(),
                                 coinbase: null,
-                            }}),
+                            }; }),
                         vout: res.getOutputsList().map((o: { getValue: () => any; getIndex: () => any; getPubkeyScript_asU8: () => ArrayBuffer | SharedArrayBuffer; getDisassembledScript: () => any; }) => {
                             return {
                                 value: o.getValue(),
@@ -271,16 +278,38 @@ export class BchdNetwork implements INetwork {
                                 scriptPubKey: {
                                     hex: Buffer.from(o.getPubkeyScript_asU8()).toString("hex"),
                                     asm: o.getDisassembledScript(),
-                                }
-                            }}),
+                                },
+                            }; }),
                         time: res.getTimestamp(),
                         blockhash: Buffer.from(res.getBlockHash_asU8().reverse()).toString("hex"),
                         blockheight: res.getBlockHeight(),
                         isCoinBase: false,
                         valueOut: res.getOutputsList().reduce((p: any, o: { getValue: () => any; }) => p += o.getValue(), 0),
                         size: res.getSize(),
-                    } as TxnDetailsResult
+                    } as TxnDetailsResult;
                 });
+
+                for (const txn of txns) {
+                    // add slp address format to transaction details
+                    txn.vin.forEach((input: any) => {
+                        try { input.slpAddress = Utils.toSlpAddress(input.legacyAddress); } catch (_) {}
+                    });
+                    txn.vout.forEach((output: any) => {
+                        try { output.scriptPubKey.slpAddrs = [ Utils.toSlpAddress(output.scriptPubKey.cashAddrs[0]) ]; } catch (_) {}
+                    });
+                    // add token information to transaction details
+                    (txn as SlpTxnDetailsResult).tokenInfo = await this.getTokenInformation(txn.txid, true);
+                    (txn as SlpTxnDetailsResult).tokenIsValid = this.validator ?
+                        await this.validator.isValidSlpTxid(txn.txid, null, null, this.logger) :
+                        await this.isValidSlpTxid(txn.txid);
+
+                    // add tokenNftParentId if token is a NFT child
+                    if ((txn as SlpTxnDetailsResult).tokenIsValid && (txn as SlpTxnDetailsResult).tokenInfo.versionType === SlpVersionType.TokenVersionType1_NFT_Child) {
+                        console.log("test");
+                        (txn as SlpTxnDetailsResult).tokenNftParentId = await this.getNftParentId((txn  as SlpTxnDetailsResult).tokenInfo.tokenIdHex);
+                    }
+                }
+                return txns as SlpTxnDetailsResult[];
             }
             count++;
             if (count > retries) {
@@ -295,9 +324,9 @@ export class BchdNetwork implements INetwork {
         if (!bchaddr.isCashAddress(address) && !bchaddr.isLegacyAddress(address)) {
             throw new Error("Not an a valid address format, must be cashAddr or Legacy address format.");
         }
-        const utxos = (await this.client.getAddressUtxos({ address: address, includeMempool: false })).getOutputsList();
+        const utxos = (await this.client.getAddressUtxos({ address, includeMempool: false })).getOutputsList();
         const balance = utxos.reduce((p: any, o: { getValue: () => any; }) => o.getValue(), 0);
-        const utxosMempool = (await this.client.getAddressUtxos({ address: address, includeMempool: true })).getOutputsList();
+        const utxosMempool = (await this.client.getAddressUtxos({ address, includeMempool: true })).getOutputsList();
         const mempoolBalance = utxosMempool.reduce((p: any, o: { getValue: () => any; }) => o.getValue(), 0);
         return {
             balance,
