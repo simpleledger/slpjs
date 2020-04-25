@@ -56,7 +56,7 @@ export class TrustedValidator implements SlpValidator {
             } else if (tokenTypeFilter && tokenTypeFilter !== this.cachedValidations[txid].tokenTypeHex) {
                 this.cachedValidations[txid].invalidReason = "Incorrect tokenTypeFilter";
                 return false;
-            } else if (typeof this.cachedValidations[txid] === "boolean") {
+            } else if (typeof this.cachedValidations[txid].validity === "boolean") {
                 return this.cachedValidations[txid].validity!;
             } else {
                 throw Error("Validation cache is corrupt.");
