@@ -38,10 +38,10 @@ NOTE: Using SLPJS requires bitbox-sdk and bitcore-lib-cash to also be installed.
 #### For node.js
 `npm install slpjs bitbox-sdk bitcore-lib-cash`
 
-#### For browser
-```<script src='https://unpkg.com/slpjs'></script>```
+#### For browser (only works for versions <= 0.26.0)
+```<script src='https://unpkg.com/slpjs@0.26.0'></script>```
 
-
+NOTE: The latest version of slpjs package will be refactored to fix this problem.
 
 # Transaction Examples
 
@@ -837,8 +837,13 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.27.1
+- Updated for trusted validator
+- Specify 
+
 ### 0.27.0
 - Update slp.ts internals to accept validator instead of network
+- Add TrustedValidator class and example
 
 ### 0.26.0
 - Utilizing simpleledger/slp-mdm package, update associated unit tests
