@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.27.1",
+  "version": "0.27.2",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -44,7 +44,7 @@
     "mkdirp": "^0.5.5",
     "mocha": "^7.1.1",
     "nyc": "^15.0.1",
-    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git#b8f55f7d0c93ce2a51eea1eab3f8f201ca0f6187",
+    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git#a450146e112aee4db5a1b33dc978229fdcfb23a4",
     "source-map-support": "^0.5.16",
     "ts-node": "^7.0.1",
     "typescript": "^3.8.3",

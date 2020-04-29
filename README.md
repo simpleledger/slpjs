@@ -837,6 +837,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.27.2
+- Fixed false positive case for MINT validation
+
 ### 0.27.1
 - Updated for trusted validator
 - Specify 
