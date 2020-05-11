@@ -44,15 +44,15 @@ describe("Slp", () => {
                     if (error.message.includes("Transaction data for the provided txid not found") &&
                     test.allow_inconclusive && test.inconclusive_reason === "missing-txn") {
                         isValid = false;
-                } else {
-                    throw error;
-                }
+                    } else {
+                        throw error;
+                    }
                 }
 
                 if (isValid === false) {
                     console.log("invalid reason:", slpValidator.cachedValidations[txid].invalidReason);
                 }
-                assert.equal(isValid, shouldBeValid);
+                assert.equal(shouldBeValid, isValid);
             });
         });
     });
