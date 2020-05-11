@@ -77,23 +77,15 @@ export class LocalValidator implements SlpValidator {
     }
 
     public async retrieveRawTransaction(txid: string) {
-        const checkTxnRegex = (txn: string) => {
-            const re = /^([A-Fa-f0-9]{2}){61,}$/;
-            if (!re.test(txn)) {
-                throw Error(`Regex failed for retrieved transaction, got: ${txn}`);
-            }
-        };
         if (!this.cachedRawTransactions[txid]) {
             this.cachedRawTransactions[txid] = "waiting";
             const txns = await this.getRawTransactions([txid]);
             if (!txns || txns.length === 0 || typeof txns[0] !== "string") {
                 throw Error(`Response error in getRawTransactions, got: ${txns}`);
             }
-            checkTxnRegex(txns[0]);
             this.cachedRawTransactions[txid] = txns[0];
             return txns[0];
         } else {
-            checkTxnRegex(this.cachedRawTransactions[txid]);
             return this.cachedRawTransactions[txid];
         }
     }

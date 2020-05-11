@@ -17,18 +17,9 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Current File",
-            "program": "${file}",
-            "outFiles": ["${workspaceFolder}/**/*.js"], 
-            "console": "integratedTerminal"
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            //"preLaunchTask": "tsc",
             "name": "Run Mocha",
             "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-            "args": ["${workspaceRoot}/test/**/*.js"],
+            "args": ["${workspaceRoot}/test/**/*.test.ts"],
             "cwd": "${workspaceRoot}",
             "outFiles": []
         }
