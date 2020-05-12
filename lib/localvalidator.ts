@@ -23,12 +23,13 @@ interface Parent {
 export class LocalValidator implements SlpValidator {
     public BITBOX: BITBOX;
     public cachedRawTransactions: { [txid: string]: string };
+    public useTransactionCache: boolean;
     public cachedValidations: { [txid: string]: Validation };
     public getRawTransactions: GetRawTransactionsAsync;
     public slp: Slp;
     public logger: logger = { log: (s: string) => null };
 
-    constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync, logger?: logger) {
+    constructor(BITBOX: BITBOX, getRawTransactions: GetRawTransactionsAsync, logger?: logger, useTransactionCache = true) {
         if (!BITBOX) {
             throw Error("Must provide BITBOX instance to class constructor.");
         }
@@ -43,6 +44,7 @@ export class LocalValidator implements SlpValidator {
         this.slp = new Slp(BITBOX);
         this.cachedValidations = {};
         this.cachedRawTransactions = {};
+        this.useTransactionCache = useTransactionCache;
     }
 
     public addValidationFromStore(hex: string, isValid: boolean) {
@@ -50,7 +52,7 @@ export class LocalValidator implements SlpValidator {
         if (!this.cachedValidations[id]) {
             this.cachedValidations[id] = { validity: isValid, parents: [], details: null, invalidReason: null, waiting: false };
         }
-        if (!this.cachedRawTransactions[id]) {
+        if (!this.cachedRawTransactions[id] && this.useTransactionCache) {
             this.cachedRawTransactions[id] = hex;
         }
     }
@@ -67,7 +69,7 @@ export class LocalValidator implements SlpValidator {
         }
     }
 
-    public async waitForTransactionDownloadToComplete(txid: string){
+    public async waitForTransactionDownloadToComplete(txid: string) {
         while (true) {
             if (this.cachedRawTransactions[txid] && this.cachedRawTransactions[txid] !== "waiting") {
                 break;
@@ -77,7 +79,7 @@ export class LocalValidator implements SlpValidator {
     }
 
     public async retrieveRawTransaction(txid: string) {
-        if (!this.cachedRawTransactions[txid]) {
+        if (this.useTransactionCache && !this.cachedRawTransactions[txid]) {
             this.cachedRawTransactions[txid] = "waiting";
             const txns = await this.getRawTransactions([txid]);
             if (!txns || txns.length === 0 || typeof txns[0] !== "string") {
@@ -85,8 +87,10 @@ export class LocalValidator implements SlpValidator {
             }
             this.cachedRawTransactions[txid] = txns[0];
             return txns[0];
-        } else {
+        } else if (this.useTransactionCache) {
             return this.cachedRawTransactions[txid];
+        } else {
+            return await this.getRawTransactions([txid]);
         }
     }
 
@@ -140,12 +144,16 @@ export class LocalValidator implements SlpValidator {
         // during the download of a previous request.
         //
         if (!this.cachedRawTransactions[txid] || this.cachedRawTransactions[txid] === "waiting") {
-            if (this.cachedRawTransactions[txid] !== "waiting") {
-                this.retrieveRawTransaction(txid);
-            }
+            if (this.useTransactionCache) {
+                if (this.cachedRawTransactions[txid] !== "waiting") {
+                    this.retrieveRawTransaction(txid);
+                }
 
-            // Wait for previously a initiated download to completed
-            await this.waitForTransactionDownloadToComplete(txid);
+                // Wait for previously a initiated download to completed
+                await this.waitForTransactionDownloadToComplete(txid);
+            } else {
+                await this.retrieveRawTransaction(txid);
+            }
         }
 
         // Handle case where txid is already in the process of being validated from a previous call
