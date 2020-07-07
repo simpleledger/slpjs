@@ -836,6 +836,11 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+### 0.27.3
+- Update packages
+- Minor updates to token send example
+- Remove extraneous regex checks
+- Add flag to disable validator transaction cache in LocalValidator
 
 ### 0.27.2
 - Fixed false positive case for MINT validation
