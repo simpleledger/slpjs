@@ -1,8 +1,13 @@
-// You can modify the configuration here with your own.
-// Make sure that your json is valid, and if you run into
-// other issues, try checking the console for errors.
-
 {
   "extends": ["tslint:recommended"],
-  "rules": {} // add additional rules and their configuration
+  "rules": {
+    "interface-name": false,
+    "no-console": false,
+    "variable-name": false,
+    "no-var-requires": false,
+    "class-name": false,
+    "object-literal-sort-keys": false,
+    "no-empty": false,
+    "trailing-comma": false
+  }
 }
