@@ -836,6 +836,10 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.27.4
+- Fixed false positive edge case for NFT child GENESIS validation using new SLP unit test vectors
+
 ### 0.27.3
 - Update packages
 - Minor updates to token send example
