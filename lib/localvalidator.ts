@@ -210,9 +210,10 @@ export class LocalValidator implements SlpValidator {
             if (slpmsg.versionType === 0x41) {
                 // An NFT1 parent should be provided at input index 0,
                 // so we check this first before checking the whole parent DAG
-                let input_txid = txn.inputs[0].prevTxId.toString("hex");
-                let input_txhex = await this.retrieveRawTransaction(input_txid);
-                let input_tx: Bitcore.Transaction = new Bitcore.Transaction(input_txhex);
+                const input_txid = txn.inputs[0].prevTxId.toString("hex");
+                const input_prevout = txn.inputs[0].outputIndex;
+                const input_txhex = await this.retrieveRawTransaction(input_txid);
+                const input_tx: Bitcore.Transaction = new Bitcore.Transaction(input_txhex);
                 let input_slpmsg;
                 try {
                     input_slpmsg = this.slp.parseSlpOutputScript(input_tx.outputs[0]._scriptBuffer);
@@ -224,21 +225,34 @@ export class LocalValidator implements SlpValidator {
                     return this.cachedValidations[txid].validity!;
                 }
                 // Check that the there is a burned output >0 in the parent txn SLP message
-                if (input_slpmsg.transactionType === SlpTransactionType.SEND &&
-                    (!input_slpmsg.sendOutputs![1].isGreaterThan(0)))
-                {
-                    this.cachedValidations[txid].validity = false;
-                    this.cachedValidations[txid].waiting = false;
-                    this.cachedValidations[txid].invalidReason = "NFT1 child's parent has SLP output that is not greater than zero.";
-                    return this.cachedValidations[txid].validity!;
-                } else if ((input_slpmsg.transactionType === SlpTransactionType.GENESIS ||
-                            input_slpmsg.transactionType === SlpTransactionType.MINT) &&
-                            !input_slpmsg.genesisOrMintQuantity!.isGreaterThan(0))
-                {
-                    this.cachedValidations[txid].validity = false;
-                    this.cachedValidations[txid].waiting = false;
-                    this.cachedValidations[txid].invalidReason = "NFT1 child's parent has SLP output that is not greater than zero.";
-                    return this.cachedValidations[txid].validity!;
+                if (input_slpmsg.transactionType === SlpTransactionType.SEND) {
+                    if (input_prevout > input_slpmsg.sendOutputs!.length - 1) {
+                        this.cachedValidations[txid].validity = false;
+                        this.cachedValidations[txid].waiting = false;
+                        this.cachedValidations[txid].invalidReason = "NFT1 child GENESIS does not have a valid NFT1 parent input.";
+                        return this.cachedValidations[txid].validity!;
+                    } else if (! input_slpmsg.sendOutputs![input_prevout].isGreaterThan(0)) {
+                        this.cachedValidations[txid].validity = false;
+                        this.cachedValidations[txid].waiting = false;
+                        this.cachedValidations[txid].invalidReason = "NFT1 child's parent has SLP output that is not greater than zero.";
+                        return this.cachedValidations[txid].validity!;
+                    } else {
+                        this.cachedValidations[txid].validity = true;
+                        this.cachedValidations[txid].waiting = false;
+                    }
+                } else if (input_slpmsg.transactionType === SlpTransactionType.GENESIS ||
+                            input_slpmsg.transactionType === SlpTransactionType.MINT) {
+                    if (input_prevout !== 1) {
+                        this.cachedValidations[txid].validity = false;
+                        this.cachedValidations[txid].waiting = false;
+                        this.cachedValidations[txid].invalidReason = "NFT1 child GENESIS does not have a valid NFT1 parent input.";
+                        return this.cachedValidations[txid].validity!;
+                    } else if (!input_slpmsg.genesisOrMintQuantity!.isGreaterThan(0)) {
+                        this.cachedValidations[txid].validity = false;
+                        this.cachedValidations[txid].waiting = false;
+                        this.cachedValidations[txid].invalidReason = "NFT1 child's parent has SLP output that is not greater than zero.";
+                        return this.cachedValidations[txid].validity!;
+                    }
                 }
                 // Continue to check the NFT1 parent DAG
                 let nft_parent_dag_validity = await this.isValidSlpTxid(input_txid, undefined, 0x81);

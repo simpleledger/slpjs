@@ -44,7 +44,7 @@
     "mkdirp": "^0.5.5",
     "mocha": "^7.2.0",
     "nyc": "^15.1.0",
-    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git#a450146e112aee4db5a1b33dc978229fdcfb23a4",
+    "slp-unit-test-data": "git+https://github.com/simpleledger/slp-unit-test-data.git#8c942eacfae12686dcf1f3366321445a4fba73e7",
     "source-map-support": "^0.5.19",
     "ts-node": "^7.0.1",
     "typescript": "^3.9.5",
