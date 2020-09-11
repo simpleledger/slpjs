@@ -10,6 +10,7 @@ export * from "./lib/trustedvalidator";
 export * from "./lib/bitboxnetwork";
 export * from "./lib/bchdnetwork";
 export * from "./lib/transactionhelpers";
+export * from "./lib/bchdtrustedvalidator";
 import * as bitcore from "bitcore-lib-cash";
 export { bitcore };
 

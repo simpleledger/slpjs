@@ -229,22 +229,6 @@ export class BchdNetwork implements INetwork {
         return utxos;
     }
 
-//   export interface TxnDetailsResult {
-//     txid: string
-//     version: number
-//     locktime: number
-//     vin: object[]
-//     vout: object[]
-//     blockhash: string
-//     blockheight: number
-//     confirmations: number
-//     time: number
-//     blocktime: number
-//     isCoinBase: boolean
-//     valueOut: number
-//     size: number
-//   }
-
     public async getTransactionDetailsWithRetry(txids: string[], retries = 40):
     Promise<SlpTxnDetailsResult[]|undefined> {
         const results: Transaction[] = [];
@@ -298,14 +282,16 @@ export class BchdNetwork implements INetwork {
                         try { output.scriptPubKey.slpAddrs = [ Utils.toSlpAddress(output.scriptPubKey.cashAddrs[0]) ]; } catch (_) {}
                     });
                     // add token information to transaction details
-                    (txn as SlpTxnDetailsResult).tokenInfo = await this.getTokenInformation(txn.txid, true);
-                    (txn as SlpTxnDetailsResult).tokenIsValid = this.validator ?
-                        await this.validator.isValidSlpTxid(txn.txid, null, null, this.logger) :
-                        await this.isValidSlpTxid(txn.txid);
+                    try {
+                        (txn as SlpTxnDetailsResult).tokenInfo = await this.getTokenInformation(txn.txid, true);
+                    } catch (_) {
+                        (txn as SlpTxnDetailsResult).tokenIsValid = false;
+                        continue;
+                    }
+                    (txn as SlpTxnDetailsResult).tokenIsValid = await this.isValidSlpTxid(txn.txid);
 
                     // add tokenNftParentId if token is a NFT child
                     if ((txn as SlpTxnDetailsResult).tokenIsValid && (txn as SlpTxnDetailsResult).tokenInfo.versionType === SlpVersionType.TokenVersionType1_NFT_Child) {
-                        console.log("test");
                         (txn as SlpTxnDetailsResult).tokenNftParentId = await this.getNftParentId((txn  as SlpTxnDetailsResult).tokenInfo.tokenIdHex);
                     }
                 }
