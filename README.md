@@ -837,6 +837,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.27.7
+- Add BchdValidator class for leveraging BCHD SLP indexer
+
 ### 0.27.6
 - Update BchdNetwork to use an interface for gRPC client
 - Note: 0.27.5 was skipped due to an error during publishing
