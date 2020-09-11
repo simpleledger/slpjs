@@ -33,13 +33,13 @@ Table of Contents
 
 # Installation
 
-NOTE: Using SLPJS requires bitbox-sdk and bitcore-lib-cash to also be installed.
+NOTE: Using SLPJS has peer dependencies bitbox-sdk and bitcore-lib-cash, so these also need to be installed.
 
 #### For node.js
 `npm install slpjs bitbox-sdk bitcore-lib-cash`
 
-#### For browser (only works for versions <= 0.26.0)
-```<script src='https://unpkg.com/slpjs@0.26.0'></script>```
+#### For browser
+```<script src='https://unpkg.com/slpjs'></script>```
 
 NOTE: The latest version of slpjs package will be refactored to fix this problem.
 
@@ -836,6 +836,10 @@ Running the unit tests require node.js v8.15+.
 
 
 # Change Log
+
+### 0.27.6
+- Update BchdNetwork to use an interface for gRPC client
+- Note: 0.27.5 was skipped due to an error during publishing
 
 ### 0.27.4
 - Fixed false positive edge case for NFT child GENESIS validation using new SLP unit test vectors
