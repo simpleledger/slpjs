@@ -1,10 +1,14 @@
 import { IGrpcClient } from "grpc-bchrpc";
-import { SlpValidator } from "..";
+import { logger, SlpValidator } from "..";
 
 export class BchdValidator implements SlpValidator {
     public client: IGrpcClient;
-    constructor(client: IGrpcClient) {
+    private logger?: { log: (s: string) => any; };
+    constructor(client: IGrpcClient, logger?: logger) {
         this.client = client;
+        if (logger) {
+            this.logger = logger;
+        }
     }
     public async getRawTransactions(txid: string[]): Promise<string[]> {
         const res = await this.client.getRawTransaction({hash: txid[0], reversedHashOrder: true});
@@ -12,19 +16,19 @@ export class BchdValidator implements SlpValidator {
     }
     public async isValidSlpTxid(txid: string): Promise<boolean> {
         try {
-            console.log(`validate: ${txid}`);
+            this.log(`validate: ${txid}`);
             const res = await this.client.getTrustedSlpValidation({
                 txos: [{vout: 1, hash: txid}],
                 reversedHashOrder: true
             });
         } catch (error) {
-            if (!error.message.includes("Error")) {
+            if (! error.message.includes("txid is missing from slp validity set")) {
                 throw error;
             }
-            console.log(`false (${txid})`);
+            this.log(`false (${txid})`);
             return false;
         }
-        console.log(`true (${txid})`);
+        this.log(`true (${txid})`);
         return true;
     }
 
@@ -34,5 +38,11 @@ export class BchdValidator implements SlpValidator {
             res.push((await this.isValidSlpTxid(txid)) ? txid : "");
         }
         return res.filter((id: string) => id.length > 0);
+    }
+
+    private log(s: string) {
+        if (this.logger) {
+            this.logger.log(s);
+        }
     }
 }

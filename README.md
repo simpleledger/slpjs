@@ -837,6 +837,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.27.8
+- Simplify BchdValidator behavior and API
+
 ### 0.27.7
 - Add BchdValidator class for leveraging BCHD SLP indexer
 
