@@ -6,7 +6,7 @@
     "downlevelIteration": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "lib":[ "es2017" ],
+    "lib":[ "es2017","dom" ],
     "declaration": true,
     "sourceMap": true,
     "plugins": [
@@ -14,7 +14,8 @@
     ]
   },
   "include": [
-    "lib/**/*.ts"
+    "lib/**/*.ts",
+    "./typings-custom/**/*.ts"
   ],
   "exclude": [
     "node_modules",
