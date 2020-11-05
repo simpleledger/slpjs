@@ -1,4 +1,4 @@
-import * as Bchaddr from "bchaddrjs-slp";
+import * as Bchaddr from "bchaddrjs-slp-2";
 import BigNumber from "bignumber.js";
 import { AddressUtxoResult } from "bitcoin-com-rest";
 import { SlpAddressUtxoResult, SlpPaymentRequest, utxo } from "../index";
