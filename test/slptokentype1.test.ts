@@ -14,7 +14,71 @@ describe("SlpTokenType1", () => {
             const batonVout = null;
             const initialQuantity = new BigNumber(100);
             let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity);
-            assert.equal(op_return.toString("hex"), "6a04534c500001010747454e455349534c004c004c004c0001004c00080000000000000064");
+            assert.strictEqual(op_return.toString("hex"), "6a04534c500001010747454e455349534c004c004c004c0001004c00080000000000000064");
+        });
+        it("Succeeds with Minimal NFT1 Group OP_RETURN", () => {
+            const ticker = null;
+            const name = null;
+            const documentUri = null;
+            const documentHashHex = null;
+            const decimals = 0;
+            const batonVout = null;
+            const initialQuantity = new BigNumber(100);
+            let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity, 0x81);
+            assert.strictEqual(op_return.toString("hex"), "6a04534c500001810747454e455349534c004c004c004c0001004c00080000000000000064");
+        });
+        it("Succeeds with Minimal NFT1 Child OP_RETURN", () => {
+            const ticker = null;
+            const name = null;
+            const documentUri = null;
+            const documentHashHex = null;
+            const decimals = 0;
+            const batonVout = null;
+            const initialQuantity = new BigNumber(1);
+            let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity, 0x41);
+            assert.strictEqual(op_return.toString("hex"), "6a04534c500001410747454e455349534c004c004c004c0001004c00080000000000000001");
+        });
+        it("NFT child throws on mint", () => {
+            assert.throws(() => { SlpTokenType1.buildMintOpReturn("6a04534c500001410747454e455349534c004c004c004c0001004c00080000000000000001", 1, new BigNumber(1), 0x41)}, "test");
+        });
+        it("NFT child throws on genesis qty != 1", () => {
+            const ticker = null;
+            const name = null;
+            const documentUri = null;
+            const documentHashHex = null;
+            const decimals = 0;
+            const batonVout = null;
+            const initialQuantity = new BigNumber(2);
+            assert.throws(() => { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity, 0x41)}, Error("nft1 child output quantity must be equal to 1"));
+        });
+        it("NFT child throws on send qty != 1", () => {
+            assert.throws(() => { SlpTokenType1.buildSendOpReturn("6a04534c500001410747454e455349534c004c004c004c0001004c00080000000000000001", [new BigNumber(2)], 0x41) }, Error("nft1 child output quantity must be equal to 1"));
+        });
+        it("NFT child throws on send with qty array length != 1", () => {
+            assert.throws(() => { SlpTokenType1.buildSendOpReturn("6a04534c500001410747454e455349534c004c004c004c0001004c00080000000000000001", [new BigNumber(1), new BigNumber(0)], 0x41) }, Error("nft1 child must have exactly 1 output quantity"));
+        });
+        it("Genesis, Send, and Mint throws on type 0x02", () => {
+            const ticker = null;
+            const name = null;
+            const documentUri = null;
+            const documentHashHex = null;
+            const decimals = 0;
+            const batonVout = null;
+            const initialQuantity = new BigNumber(100);
+            assert.throws(() => { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity, 0x02); }, Error("unsupported token type"));
+            assert.throws(() => { SlpTokenType1.buildMintOpReturn("6a04534c500001410747454e455349534c004c004c004c0001004c00080000000000000001", 1, new BigNumber(1), 0x02); }, Error("unsupported token type"));
+            assert.throws(() => { SlpTokenType1.buildSendOpReturn("6a04534c500001410747454e455349534c004c004c004c0001004c00080000000000000001", [new BigNumber(1)], 0x02); }, Error("unsupported token type"));
+        });
+        it("Succeeds with Minimal OP_RETURN", () => {
+            const ticker = null;
+            const name = null;
+            const documentUri = null;
+            const documentHashHex = null;
+            const decimals = 0;
+            const batonVout = null;
+            const initialQuantity = new BigNumber(100);
+            let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity);
+            assert.strictEqual(op_return.toString("hex"), "6a04534c500001010747454e455349534c004c004c004c0001004c00080000000000000064");
         });
         it("Throws without BigNumber", () => {
             const ticker: null = null;
@@ -75,7 +139,7 @@ describe("SlpTokenType1", () => {
             const batonVout = 2;
             const initialQuantity = new BigNumber("18446744073709551615");
             let op_return = SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri, documentHashHex, decimals, batonVout, initialQuantity);
-            assert.equal(op_return.toString("hex"), "6a04534c500001010747454e455349534c004c004c004c000100010208ffffffffffffffff");
+            assert.strictEqual(op_return.toString("hex"), "6a04534c500001010747454e455349534c004c004c004c000100010208ffffffffffffffff");
         });
         it("Throws when batonVout is less than 2", () => {
             const ticker: null = null;
@@ -215,7 +279,7 @@ describe("SlpTokenType1", () => {
             const decimals = 0;
             const batonVout: null = null;
             const initialQuantity = new BigNumber("18446744073709551615");
-            assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri as string, documentHashHex, decimals, batonVout, initialQuantity); }, TypeError("The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type number"));
+            assert.throws(function () { SlpTokenType1.buildGenesisOpReturn(ticker, name, documentUri as string, documentHashHex, decimals, batonVout, initialQuantity); }, TypeError("The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received type number (1)"));
         });
         it("Throws when documentHashHex is not a string", () => {
             const ticker: null = null;
@@ -234,14 +298,14 @@ describe("SlpTokenType1", () => {
             const tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888";
             const outputQtyArray = [ new BigNumber("66") ];
             const result = SlpTokenType1.buildSendOpReturn(tokenIdHex, outputQtyArray).toString("hex");
-            assert.equal(result, expectedResult);
+            assert.strictEqual(result, expectedResult);
         });
         it("Succeeds with 2 outputs", () => {
             const expectedResult = "6a04534c500001010453454e44208888888888888888888888888888888888888888888888888888888888888888080000000000000042080000000000000063";
             const tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888";
             const outputQtyArray = [ new BigNumber("66"), new BigNumber("99") ];
             const result = SlpTokenType1.buildSendOpReturn(tokenIdHex, outputQtyArray).toString("hex");
-            assert.equal(result, expectedResult);
+            assert.strictEqual(result, expectedResult);
         });
         it("Succeeds with 19 outputs", () => {
             const expectedResult = "6a04534c500001010453454e44208888888888888888888888888888888888888888888888888888888888888888080000000000000042080000000000000063080000000000000063080000000000000063080000000000000063080000000000000042080000000000000063080000000000000063080000000000000063080000000000000063080000000000000042080000000000000063080000000000000063080000000000000063080000000000000063080000000000000042080000000000000063080000000000000063080000000000000063";
@@ -251,7 +315,7 @@ describe("SlpTokenType1", () => {
                                     new BigNumber("66"), new BigNumber("99"), new BigNumber("99"), new BigNumber("99"), new BigNumber("99"),
                                     new BigNumber("66"), new BigNumber("99"), new BigNumber("99"), new BigNumber("99") ];
             const result = SlpTokenType1.buildSendOpReturn(tokenIdHex, outputQtyArray).toString("hex");
-            assert.equal(result, expectedResult);
+            assert.strictEqual(result, expectedResult);
         });
         it("Throws with 20 outputs", () => {
             const tokenIdHex = "8888888888888888888888888888888888888888888888888888888888888888";
@@ -309,7 +373,7 @@ describe("SlpTokenType1", () => {
             const batonVout = null;
             const mintQuantity = new BigNumber("100");
             const result = SlpTokenType1.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity).toString("hex");
-            assert.equal(result, expectedResult);
+            assert.strictEqual(result, expectedResult);
         });
         it("Succeeds when batonVout is 2", () => {
             const expectedResult = "6a04534c50000101044d494e5420ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0102080000000000000064";
@@ -317,7 +381,7 @@ describe("SlpTokenType1", () => {
             const batonVout = 2;
             const mintQuantity = new BigNumber("100");
             const result = SlpTokenType1.buildMintOpReturn(tokenIdHex, batonVout, mintQuantity).toString("hex");
-            assert.equal(result, expectedResult);
+            assert.strictEqual(result, expectedResult);
         });
         it("Throws when batonVout is 1", () => {
             const tokenIdHex = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";

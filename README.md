@@ -837,6 +837,9 @@ Running the unit tests require node.js v8.15+.
 
 # Change Log
 
+### 0.27.9
+- Updates for creating and sending NFT1 group and children token types
+
 ### 0.27.8
 - Simplify BchdValidator behavior and API
 

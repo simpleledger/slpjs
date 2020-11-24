@@ -1,6 +1,6 @@
 {
   "name": "slpjs",
-  "version": "0.27.8",
+  "version": "0.27.9",
   "description": "Simple Ledger Protocol (SLP) JavaScript Library",
   "main": "index.js",
   "files": [
@@ -10,8 +10,8 @@
     "dist/"
   ],
   "scripts": {
-    "test": "tsc && nyc mocha",
-    "build": "tsc && mkdirp dist && browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
+    "test": "npx tsc && nyc mocha",
+    "build": "npx tsc && mkdirp dist && browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
   },
   "repository": {
     "type": "git",
