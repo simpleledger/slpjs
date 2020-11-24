@@ -109,7 +109,7 @@ const NFT1ParentGroupID = "112f967519e18083c8e4bd7ba67ebc04d72aaaa941826d38655c5
     const inputs = [utxo!, ...balances.nonSlpUtxos];
     inputs.map(txo => txo.wif = fundingWif);
 
-    // 4) Use "simpleTokenGenesis()" helper method
+    // 4) Use "simpleNFT1ChildGenesis()" helper method
     const genesisTxid = await bitboxNetwork.simpleNFT1ChildGenesis(
             NFT1ParentGroupID,
             name,
