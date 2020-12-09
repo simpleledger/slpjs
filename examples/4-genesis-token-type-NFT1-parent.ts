@@ -6,19 +6,15 @@
  *      (1) - Send some BCH to simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu
  *            or tBCH to slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l
  *            to fund the example.
- *      (2) - Select Network and Address by commenting/uncommenting the desired
- *              NETWORK section and providing valid BCH address.
- *      (3) - Select a Validation method by commenting/uncommenting the desired
- *              VALIDATOR section. Chose from remote validator or local validator.
- *              Both options rely on remote JSON RPC calls to rest.bitcoin.com.
- *      (4) - Run `tsc && node <file-name.js>` just before script execution 
- *      (5) - Optional: Use vscode debugger w/ launch.json settings
+ *      (2) - Run `tsc && node <file-name.js>` just before script execution
+ *      (3) - Optional: Use vscode debugger w/ launch.json settings
  *
  * ************************************************************************************/
 
 import { BigNumber } from "bignumber.js";
 import * as BITBOXSDK from "bitbox-sdk";
-import { BitboxNetwork, SlpBalancesResult } from "../index";
+import { GrpcClient } from "grpc-bchrpc-node";
+import { BchdNetwork, GetRawTransactionsAsync, LocalValidator, SlpBalancesResult } from "../index";
 
 const name = "My NFT1 Group";
 const ticker = "NFT1 Group";
@@ -29,7 +25,7 @@ const initialTokenQty = 1000000;
 (async () => {
 
     // // NETWORK: FOR MAINNET UNCOMMENT
-    const BITBOX = new BITBOXSDK.BITBOX({ restURL: "https://rest.bitcoin.com/v2/" });
+    const BITBOX = new BITBOXSDK.BITBOX();
     const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
     const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";     // <-- compressed WIF format
     const tokenReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- must be simpleledger format
@@ -37,20 +33,20 @@ const initialTokenQty = 1000000;
     // For unlimited issuance provide a "batonReceiverAddress"
     const batonReceiverAddress     = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 
-    // NETWORK: FOR TESTNET UNCOMMENT
-    // const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://trest.bitcoin.com/v2/' });
-    // const fundingAddress           = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-    // const fundingWif               = "cVjzvdHGfQDtBEq7oddDRcpzpYuvNtPbWdi8tKQLcZae65G4zGgy";
-    // const tokenReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-    // const bchChangeReceiverAddress = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
-    // // For unlimited issuance provide a "batonReceiverAddress"
-    // const batonReceiverAddress     = "slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l";
+    // VALIDATOR SETUP: FOR REMOTE VALIDATION
+    const client = new GrpcClient(); //{ url: "bchd.ny1.simpleledger.io" });
 
-    const bitboxNetwork = new BitboxNetwork(BITBOX);
+    const getRawTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
+        const txid = txids[0];
+        const res = await client.getRawTransaction({ hash: txid, reversedHashOrder: true });
+        return [Buffer.from(res.getTransaction_asU8()).toString("hex")];
+    };
+    const logger = console;
+    const validator = new LocalValidator(BITBOX, getRawTransactions, logger);
+    const bchdNetwork = new BchdNetwork({ BITBOX, client, validator, logger });
 
     // 1) Get all balances at the funding address.
-    const balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress) as SlpBalancesResult;
-    console.log("'balances' variable is set.");
+    const balances = await bchdNetwork.getAllSlpBalancesAndUtxos(fundingAddress) as SlpBalancesResult;
     console.log("BCH balance:", balances.satoshis_available_bch);
 
     // 2) Calculate the token quantity with decimal precision included
@@ -60,7 +56,7 @@ const initialTokenQty = 1000000;
     balances!.nonSlpUtxos.forEach(txo => txo.wif = fundingWif);
 
     // 4) Use "simpleTokenGenesis()" helper method
-    const genesisTxid = await bitboxNetwork.simpleNFT1ParentGenesis(
+    const genesisTxid = await bchdNetwork.simpleNFT1ParentGenesis(
             name,
             ticker,
             initialTokenQtyBN,

@@ -4,7 +4,7 @@ import { BITBOX } from "bitbox-sdk";
 import { AddressDetailsResult, AddressUtxoResult,
     TxnDetailsResult, utxo } from "bitcoin-com-rest";
 import * as Bitcore from "bitcore-lib-cash";
-import { IGrpcClient, Transaction } from "grpc-bchrpc";
+import { IGrpcClient, SlpRequiredBurn, SubmitTransactionResponse, Transaction } from "grpc-bchrpc";
 import * as _ from "lodash";
 import { INetwork, logger, Primatives,
     SlpAddressUtxoResult, SlpBalancesResult,
@@ -113,7 +113,7 @@ export class BchdNetwork implements INetwork {
         if (typeof address === "string") {
             address = bchaddr.toCashAddress(address);
             const result = await this.getUtxoWithTxDetails(address);
-            return await this.processUtxosForSlp(result);
+            return this.processUtxosForSlp(result);
         }
         address = address.map((a) => bchaddr.toCashAddress(a));
         const results: Array<{ address: string, result: SlpBalancesResult }> = [];
@@ -141,7 +141,7 @@ export class BchdNetwork implements INetwork {
                         "then after the transaction is signed you can use BitboxNetwork.sendTx()");
         }
 
-        return await this.sendTx(txHex);
+        return this.sendTx(txHex);
     }
 
     public async simpleBchSend(
@@ -150,7 +150,7 @@ export class BchdNetwork implements INetwork {
         const genesisTxHex = this.txnHelpers.simpleBchSend({
             sendAmounts, inputUtxos, bchReceiverAddresses, changeReceiverAddress,
         });
-        return await this.sendTx(genesisTxHex);
+        return this.sendTx(genesisTxHex);
     }
 
     public async simpleTokenGenesis(
@@ -161,7 +161,7 @@ export class BchdNetwork implements INetwork {
             tokenName, tokenTicker, tokenAmount, documentUri, documentHash, decimals,
             tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos,
         });
-        return await this.sendTx(genesisTxHex);
+        return this.sendTx(genesisTxHex);
     }
 
     public async simpleNFT1ParentGenesis(
@@ -173,18 +173,28 @@ export class BchdNetwork implements INetwork {
             tokenName, tokenTicker, tokenAmount, documentUri, documentHash,
             tokenReceiverAddress, batonReceiverAddress, bchChangeReceiverAddress, inputUtxos, decimals,
         });
-        return await this.sendTx(genesisTxHex);
+        return this.sendTx(genesisTxHex);
     }
 
     public async simpleNFT1ChildGenesis(
         nft1GroupId: string, tokenName: string, tokenTicker: string, documentUri: string|null,
         documentHash: Buffer|null, tokenReceiverAddress: string, bchChangeReceiverAddress: string,
-        inputUtxos: SlpAddressUtxoResult[], allowBurnAnyAmount= false) {
+        inputUtxos: SlpAddressUtxoResult[], allowBurnAnyAmount = false) {
         const genesisTxHex = this.txnHelpers.simpleNFT1ChildGenesis({
             nft1GroupId, tokenName, tokenTicker, documentUri, documentHash, tokenReceiverAddress,
             bchChangeReceiverAddress, inputUtxos, allowBurnAnyAmount,
         });
-        return await this.sendTx(genesisTxHex);
+
+        // include explicit burn allowance for burning Group token
+        const burn: SlpRequiredBurn = {
+            tokenId: Buffer.from(nft1GroupId, "hex"),
+            tokenType: 129,
+            amount: allowBurnAnyAmount ? inputUtxos[0].slpUtxoJudgementAmount.toFixed() : "1",
+            outpointHash: Buffer.from(Buffer.from(inputUtxos[0].txid, "hex").reverse()),
+            outpointVout: inputUtxos[0].vout
+        };
+
+        return this.sendTx(genesisTxHex, [burn]);
     }
 
     // Sent SLP tokens to a single output address with change handled
@@ -195,7 +205,7 @@ export class BchdNetwork implements INetwork {
         const txHex = this.txnHelpers.simpleTokenMint({
             tokenId, mintAmount, inputUtxos, tokenReceiverAddress, batonReceiverAddress, changeReceiverAddress,
         });
-        return await this.sendTx(txHex);
+        return this.sendTx(txHex);
     }
 
     // Burn a precise quantity of SLP tokens with remaining tokens (change) sent to a
@@ -205,11 +215,11 @@ export class BchdNetwork implements INetwork {
         const txHex = this.txnHelpers.simpleTokenBurn({
             tokenId, burnAmount, inputUtxos, changeReceiverAddress,
         });
-        return await this.sendTx(txHex);
+        return this.sendTx(txHex);
     }
 
     public async getUtxoWithRetry(address: string, retries = 40): Promise<AddressUtxoResult> {
-        return await this.getUtxos(address);
+        return this.getUtxos(address);
     }
 
     public async getUtxoWithTxDetails(address: string): Promise<SlpAddressUtxoResult[]> {
@@ -323,8 +333,8 @@ export class BchdNetwork implements INetwork {
             totalSentSat: null,
             unconfirmedBalance: mempoolBalance - balance,
             unconfirmedBalanceSat: mempoolBalance * 10 ** 8 - balance * 10 ** 8,
-            unconfirmedTxApperances: null,
-            txApperances: null,
+            unconfirmedTxAppearances: null,
+            txAppearances: null,
             transactions: null,
             legacyAddress: bchaddr.toLegacyAddress(address),
             cashAddress: bchaddr.toCashAddress(address),
@@ -332,9 +342,31 @@ export class BchdNetwork implements INetwork {
         } as any as AddressDetailsResult;
     }
 
-    public async sendTx(hex: string): Promise<string> {
-        const res = await this.client.submitTransaction({ txnHex: hex });
-        return Buffer.from(res.getHash_asU8().reverse()).toString("hex");
+    public async sendTx(hex: string, slpBurns?: SlpRequiredBurn[], suppressWarnings = false): Promise<string> {
+        let txn: SubmitTransactionResponse|undefined;
+        try {
+            txn = await this.client.submitTransaction({
+                txnHex: hex,
+                requiredSlpBurns: slpBurns,
+            });
+        } catch (err) {
+            if (err.message.includes("BCHD instance does not have SLP indexing enabled")) {
+                if (! suppressWarnings) {
+                    console.log(err.message);
+                }
+            } else {
+                throw err;
+            }
+        }
+
+        if (! txn) {
+            txn = await this.client.submitTransaction({
+                txnHex: hex,
+                skipSlpValidityChecks: true
+            });
+        }
+
+        return Buffer.from(txn.getHash_asU8().reverse()).toString("hex");
     }
 
     public async monitorForPayment(paymentAddress: string, fee: number, onPaymentCB: Function): Promise<void> {
@@ -358,27 +390,27 @@ export class BchdNetwork implements INetwork {
     }
 
     public async processUtxosForSlp(utxos: SlpAddressUtxoResult[]): Promise<SlpBalancesResult> {
-        return await this.slp.processUtxosForSlpAbstract(utxos, this);
+        return this.slp.processUtxosForSlpAbstract(utxos, this);
     }
 
     public async getRawTransactions(txids: string[]): Promise<string[]> {
         if (this.validator && this.validator.getRawTransactions) {
-            return await this.validator.getRawTransactions(txids);
+            return this.validator.getRawTransactions(txids);
         }
         const getTxnHex = async (txid: string) => {
             return Buffer.from((await this.client
                                 .getRawTransaction({ hash: txid, reversedHashOrder: true }))
                                 .getTransaction_asU8()).toString("hex");
         };
-        return await Promise.all(txids.map((txid) => getTxnHex(txid)));
+        return Promise.all(txids.map((txid) => getTxnHex(txid)));
     }
 
     public async isValidSlpTxid(txid: string): Promise<boolean> {
-        return await this.validator.isValidSlpTxid(txid, null, null, this.logger);
+        return this.validator.isValidSlpTxid(txid, null, null, this.logger);
     }
 
     public async validateSlpTransactions(txids: string[]): Promise<string[]> {
-        return await this.validator.validateSlpTransactions(txids);
+        return this.validator.validateSlpTransactions(txids);
     }
 
     public async getNftParentId(tokenIdHex: string) {
