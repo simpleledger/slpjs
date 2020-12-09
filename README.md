@@ -151,7 +151,6 @@ const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
   console.log('BCH balance:', balances.satoshis_available_bch);
 })();
 
@@ -228,7 +227,6 @@ const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
   if(balances.slpBatonUtxos[tokenIdHexToMint])
     console.log("You have the minting baton for this token");
   else
@@ -321,7 +319,6 @@ let tokenDecimals;
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
   console.log(balances);
   if(balances.slpTokenBalances[tokenId] === undefined)
     console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")
@@ -386,7 +383,6 @@ const bitboxNetwork = new slpjs.BitboxNetwork(BITBOX);
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.", balances);
   
   if (balances.satoshis_available_bch < sendAmountsInSatoshi) {
     throw new Error("You need to fund the addresses provided in this example with BCH.");
@@ -489,7 +485,6 @@ let tokenDecimals;
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
   console.log(balances);
   if(balances.slpTokenBalances[tokenId] === undefined)
     console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")
@@ -580,7 +575,6 @@ let fundingAddress = "simpleledger:pphnuh7dx24rcwjkj0sl6xqfyfzf23aj7udr0837gn";
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
   console.log(balances);
   if(balances.slpTokenBalances[tokenId] === undefined)
     console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")
@@ -669,7 +663,6 @@ let tokenDecimals;
 let balances; 
 (async function() {
   balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-  console.log("'balances' variable is set.");
   console.log('Token balance:', balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals)
 })();
 

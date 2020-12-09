@@ -70,7 +70,6 @@ import { BitboxNetwork, SlpBalancesResult, Slp, TransactionHelpers, Utils } from
         
     // Check that token balance is greater than our desired sendAmount
     let balances = <SlpBalancesResult>await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-    console.log("'balances' variable is set.");
     console.log(balances);
     if(balances.slpTokenBalances[tokenId] === undefined)
     console.log("You need to fund the addresses provided in this example with tokens and BCH.  Change the tokenId as required.")

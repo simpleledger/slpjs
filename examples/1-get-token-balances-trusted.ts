@@ -4,7 +4,7 @@
  *              using BCHD and SLPDB Trusted Validation
  *
  *  Instructions:
- *      (1) - Select Network and Address by commenting/uncommenting the desired
+ *      (1) - Select Network and Address by commenting/un-commenting the desired
  *              TESTNET or MAINNET section and providing valid BCH address.
  *      (2) - Run `ts-node <file-name.js>` just before script execution,
  *            or use vscode debugger w/ launch.json settings for "Current TS File"
@@ -16,7 +16,7 @@ const BITBOX = new BITBOXSDK.BITBOX();
 import { GrpcClient } from "grpc-bchrpc-node";
 import { BchdNetwork, BchdValidator, SlpBalancesResult } from "../index";
 
-const addr = "simpleledger:qpd2crqxr32tqmu72h6dkygryracrwtcwqy0enzf3z";
+const addr = "simpleledger:qpcgsyu3c4hd00luwhc5a9x5zcgnlw8kdqmdxyjsta";
 
 const client = new GrpcClient({ url: "bchd.ny1.simpleledger.io" });
 const validator = new BchdValidator(client);

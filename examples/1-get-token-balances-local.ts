@@ -7,7 +7,7 @@
  *        using SLPDB.
  *
  *  Instructions:
- *      (1) - Select Network and Address by commenting/uncommenting the desired
+ *      (1) - Select Network and Address by commenting/un-commenting the desired
  *              TESTNET or MAINNET section and providing valid BCH address.
  *      (2) - Run `ts-node <file-name.js>` just before script execution,
  *            or use vscode debugger w/ launch.json settings for "Current TS File"
@@ -22,7 +22,7 @@ import { BchdNetwork } from "../lib/bchdnetwork";
 import { GetRawTransactionsAsync } from "../lib/localvalidator";
 
 // MAINNET NETWORK
-const addr = "simpleledger:qp4a73gx6j5u3se0f7263us6rdxygh3rfvk0gu9mfa"; // "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
+const addr = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";
 const testnet = false;
 
 // TESTNET NETWORK

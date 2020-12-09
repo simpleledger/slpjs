@@ -6,9 +6,9 @@
  *      (1) - Send some BCH to simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu
  *            or tBCH to slptest:qpwyc9jnwckntlpuslg7ncmhe2n423304ueqcyw80l
 *             to fund the example.
- *      (2) - Select Network and Address by commenting/uncommenting the desired
+ *      (2) - Select Network and Address by commenting/un-commenting the desired
  *              NETWORK section and providing valid BCH address.
- *      (3) - Select a Validation method by commenting/uncommenting the desired
+ *      (3) - Select a Validation method by commenting/un-commenting the desired
  *              VALIDATOR section. Chose from remote validator or local validator.
  *              Both options rely on remote JSON RPC calls to rest.bitcoin.com.
  *      (4) - Run `tsc && node <file-name.js>` just before script execution
@@ -51,14 +51,13 @@ const initialTokenQty = 1000000;
 
     // 1) Get all balances at the funding address.
     const balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress) as SlpBalancesResult;
-    console.log("'balances' variable is set.");
     console.log("BCH balance:", balances.satoshis_available_bch);
 
     // 2) Calculate the token quantity with decimal precision included
     const initialTokenQtyBN = (new BigNumber(initialTokenQty)).times(10 ** decimals);
 
     // 3) Set private keys
-    balances!.nonSlpUtxos.forEach(txo => txo.wif = fundingWif);
+    balances!.nonSlpUtxos.forEach((txo) => txo.wif = fundingWif);
 
     // 4) Use "simpleTokenGenesis()" helper method
     const genesisTxid = await bitboxNetwork.simpleTokenGenesis(

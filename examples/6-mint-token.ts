@@ -21,10 +21,10 @@
  *
  * ************************************************************************************/
 
-import * as BITBOXSDK from "bitbox-sdk";
 import { BigNumber } from "bignumber.js";
-import { BitboxNetwork, SlpBalancesResult, GetRawTransactionsAsync, LocalValidator } from "../index";
+import * as BITBOXSDK from "bitbox-sdk";
 import { GetRawTransactionRequest, GrpcClient } from "grpc-bchrpc-node";
+import { BitboxNetwork, LocalValidator, SlpBalancesResult } from "../index";
 
 (async () => {
 
@@ -69,7 +69,6 @@ import { GetRawTransactionRequest, GrpcClient } from "grpc-bchrpc-node";
 
     // 1) Get all balances at the funding address.
     const balances = await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress) as SlpBalancesResult;
-    console.log("'balances' variable is set.");
     if (balances.slpBatonUtxos[tokenIdHexToMint]) {
         console.log("You have the minting baton for this token");
     } else {
@@ -78,7 +77,7 @@ import { GetRawTransactionRequest, GrpcClient } from "grpc-bchrpc-node";
 
     // 2) Fetch critical token decimals information using bitdb
     const tokenInfo = await bitboxNetwork.getTokenInformation(tokenIdHexToMint);
-    const tokenDecimals = tokenInfo.decimals; 
+    const tokenDecimals = tokenInfo.decimals;
     console.log("Token precision: " + tokenDecimals.toString());
 
     // 3) Multiply the specified token quantity by 10^(token decimal precision)
@@ -92,7 +91,7 @@ import { GetRawTransactionRequest, GrpcClient } from "grpc-bchrpc-node";
     inputUtxos = inputUtxos.concat(balances.nonSlpUtxos);
 
     // 6) Set the proper private key for each Utxo
-    inputUtxos.forEach(txo => txo.wif = fundingWif);
+    inputUtxos.forEach((txo) => txo.wif = fundingWif);
 
     // 7) MINT token using simple function
     const mintTxid = await bitboxNetwork.simpleTokenMint(

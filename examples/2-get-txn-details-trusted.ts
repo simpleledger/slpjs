@@ -3,9 +3,9 @@
  *  Example 2: Fetch token details for given txid
  *
  *  Instructions:
- *      (1) - Select Network and Address by commenting/uncommenting the desired
+ *      (1) - Select Network and Address by commenting/un-commenting the desired
  *              NETWORK section and providing valid BCH address.
- *      (2) - Select a Validation method by commenting/uncommenting the desired
+ *      (2) - Select a Validation method by commenting/un-commenting the desired
  *              VALIDATOR section. Chose from remote validator or local validator.
  *              Both options rely on remote JSON RPC calls to rest.bitcoin.com.
  *      (3) - Run `tsc && node <file-name.js>` just before script execution
@@ -14,16 +14,16 @@
  * ************************************************************************************/
 
 import * as BITBOXSDK from "bitbox-sdk";
+import { GrpcClient } from "grpc-bchrpc-node";
 import { BchdNetwork } from "../index";
 import { GetRawTransactionsAsync } from "../lib/localvalidator";
-import { GrpcClient } from "grpc-bchrpc-node";
 import { TrustedValidator } from "../lib/trustedvalidator";
 
 const BITBOX = new BITBOXSDK.BITBOX();
 const logger = console;
 
 // NETWORK: FOR MAINNET COMMENT/UNCOMMENT
-let txid = "c67c6423767a86e27c56ad9c04581f4500d88baff12b865611a39602f449b465";
+const txid = "c67c6423767a86e27c56ad9c04581f4500d88baff12b865611a39602f449b465";
 const testnet = false;
 
 // VALIDATOR: FOR LOCAL VALIDATOR

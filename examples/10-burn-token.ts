@@ -19,22 +19,22 @@
  * 
  * ************************************************************************************/
 
-import * as BITBOXSDK from 'bitbox-sdk';
-import { BigNumber } from 'bignumber.js';
-import { BitboxNetwork, SlpBalancesResult, LocalValidator } from '../index';
+import { BigNumber } from "bignumber.js";
+import * as BITBOXSDK from "bitbox-sdk";
+import { BitboxNetwork, LocalValidator, SlpBalancesResult } from "../index";
 
-(async function() {
-    
+(async () => {
+
     // NETWORK: FOR MAINNET
-    const BITBOX = new BITBOXSDK.BITBOX({ restURL: 'https://rest.bitcoin.com/v2/' });
+    const BITBOX = new BITBOXSDK.BITBOX({ restURL: "https://rest.bitcoin.com/v2/" });
     const fundingAddress           = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
     const fundingWif               = "L3gngkDg1HW5P9v5GdWWiCi3DWwvw5XnzjSPwNwVPN5DSck3AaiF";    // <-- compressed WIF format
     const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu"; // <-- must be simpleledger format
-    let tokenId = "d32b4191d3f78909f43a3f5853ba59e9f2d137925f28e7780e717f4b4bfd4a3f";
-    let burnAmount = 1;
+    const tokenId = "d32b4191d3f78909f43a3f5853ba59e9f2d137925f28e7780e717f4b4bfd4a3f";
+    const burnAmount = 1;
 
     // VALIDATOR: Option 1: FOR REMOTE VALIDATION
-    //const bitboxNetwork = new BitboxNetwork(BITBOX);
+    // const bitboxNetwork = new BitboxNetwork(BITBOX);
 
     // VALIDATOR: Option 2: FOR LOCAL VALIDATOR / REMOTE JSON RPC
     // const getRawTransactions: GetRawTransactionsAsync = async function(txids: string[]) { 
@@ -46,27 +46,27 @@ import { BitboxNetwork, SlpBalancesResult, LocalValidator } from '../index';
 
     // VALIDATOR: Option 3: LOCAL VALIDATOR / LOCAL FULL NODE JSON RPC
     const logger = console;
-    const RpcClient = require('bitcoin-rpc-promise');
-    const connectionString = 'http://bitcoin:password@localhost:8332'
+    const RpcClient = require("bitcoin-rpc-promise");
+    const connectionString = "http://bitcoin:password@localhost:8332"
     const rpc = new RpcClient(connectionString);
     const slpValidator = new LocalValidator(BITBOX, async (txids) => [ await rpc.getRawTransaction(txids[0]) ], logger)
     const bitboxNetwork = new BitboxNetwork(BITBOX, slpValidator);
-    
+
     // 1) Fetch critical token information
     const tokenInfo = await bitboxNetwork.getTokenInformation(tokenId);
-    let tokenDecimals = tokenInfo.decimals; 
-    console.log('Token precision:', tokenDecimals.toString());
+    const tokenDecimals = tokenInfo.decimals;
+    console.log("Token precision:", tokenDecimals.toString());
 
     // 2) Check that token balance is greater than our desired sendAmount
-    let balances = <SlpBalancesResult>await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
-    console.log("'balances' variable is set.");
-    if(balances.slpTokenBalances[tokenId])
-        console.log('Token balance:', <any>balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals)
-    else
+    const balances = <SlpBalancesResult>await bitboxNetwork.getAllSlpBalancesAndUtxos(fundingAddress);
+    if (balances.slpTokenBalances[tokenId]) {
+        console.log("Token balance:", <any>balances.slpTokenBalances[tokenId].toFixed() / 10**tokenDecimals)
+    } else {
         console.log("Funding addresss is not holding any tokens with id:", tokenId);
+    }
 
     // 3) Calculate send amount in "Token Satoshis".  In this example we want to just send 1 token unit to someone...
-    let amount = (new BigNumber(burnAmount)).times(10**tokenDecimals);  // Don't forget to account for token precision
+    const amount = (new BigNumber(burnAmount)).times(10**tokenDecimals);  // Don't forget to account for token precision
 
     // 4) Get all of our token's UTXOs
     let inputUtxos = balances.slpTokenUtxos[tokenId];
@@ -75,14 +75,15 @@ import { BitboxNetwork, SlpBalancesResult, LocalValidator } from '../index';
     inputUtxos = inputUtxos.concat(balances.nonSlpUtxos);
 
     // 6) Set the proper private key for each Utxo
-    inputUtxos.forEach(txo => txo.wif = fundingWif)
+    inputUtxos.forEach((txo) => txo.wif = fundingWif);
 
     // 7) Send token
-    let sendTxid  = await bitboxNetwork.simpleTokenBurn(
-            tokenId, 
-            amount, 
-            inputUtxos, 
+    const sendTxid  = await bitboxNetwork.simpleTokenBurn(
+            tokenId,
+            amount,
+            inputUtxos,
             bchChangeReceiverAddress
-        )
-    console.log("BURN txn complete:",sendTxid);
+    );
+
+    console.log("BURN txn complete:", sendTxid);
 })();

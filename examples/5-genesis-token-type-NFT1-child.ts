@@ -39,7 +39,7 @@ const NFT1ParentGroupID = "240c44216936e86e624538866934c6f038a6cc4a5a83db232d735
     const bchChangeReceiverAddress = "simpleledger:qrhvcy5xlegs858fjqf8ssl6a4f7wpstaqnt0wauwu";  // <-- cashAddr or slpAddr format
 
     // VALIDATOR SETUP: FOR REMOTE VALIDATION
-    const client = new GrpcClient();
+    const client = new GrpcClient({ url: "bchd.greyh.at:8335" });
     const getRawTransactions: GetRawTransactionsAsync = async (txids: string[]) => {
         const txid = txids[0];
         const res = await client.getRawTransaction({ hash: txid, reversedHashOrder: true });
@@ -95,15 +95,15 @@ const NFT1ParentGroupID = "240c44216936e86e624538866934c6f038a6cc4a5a83db232d735
 
     // 4) Use "simpleNFT1ChildGenesis()" helper method
     const genesisTxid = await bchdNetwork.simpleNFT1ChildGenesis(
-            NFT1ParentGroupID,
-            name,
-            ticker,
-            documentUri,
-            documentHash,
-            tokenReceiverAddress,
-            bchChangeReceiverAddress,
-            inputs,
-            );
+        NFT1ParentGroupID,
+        name,
+        ticker,
+        documentUri,
+        documentHash,
+        tokenReceiverAddress,
+        bchChangeReceiverAddress,
+        inputs,
+    );
 
     console.log("NFT1 Child GENESIS txn complete:", genesisTxid);
 })();
