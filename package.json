@@ -63,7 +63,7 @@
     "@types/socket.io": "^2.1.8",
     "@types/socket.io-client": "^1.4.33",
     "@types/wif": "^2.0.1",
-    "axios": "^0.18.1",
+    "axios": "^0.21.1",
     "bchaddrjs-slp": "0.2.8",
     "bignumber.js": "9.0.0",
     "crypto-js": "^4.0.0",
