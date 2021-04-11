@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - 12
+  - 14.15
+sudo: false
+script:
+  - npm test
+after_success:
+  - npm run coverage
