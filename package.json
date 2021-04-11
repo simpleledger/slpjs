@@ -10,7 +10,8 @@
     "dist/"
   ],
   "scripts": {
-    "test": "npx tsc && nyc mocha",
+    "test": "mocha",
+    "coverage": "nyc npm test && nyc report --reporter=text-lcov | coveralls",
     "build": "npx tsc && mkdirp dist && browserify index.js --standalone slpjs > dist/slpjs.js && uglifyjs dist/slpjs.js > dist/slpjs.min.js"
   },
   "repository": {
