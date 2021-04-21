@@ -148,6 +148,10 @@ describe("Utils", () => {
             const addr = Utils.toCashAddress("simpleledger:qr5agtachyxvrwxu76vzszan5pnvuzy8duhv4lxrsk");
             assert.equal(addr, "bitcoincash:qr5agtachyxvrwxu76vzszan5pnvuzy8dumh7ynrwg");
         });
+        it("toSlpRegtestAddress()", () => {
+            const addr = Utils.toSlpRegtestAddress("simpleledger:qph5kuz78czq00e3t85ugpgd7xmer5kr7ccj3fcpsg");
+            assert.equal(addr, "slpreg:qph5kuz78czq00e3t85ugpgd7xmer5kr7ch8j98fn9");
+        });
         it("isCashAddress()", () => {
             const addr = Utils.isCashAddress("bitcoincash:qr5agtachyxvrwxu76vzszan5pnvuzy8dumh7ynrwg");
             assert.equal(addr, true);
