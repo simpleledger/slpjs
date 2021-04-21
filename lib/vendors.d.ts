@@ -6,6 +6,7 @@ declare module "bchaddrjs-slp" {
     export function toLegacyAddress(address: string): string;
     export function isSlpAddress(address: string): boolean;
     export function toSlpAddress(address: string): string;
+    export function toSlpRegtestAddress(address: string): string;
     export function toRegtestAddress(address: string): string;
     export function decodeAddress(address: string): AddressDetails;
     export function encodeAsSlpaddr(decoded: AddressDetails): string;

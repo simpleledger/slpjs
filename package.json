@@ -65,7 +65,7 @@
     "@types/socket.io-client": "^1.4.33",
     "@types/wif": "^2.0.1",
     "axios": "^0.21.1",
-    "bchaddrjs-slp": "0.2.8",
+    "bchaddrjs-slp": "0.2.12",
     "bignumber.js": "9.0.0",
     "crypto-js": "^4.0.0",
     "grpc-bchrpc": "^0.0.10",

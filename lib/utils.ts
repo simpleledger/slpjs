@@ -38,6 +38,10 @@ export class Utils {
         return Bchaddr.toSlpAddress(address);
     }
 
+    public static toSlpRegtestAddress(address: string) {
+        return Bchaddr.toSlpRegtestAddress(address);
+    }
+
     public static toRegtestAddress(address: string) {
         return Bchaddr.toRegtestAddress(address);
     }
